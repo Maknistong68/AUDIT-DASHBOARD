@@ -111,6 +111,26 @@ a {
   font-size: 13px;
 }
 
+.admin-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.admin-nav a {
+  text-decoration: none;
+  color: var(--ink-2);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  border: 1px solid var(--grid);
+}
+
+.admin-nav a:hover {
+  background: var(--accent-wash);
+  color: var(--ink-1);
+}
+
 /* ---- Cards & layout ---- */
 
 .card {
