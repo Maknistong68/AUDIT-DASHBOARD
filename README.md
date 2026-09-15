@@ -1,0 +1,89 @@
+# Contractor Audit Dashboard
+
+An **audit analytics and compliance-trend platform** for contractor welfare/compliance audits.
+
+> **Data-minimization principle:** This application records structured,
+> contractor-level audit results only. It does not intentionally collect or
+> store personal data, worker records, photographs, salary information,
+> identification numbers, or individual welfare case information.
+> The only personal data in the system is the minimal account data of the
+> application's own users (auditors/admins), handled by Supabase Auth.
+
+## What it records
+
+| Entity | Example |
+|---|---|
+| Contractor | `ABC Contracting` |
+| Audit | `Welfare Management Audit — 2026-09-01` |
+| Question / control | `WMP-01 — Worker Management Plan is established and implemented…` |
+| Result | `Full Compliance` / `Non-Compliance` / `Not Applicable` |
+| NC classification | `Documentation Available but Not Approved` |
+| Observation (optional, non-scoring) | `Positive Practice` |
+| Corrective action status (NC only) | `Open` → `In Progress` → `Closed` → `Verified` |
+| Score | `82.5%` |
+
+No free text in the scoring interface — every field is structured and
+controlled, which is what makes the trend analytics reliable.
+
+## Scoring model
+
+- **Full Compliance** → question weight counts fully (100%)
+- **Non-Compliance** → question weight counts as 0%, and a standardized
+  NC classification is **mandatory**
+- **Not Applicable** → excluded from the calculation entirely
+- **Observations** (Positive Practice / Improvement Opportunity) are recorded
+  separately and never affect the score
+
+```
+score = Σ weight(Full Compliance) / Σ weight(all applicable) × 100
+```
+
+An audit with zero applicable questions has no score (`NULL`), not 0%.
+
+## Repository layout
+
+```
+supabase/
+  migrations/
+    0001_schema.sql     # enums, tables, integrity constraints
+    0002_scoring.sql    # scoring function, triggers, analytics views
+    0003_rls.sql        # roles, row-level security policies
+  seed.sql              # NC taxonomy, Welfare Management Audit question set
+  tests/
+    harness.sql         # local-Postgres shim for the Supabase auth schema
+    smoke_test.sql      # end-to-end DB assertions (scoring, constraints, RLS)
+src/lib/
+  types.ts              # shared domain types (mirror of the DB enums)
+  scoring.ts            # client-side scoring + aggregation (mirrors the DB)
+  scoring.test.ts       # unit tests
+docs/
+  ARCHITECTURE.md       # full design: data model, scoring, KPIs, roles, RLS
+scripts/
+  validate-db.sh        # spins the migrations + seed + smoke tests against a
+                        # local Postgres (see script header for usage)
+```
+
+## Running the checks
+
+```bash
+npm install
+npm test                # TypeScript scoring unit tests (vitest)
+
+# Database validation against any local Postgres 15+:
+PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
+```
+
+## Deployment target
+
+Vercel (Next.js frontend) + Supabase (Postgres, Auth, RLS). Because the audit
+dataset is organizational/compliance information rather than personal data,
+the hosting question is primarily an internal IT/security approval matter —
+verify the project's approved cloud architecture before putting real project
+data into production.
+
+## Next steps
+
+1. Next.js app scaffold (audit entry form, dashboard)
+2. Wire Supabase client + generated types (`supabase gen types typescript`)
+3. Dashboard charts on top of the `v_*` analytics views
+4. Corrective-action follow-up workflow
