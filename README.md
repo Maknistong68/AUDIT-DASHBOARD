@@ -43,6 +43,15 @@ An audit with zero applicable questions has no score (`NULL`), not 0%.
 ## Repository layout
 
 ```
+src/
+  app/                  # Next.js App Router
+    page.tsx            # overview dashboard (KPIs, trend, NC Pareto, tables)
+    contractors/        # league table + per-contractor drill-down
+    audits/             # audit list, creation, structured entry form
+    login/              # Supabase email/password sign-in
+    demo/               # dev-only component gallery with sample data
+  components/           # stat tiles, score meters, badges, SVG charts
+  middleware.ts         # Supabase session refresh + auth gate
 supabase/
   migrations/
     0001_schema.sql     # enums, tables, integrity constraints
@@ -63,11 +72,27 @@ scripts/
                         # local Postgres (see script header for usage)
 ```
 
-## Running the checks
+## Running the app
 
 ```bash
 npm install
+cp .env.example .env.local   # fill in your Supabase URL + anon key
+npm run dev                  # http://localhost:3000
+```
+
+Apply `supabase/migrations/*.sql` and `supabase/seed.sql` to your Supabase
+project (e.g. `supabase db push`), create users in Supabase Auth, and promote
+the first admin by setting their `profiles.role` to `admin`. Without
+configured env vars the app renders a setup notice; with them, all routes
+require sign-in. In development, `/demo` shows every dashboard component with
+sample data and no Supabase needed.
+
+## Running the checks
+
+```bash
 npm test                # TypeScript scoring unit tests (vitest)
+npm run typecheck
+npm run build           # production build
 
 # Database validation against any local Postgres 15+:
 PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
@@ -83,7 +108,7 @@ data into production.
 
 ## Next steps
 
-1. Next.js app scaffold (audit entry form, dashboard)
-2. Wire Supabase client + generated types (`supabase gen types typescript`)
-3. Dashboard charts on top of the `v_*` analytics views
-4. Corrective-action follow-up workflow
+1. Replace hand-written row types with `supabase gen types typescript`
+2. Admin screens for reference data (contractors, questions, NC taxonomy, roles)
+3. Corrective-action follow-up workflow after audit submission
+4. Dashboard filters (date range, audit type) scoping all charts at once
