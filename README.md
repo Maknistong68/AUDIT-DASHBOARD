@@ -109,6 +109,5 @@ data into production.
 ## Next steps
 
 1. Replace hand-written row types with `supabase gen types typescript`
-2. Admin screens for reference data (contractors, questions, NC taxonomy, roles)
-3. Corrective-action follow-up workflow after audit submission
-4. Dashboard filters (date range, audit type) scoping all charts at once
+2. Dashboard filters (date range, audit type) scoping all charts at once
+3. Audit-type management in the admin section

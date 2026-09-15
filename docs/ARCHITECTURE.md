@@ -142,9 +142,15 @@ draft ──(auditor submits)──▶ submitted ──(admin approves)──▶
   reopen).
 
 Corrective-action tracking (`open → in_progress → closed → verified`) lives on
-the NC response. While the audit is draft the auditor sets it; after
-submission it is admin-maintained (a dedicated follow-up workflow is a
-planned enhancement).
+the NC response. While the audit is draft the auditor sets it through the
+normal edit path. After submission the response is locked, but the corrective
+action still has a life of its own: `public.update_corrective_action()`
+(a `SECURITY DEFINER` function, `0004_corrective_actions.sql`) lets the
+audit's own auditor and admins advance **only** that column on finalized
+audits — surfaced in the app as the `/actions-queue` follow-up page. The
+score-refresh trigger skips updates that don't change the result, so a
+corrective-action update can never rewrite a historical score (even after a
+question-weight change).
 
 ## 6. Dashboard / KPI structure
 

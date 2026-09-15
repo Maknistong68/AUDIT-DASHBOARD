@@ -312,4 +312,100 @@ $$;
 
 reset role;
 
+-- ---------------------------------------------------------------------------
+-- Corrective-action workflow on a finalized audit (0004)
+-- Audit 1 is approved and carries an NC on WMP-02 with an open action.
+-- ---------------------------------------------------------------------------
+
+-- Another auditor and a viewer must both be rejected.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000003', false);
+set role authenticated;
+
+do $$
+declare
+  resp uuid := (
+    select r.id from public.audit_responses r
+    join public.audit_questions q on q.id = r.question_id
+    where r.audit_id = '10000000-0000-0000-0000-000000000001'
+      and q.code = 'WMP-02'
+  );
+begin
+  begin
+    perform public.update_corrective_action(resp, 'in_progress');
+    raise exception 'another auditor must not update foreign corrective actions';
+  exception when raise_exception then
+    if sqlerrm like '%must not update%' then raise; end if;
+  end;
+end
+$$;
+
+reset role;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000004', false);
+set role authenticated;
+
+do $$
+declare
+  resp uuid := (
+    select r.id from public.audit_responses r
+    join public.audit_questions q on q.id = r.question_id
+    where r.audit_id = '10000000-0000-0000-0000-000000000001'
+      and q.code = 'WMP-02'
+  );
+begin
+  begin
+    perform public.update_corrective_action(resp, 'closed');
+    raise exception 'a viewer must not update corrective actions';
+  exception when raise_exception then
+    if sqlerrm like '%must not update%' then raise; end if;
+  end;
+end
+$$;
+
+reset role;
+
+-- Weight change after finalization must NOT rewrite the historical score
+-- when only the corrective action advances.
+update public.audit_questions set weight = 5
+where code = 'WMP-02';
+
+-- The audit's own auditor advances the action on the approved audit.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000002', false);
+set role authenticated;
+
+select public.update_corrective_action(
+  (select r.id from public.audit_responses r
+   join public.audit_questions q on q.id = r.question_id
+   where r.audit_id = '10000000-0000-0000-0000-000000000001'
+     and q.code = 'WMP-02'),
+  'in_progress');
+
+-- ...but still cannot edit the response itself (RLS: audit is finalized).
+update public.audit_responses r
+   set result = 'full_compliance', nc_category_id = null
+from public.audit_questions q
+where q.id = r.question_id and q.code = 'WMP-02'
+  and r.audit_id = '10000000-0000-0000-0000-000000000001';
+
+reset role;
+
+do $$
+begin
+  assert (select r.corrective_action_status from public.audit_responses r
+          join public.audit_questions q on q.id = r.question_id
+          where r.audit_id = '10000000-0000-0000-0000-000000000001'
+            and q.code = 'WMP-02') = 'in_progress',
+    'the auditor must be able to advance the corrective action';
+  assert (select r.result from public.audit_responses r
+          join public.audit_questions q on q.id = r.question_id
+          where r.audit_id = '10000000-0000-0000-0000-000000000001'
+            and q.code = 'WMP-02') = 'non_compliance',
+    'the response result must stay locked on a finalized audit';
+  assert (select score from public.audits
+          where id = '10000000-0000-0000-0000-000000000001') = 75.00,
+    'a corrective-action update must not rewrite the historical score';
+end
+$$;
+
+update public.audit_questions set weight = 1 where code = 'WMP-02';
+
 select 'smoke tests passed' as result;

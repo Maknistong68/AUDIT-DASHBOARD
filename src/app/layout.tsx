@@ -47,6 +47,7 @@ export default async function RootLayout({
                   <Link href="/">Overview</Link>
                   <Link href="/contractors">Contractors</Link>
                   <Link href="/audits">Audits</Link>
+                  <Link href="/actions-queue">Actions</Link>
                   {profile.role === "admin" && <Link href="/admin">Admin</Link>}
                 </nav>
                 <span className="who">
