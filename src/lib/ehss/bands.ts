@@ -39,7 +39,11 @@ export const BANDS: Band[] = [
 
 export function bandFor(score: number | null | undefined): Band | null {
   if (score === null || score === undefined) return null;
-  return BANDS.find((b) => score >= b.min) ?? null;
+  // Band on the value as displayed, not the raw one: 69.99 renders as
+  // "70.0%", and a bar labelled 70.0% coloured as the 60–69 band reads as a
+  // contradiction. One decimal matches formatScore().
+  const shown = Math.round(score * 10) / 10;
+  return BANDS.find((b) => shown >= b.min) ?? null;
 }
 
 /** Fill colour for a mark, falling back to the muted ink when unscored. */

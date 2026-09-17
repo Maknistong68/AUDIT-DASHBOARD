@@ -1005,3 +1005,72 @@ td.cell-weak {
   border-radius: 3px;
   border: 1px solid var(--border);
 }
+
+/* ---- Small-multiple trajectories ---- */
+
+.spark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  gap: 10px;
+}
+
+.spark {
+  text-align: left;
+  font: inherit;
+  background: var(--surface-1);
+  border: 1px solid var(--grid);
+  border-radius: 9px;
+  padding: 9px 10px 7px;
+  cursor: pointer;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.spark:hover {
+  border-color: var(--baseline);
+  transform: translateY(-1px);
+}
+
+.spark.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.spark-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.spark-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spark-score {
+  font-size: 12.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-1);
+}
+
+.spark-foot {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.spark-up { color: var(--success-text); }
+.spark-down { color: var(--band-non); }
+.spark-flat { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .spark:hover {
+    transform: none;
+  }
+}

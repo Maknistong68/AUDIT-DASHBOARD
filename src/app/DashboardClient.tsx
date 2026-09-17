@@ -10,7 +10,7 @@ import {
   RATING_KEY,
 } from "@/components/charts/ContractorBarChart";
 import { ContractorDrilldown } from "@/components/ContractorDrilldown";
-import { ContractorTrendLines } from "@/components/charts/ContractorTrendLines";
+import { ContractorSparkGrid } from "@/components/charts/ContractorSparkGrid";
 import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { formatScore } from "@/lib/format";
@@ -266,21 +266,21 @@ export function DashboardClient() {
         </FloatingPanel>
       )}
 
-      <div className="grid-2">
-        <section className="card">
-          <h2>Score trajectories</h2>
-          <p className="sub">
-            Every contractor across the quarters in scope — hover or click a
-            line to follow one
-          </p>
-          <ContractorTrendLines
-            quarters={contractorLines.quarters}
-            series={contractorLines.series}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-          />
-        </section>
+      <section className="card">
+        <h2>Score trajectories</h2>
+        <p className="sub">
+          One panel per contractor on a shared scale — where each is heading
+          across the quarters in scope. Select a panel for the detail.
+        </p>
+        <ContractorSparkGrid
+          quarters={contractorLines.quarters}
+          series={contractorLines.series}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      </section>
 
+      <div className="grid-2">
         <section className="card">
           <h2>Observation trends</h2>
           <p className="sub">
@@ -292,34 +292,35 @@ export function DashboardClient() {
             series={observationTrend.series}
           />
         </section>
+
+        <section className="card">
+          <h2>Weakest sub-sections</h2>
+          <p className="sub">Lowest average across the reviews in scope</p>
+          {weakest.length === 0 ? (
+            <div className="chart-empty">No finalized reviews in scope.</div>
+          ) : (
+            <table className="data">
+              <tbody>
+                {weakest.map((w) => (
+                  <tr key={w.code}>
+                    <td style={{ width: 44 }}>
+                      <strong>{w.code}</strong>
+                    </td>
+                    <td>{w.title}</td>
+                    <td style={{ width: 150 }}>
+                      <ScoreMeter score={w.avg} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <p className="sub" style={{ marginTop: 12 }}>
+            <Link href="/findings">Open the findings register →</Link>
+          </p>
+        </section>
       </div>
 
-      <section className="card">
-        <h2>Weakest sub-sections</h2>
-        <p className="sub">Lowest average across the reviews in scope</p>
-        {weakest.length === 0 ? (
-          <div className="chart-empty">No finalized reviews in scope.</div>
-        ) : (
-          <table className="data">
-            <tbody>
-              {weakest.map((w) => (
-                <tr key={w.code}>
-                  <td style={{ width: 44 }}>
-                    <strong>{w.code}</strong>
-                  </td>
-                  <td>{w.title}</td>
-                  <td style={{ width: 190 }}>
-                    <ScoreMeter score={w.avg} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        <p className="sub" style={{ marginTop: 12 }}>
-          <Link href="/findings">Open the findings register →</Link>
-        </p>
-      </section>
     </div>
   );
 }

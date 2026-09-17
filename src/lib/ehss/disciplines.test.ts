@@ -6,6 +6,7 @@ import {
   rankScores,
   weightedOverall,
 } from "./disciplines";
+import { bandFor } from "./bands";
 
 describe("discipline weights", () => {
   it("are the scorecard's: 40/25/10/10/15", () => {
@@ -84,5 +85,28 @@ describe("ranking", () => {
     expect([1, 2, 3, 4, 11, 12, 13, 21].map(ordinal)).toEqual([
       "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st",
     ]);
+  });
+});
+
+describe("rating bands", () => {
+  it("bands on the displayed value, so colour and number never disagree", () => {
+    // 69.99 renders as "70.0%" — it must read as Moderately Compliant, not
+    // as the 60–69 band.
+    expect(bandFor(69.99)?.id).toBe("moderate");
+    // 89.97 shows as "90%", so it reads as Compliant — the label and the
+    // colour agree with the printed number, which is the point.
+    expect(bandFor(89.97)?.id).toBe("compliant");
+    expect(bandFor(89.94)?.id).toBe("mostly");
+    expect(bandFor(59.99)?.id).toBe("minimal");
+    expect(bandFor(59.94)?.id).toBe("non");
+  });
+
+  it("maps each band to its range", () => {
+    expect(bandFor(95)?.label).toBe("Compliant");
+    expect(bandFor(85)?.label).toBe("Mostly Compliant");
+    expect(bandFor(75)?.label).toBe("Moderately Compliant");
+    expect(bandFor(65)?.label).toBe("Minimally Compliant");
+    expect(bandFor(42)?.label).toBe("Non-Compliant");
+    expect(bandFor(null)).toBeNull();
   });
 });
