@@ -1,64 +1,66 @@
 import Link from "next/link";
-import { getAuditsList, getCurrentUser } from "@/lib/data";
-import { isDemoMode } from "@/lib/demo/mode";
-import { AuditStatusBadge } from "@/components/Badges";
+import { audits, contractors, subRegions } from "@/lib/ehss/mock";
+import { summarizeAll } from "@/lib/ehss/summaries";
+import { quarterLabel } from "@/lib/ehss/model";
+import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatDate, formatScore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
-export default async function AuditsPage() {
-  const [audits, user] = await Promise.all([getAuditsList(), getCurrentUser()]);
-  const demo = isDemoMode();
-  const canCreate =
-    !demo && (user?.role === "auditor" || user?.role === "admin");
+export default function AuditsPage() {
+  const summaries = summarizeAll(audits, contractors, subRegions).sort(
+    (a, b) =>
+      b.quarter.localeCompare(a.quarter) ||
+      a.contractorName.localeCompare(b.contractorName),
+  );
 
   return (
     <section className="card">
-      <h2>Audits</h2>
+      <h2>Quarterly audits</h2>
       <p className="sub">
-        {demo
-          ? "Demo data — open the draft to try the scoring form."
-          : "Drafts are visible only to their auditor and admins."}
+        One EHSS performance review per contractor per quarter. Open the draft
+        to try the entry form.
       </p>
-      {canCreate && (
-        <p>
-          <Link href="/audits/new">
-            <button className="primary" type="button">
-              New audit
-            </button>
-          </Link>
-        </p>
-      )}
-      {audits.length === 0 ? (
-        <div className="chart-empty">No audits yet.</div>
-      ) : (
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Contractor</th>
-              <th>Audit type</th>
-              <th>Status</th>
-              <th className="num">Score</th>
+      <table className="data">
+        <thead>
+          <tr>
+            <th>Quarter</th>
+            <th>Contractor</th>
+            <th>Sub-region</th>
+            <th>Date</th>
+            <th>Ref</th>
+            <th>Status</th>
+            <th className="num">Score</th>
+            <th>Rating</th>
+          </tr>
+        </thead>
+        <tbody>
+          {summaries.map((s) => (
+            <tr key={s.id}>
+              <td>
+                <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>
+              </td>
+              <td>{s.contractorName}</td>
+              <td>{s.subRegionName}</td>
+              <td>{formatDate(s.auditDate)}</td>
+              <td>{s.inspectionNo}</td>
+              <td>
+                <AuditStatusBadge status={s.status} />
+              </td>
+              <td className="num">
+                {s.status === "draft" ? "—" : formatScore(s.total)}
+              </td>
+              <td>
+                {s.status === "draft" ? (
+                  <span style={{ color: "var(--muted)" }}>in progress</span>
+                ) : (
+                  <RatingBadge rating={s.rating} />
+                )}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {audits.map((a) => (
-              <tr key={a.id}>
-                <td>
-                  <Link href={`/audits/${a.id}`}>{formatDate(a.audit_date)}</Link>
-                </td>
-                <td>{a.contractor_name ?? "—"}</td>
-                <td>{a.audit_type_name ?? "—"}</td>
-                <td>
-                  <AuditStatusBadge status={a.status} />
-                </td>
-                <td className="num">{formatScore(a.score)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

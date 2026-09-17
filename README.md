@@ -1,131 +1,87 @@
 # Contractor Audit Dashboard
 
-An **audit analytics and compliance-trend platform** for contractor welfare/compliance audits.
+An **EHSS quarterly audit scoring and compliance-trend platform** for Oxagon
+contractors, built from the *Excellence EHSS Quarterly Performance Review*
+checklist workbook.
 
 > **Data-minimization principle:** This application records structured,
 > contractor-level audit results only. It does not intentionally collect or
 > store personal data, worker records, photographs, salary information,
-> identification numbers, or individual welfare case information.
-> The only personal data in the system is the minimal account data of the
-> application's own users (auditors/admins), handled by Supabase Auth.
+> identification numbers, or individual welfare case information — and the
+> audit form has **no free-text fields and no photo uploads**: every entry is
+> a controlled selection, so results stay analyzable.
 
-## What it records
+## The model
 
-| Entity | Example |
-|---|---|
-| Contractor | `ABC Contracting` |
-| Audit | `Welfare Management Audit — 2026-09-01` |
-| Question / control | `WMP-01 — Worker Management Plan is established and implemented…` |
-| Result | `Full Compliance` / `Non-Compliance` / `Not Applicable` |
-| NC classification | `Documentation Available but Not Approved` |
-| Observation (optional, non-scoring) | `Positive Practice` |
-| Corrective action status (NC only) | `Open` → `In Progress` → `Closed` → `Verified` |
-| Score | `82.5%` |
+- **Two sub-regions** (Sub Region 1, Sub Region 2), each with its
+  contractors; every contractor gets one review per **quarter**.
+- **The checklist** (81 questions from the workbook): Section **A
+  Management** (15), **B Process & Procedures** (12 sub-sections, 36), **C
+  Planning & Commitment** (C1 Leadership, C2 Planning, 30). Each question
+  carries a weight of 1–4.
+- **Answers** per question: **Full / Partial / No / N-A** (the workbook's
+  dropdown).
+- **Pre-made observations** instead of free comments: every Partial or No
+  answer must carry one of the standardized classifications **OB2
+  Documentation gap · OB3 Implementation gap · OB4 Resources/competence gap
+  · OB5 Monitoring/reporting gap** (OB1 = good practice, optional on Full).
+  These codes are what the dashboard analyzes.
 
-No free text in the scoring interface — every field is structured and
-controlled, which is what makes the trend analytics reliable.
-
-## Scoring model
-
-- **Full Compliance** → question weight counts fully (100%)
-- **Non-Compliance** → question weight counts as 0%, and a standardized
-  NC classification is **mandatory**
-- **Not Applicable** → excluded from the calculation entirely
-- **Observations** (Positive Practice / Improvement Opportunity) are recorded
-  separately and never affect the score
+## Scoring (the workbook's formula)
 
 ```
-score = Σ weight(Full Compliance) / Σ weight(all applicable) × 100
+points        = weight × (Full = 100%, Partial = 50%, No = 0%)
+N/A           = excluded from numerator and denominator
+sub-section   = Σ points ÷ Σ applicable weight
+section       = mean of its sub-section scores
+TOTAL         = mean of the three section scores
 ```
 
-An audit with zero applicable questions has no score (`NULL`), not 0%.
+Ratings: **Compliant** 90–100 · **Mostly** 80–89 · **Moderately** 70–79 ·
+**Minimally** 60–69 · **Non-Compliant** below 60.
 
-## Repository layout
+The scoring engine is validated against the workbook's own filled audit —
+the test suite asserts the exact section scores (A 46.94%, B 74.60%, C 61%)
+and total (60.85%). The workbook's manual `+0.012` total adjustment is
+deliberately not reproduced.
 
-```
-src/
-  app/                  # Next.js App Router
-    page.tsx            # overview dashboard (KPIs, trend, NC Pareto, tables)
-    contractors/        # league table + per-contractor drill-down
-    audits/             # audit list, creation, structured entry form
-    login/              # Supabase email/password sign-in
-    demo/               # dev-only component gallery with sample data
-  components/           # stat tiles, score meters, badges, SVG charts
-  middleware.ts         # Supabase session refresh + auth gate
-supabase/
-  migrations/
-    0001_schema.sql     # enums, tables, integrity constraints
-    0002_scoring.sql    # scoring function, triggers, analytics views
-    0003_rls.sql        # roles, row-level security policies
-  seed.sql              # NC taxonomy, Welfare Management Audit question set
-  tests/
-    harness.sql         # local-Postgres shim for the Supabase auth schema
-    smoke_test.sql      # end-to-end DB assertions (scoring, constraints, RLS)
-src/lib/
-  types.ts              # shared domain types (mirror of the DB enums)
-  scoring.ts            # client-side scoring + aggregation (mirrors the DB)
-  scoring.test.ts       # unit tests
-docs/
-  ARCHITECTURE.md       # full design: data model, scoring, KPIs, roles, RLS
-scripts/
-  validate-db.sh        # spins the migrations + seed + smoke tests against a
-                        # local Postgres (see script header for usage)
-```
+## The app
 
-## Running the app
+- **/** — dynamic dashboard: filter by **sub-region** and **contractor**;
+  KPI tiles, quarterly score trend, observation-cause Pareto, section
+  performance, weakest sub-sections, contractor standings with ratings.
+- **/audits** — quarterly reviews; the draft opens the **entry form**: the
+  full checklist with the four-way answer toggle, required observation
+  classification on every gap, and live sub-section/section/total scores.
+- **/contractors** — register by sub-region with drill-downs (trend, section
+  and sub-section breakdown, observation history).
+- **/findings** — every gap observation, filterable by sub-region,
+  contractor and classification.
+- **/admin** — reference view of the checklist, scoring rules, and taxonomy.
+
+Currently runs **database-free**: a built-in demo dataset (five contractors,
+14 audits across 2026 — one of them the workbook's real audit) and a
+name-and-role onboarding page instead of authentication. **Deploy to Vercel
+with no env vars and it just works.** The Supabase layer under `supabase/`
+is the earlier welfare-audit schema and is dormant; it needs remodeling to
+this EHSS structure before database mode returns.
+
+## Development
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in your Supabase URL + anon key
-npm run dev                  # http://localhost:3000
-```
-
-Apply `supabase/migrations/*.sql` and `supabase/seed.sql` to your Supabase
-project (e.g. `supabase db push`), create users in Supabase Auth, and promote
-the first admin by setting their `profiles.role` to `admin`. Without
-configured env vars the app renders a setup notice; with them, all routes
-require sign-in. In development, `/demo` shows every dashboard component with
-sample data and no Supabase needed.
-
-## Running the checks
-
-```bash
-npm test                # TypeScript scoring unit tests (vitest)
+npm run dev        # http://localhost:3000
+npm test           # scoring engine vs. workbook fixture (15 tests)
 npm run typecheck
-npm run build           # production build
-
-# Database validation against any local Postgres 15+:
-PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
+npm run build
 ```
 
-## Demo mode (no database)
-
-When Supabase env vars are absent (or `NEXT_PUBLIC_DEMO_MODE=1`), the app
-runs entirely on a built-in dataset (`src/lib/demo/`): no database, no
-authentication — a lightweight onboarding page (name + role, stored in a
-cookie) replaces login. All dashboards are populated (Contractor One/Two/
-Three, six audits), the draft audit's scoring form works live, and every
-mutation is blocked with a "demo mode" message. **Deploy to Vercel with no
-env vars and you get this demo.** Setting the two Supabase env vars switches
-the app back to real database mode automatically.
-
-## Deploying
-
-Step-by-step Supabase + Vercel instructions: **`docs/DEPLOYMENT.md`**.
-`supabase/setup.sql` applies the whole schema in one SQL-editor paste, and
-`supabase/mock_data.sql` loads a demo dataset (Contractor One/Two/Three)
-so the dashboards are populated on first login.
-
-## Deployment target
-
-Vercel (Next.js frontend) + Supabase (Postgres, Auth, RLS). Because the audit
-dataset is organizational/compliance information rather than personal data,
-the hosting question is primarily an internal IT/security approval matter —
-verify the project's approved cloud architecture before putting real project
-data into production.
+Checklist source of truth: `src/lib/ehss/checklist.ts` (generated from the
+workbook — regenerate rather than hand-edit if the checklist changes).
 
 ## Next steps
 
-1. Replace hand-written row types with `supabase gen types typescript`
-2. Dashboard filters (date range, audit type) scoping all charts at once
-3. Audit-type management in the admin section
+1. Remodel the Supabase schema to the EHSS structure (sub-regions,
+   quarters, weighted checklist, observations) for real persistence
+2. Multi-discipline checklists (the workbook's other sheets) as audit types
+3. Quarter-range filter and quarter-over-quarter comparison views

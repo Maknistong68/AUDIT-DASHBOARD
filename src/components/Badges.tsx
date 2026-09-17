@@ -1,16 +1,13 @@
-import {
-  CORRECTIVE_ACTION_LABELS,
-  STATUS_LABELS,
-} from "@/lib/format";
-import type { AuditStatus, CorrectiveActionStatus } from "@/lib/types";
+import { STATUS_LABELS } from "@/lib/format";
+import type { EhssAuditStatus } from "@/lib/ehss/model";
 
-const AUDIT_STATUS_TONE: Record<AuditStatus, string> = {
+const AUDIT_STATUS_TONE: Record<EhssAuditStatus, string> = {
   draft: "",
   submitted: "accent",
   approved: "good",
 };
 
-export function AuditStatusBadge({ status }: { status: AuditStatus }) {
+export function AuditStatusBadge({ status }: { status: EhssAuditStatus }) {
   return (
     <span className={`badge ${AUDIT_STATUS_TONE[status]}`}>
       <span className="dot" aria-hidden />
@@ -19,22 +16,21 @@ export function AuditStatusBadge({ status }: { status: AuditStatus }) {
   );
 }
 
-const CA_TONE: Record<CorrectiveActionStatus, string> = {
-  open: "serious",
-  in_progress: "warning",
-  closed: "good",
-  verified: "good",
+/** Rating bands from the workbook. Color supplements the label, never alone. */
+const RATING_TONE: Record<string, string> = {
+  Compliant: "good",
+  "Mostly Compliant": "good",
+  "Moderately Compliant": "warning",
+  "Minimally Compliant": "serious",
+  "Non-Compliant": "critical",
 };
 
-export function CorrectiveActionBadge({
-  status,
-}: {
-  status: CorrectiveActionStatus;
-}) {
+export function RatingBadge({ rating }: { rating: string | null }) {
+  if (!rating) return <span style={{ color: "var(--muted)" }}>—</span>;
   return (
-    <span className={`badge ${CA_TONE[status]}`}>
+    <span className={`badge ${RATING_TONE[rating] ?? ""}`}>
       <span className="dot" aria-hidden />
-      {CORRECTIVE_ACTION_LABELS[status]}
+      {rating}
     </span>
   );
 }

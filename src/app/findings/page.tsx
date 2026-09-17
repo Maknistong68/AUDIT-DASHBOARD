@@ -1,18 +1,15 @@
 import { audits, contractors, subRegions } from "@/lib/ehss/mock";
-import { collectObservations, summarizeAll } from "@/lib/ehss/summaries";
-import { DashboardClient } from "./DashboardClient";
+import { collectObservations } from "@/lib/ehss/summaries";
+import { FindingsClient } from "./FindingsClient";
 
 export const dynamic = "force-dynamic";
 
-export default function OverviewPage() {
-  const summaries = summarizeAll(audits, contractors, subRegions);
+export default function FindingsPage() {
   const observations = collectObservations(audits, contractors);
-
   return (
-    <DashboardClient
+    <FindingsClient
       subRegions={subRegions}
       contractors={contractors}
-      summaries={summaries}
       observations={observations}
     />
   );

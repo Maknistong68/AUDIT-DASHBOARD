@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { getCurrentUser } from "@/lib/data";
-import { isDemoMode } from "@/lib/demo/mode";
+import { readDemoProfile } from "@/lib/demo/profile";
 
 export const metadata: Metadata = {
   title: "Audit Dashboard",
   description:
-    "Contractor audit scoring and compliance-trend analytics platform",
+    "Contractor EHSS quarterly audit scoring and compliance-trend analytics",
 };
 
 export default async function RootLayout({
@@ -15,8 +14,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getCurrentUser();
-  const demo = isDemoMode();
+  const profile = await readDemoProfile();
 
   return (
     <html lang="en">
@@ -26,22 +24,23 @@ export default async function RootLayout({
             <Link className="brand" href="/">
               Audit Dashboard
             </Link>
-            {user && (
+            {profile && (
               <>
                 <nav>
-                  <Link href="/">Overview</Link>
+                  <Link href="/">Dashboard</Link>
                   <Link href="/contractors">Contractors</Link>
                   <Link href="/audits">Audits</Link>
-                  <Link href="/actions-queue">Actions</Link>
-                  {user.role === "admin" && <Link href="/admin">Admin</Link>}
+                  <Link href="/findings">Findings</Link>
+                  {profile.role === "admin" && (
+                    <Link href="/admin">Reference</Link>
+                  )}
                 </nav>
                 <span className="who">
-                  {user.name ?? "Signed in"} · {user.role}
-                  {demo ? " · demo" : ""}
+                  {profile.name} · {profile.role} · demo
                 </span>
                 <form action="/auth/signout" method="post">
                   <button className="ghost" type="submit">
-                    {demo ? "Restart demo" : "Sign out"}
+                    Restart demo
                   </button>
                 </form>
               </>

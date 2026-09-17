@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { getAuditDetail, getCurrentUser } from "@/lib/data";
-import { isDemoMode } from "@/lib/demo/mode";
+import { auditById, contractorById, subRegionById } from "@/lib/ehss/mock";
+import { quarterLabel } from "@/lib/ehss/model";
+import { readDemoProfile } from "@/lib/demo/profile";
 import { AuditStatusBadge } from "@/components/Badges";
 import { formatDate } from "@/lib/format";
-import { AuditEntryForm } from "./AuditEntryForm";
+import { EhssAuditForm } from "./EhssAuditForm";
 
 export const dynamic = "force-dynamic";
 
@@ -13,40 +14,31 @@ export default async function AuditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const [audit, user] = await Promise.all([
-    getAuditDetail(id),
-    getCurrentUser(),
-  ]);
+  const audit = auditById.get(id);
   if (!audit) notFound();
 
-  const demo = isDemoMode();
-  const isAdmin = user?.role === "admin";
+  const contractor = contractorById.get(audit.contractorId)!;
+  const subRegion = subRegionById.get(contractor.subRegionId)!;
+  const profile = await readDemoProfile();
   const canEdit =
     audit.status === "draft" &&
-    (isAdmin ||
-      (user?.role === "auditor" && (demo || audit.auditor_id === user?.id)));
+    (profile?.role === "auditor" || profile?.role === "admin");
 
   return (
     <div className="stack">
       <section className="card">
         <h2>
-          {audit.contractor_name || "Contractor"} —{" "}
-          {audit.audit_type_name || "Audit"}
+          {contractor.name} — EHSS Quarterly Performance Review
         </h2>
         <p className="sub">
-          {formatDate(audit.audit_date)} ·{" "}
+          {subRegion.name} · {quarterLabel(audit.quarter)} ·{" "}
+          {formatDate(audit.auditDate)} · {audit.inspectionNo} ·{" "}
           <AuditStatusBadge status={audit.status} />
         </p>
-        <AuditEntryForm
-          auditId={audit.id}
-          auditStatus={audit.status}
+        <EhssAuditForm
+          initialResponses={audit.responses}
           canEdit={canEdit}
-          isAdmin={Boolean(isAdmin)}
-          demoMode={demo}
-          questions={audit.questions}
-          responses={audit.responses}
-          ncCategories={audit.ncCategories}
+          status={audit.status}
         />
       </section>
     </div>
