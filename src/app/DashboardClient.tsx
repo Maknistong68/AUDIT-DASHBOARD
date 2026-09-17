@@ -5,10 +5,14 @@ import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
 import { StatTile } from "@/components/StatTile";
 import { ScoreMeter } from "@/components/ScoreMeter";
-import { ContractorBarChart } from "@/components/charts/ContractorBarChart";
+import {
+  ContractorBarChart,
+  RATING_KEY,
+} from "@/components/charts/ContractorBarChart";
 import { ContractorDrilldown } from "@/components/ContractorDrilldown";
-import { TrendChart } from "@/components/charts/TrendChart";
-import { ParetoBars } from "@/components/charts/ParetoBars";
+import { ContractorTrendLines } from "@/components/charts/ContractorTrendLines";
+import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
+import { FloatingPanel } from "@/components/FloatingPanel";
 import { formatScore } from "@/lib/format";
 import {
   OBSERVATION_BY_CODE,
@@ -20,17 +24,27 @@ import { contractorLabel } from "@/lib/ehss/mock";
 import {
   TIMEFRAMES,
   areaTrends,
-  averageByQuarter,
   collectObservations,
+  contractorSeriesByQuarter,
   contractorStats,
   finalized,
-  observationBreakdown,
+  observationTrendByQuarter,
   summarizeAll,
   timeframeById,
   topIssues,
   weakestSubSections,
   type TimeframeId,
 } from "@/lib/ehss/summaries";
+
+/** Tile accent follows the rating band the value falls in. */
+function toneFor(score: number | null): "good" | "warning" | "serious" | "critical" | "neutral" {
+  if (score === null) return "neutral";
+  if (score >= 90) return "good";
+  if (score >= 80) return "good";
+  if (score >= 70) return "warning";
+  if (score >= 60) return "serious";
+  return "critical";
+}
 
 export function DashboardClient() {
   const { subRegions, contractors, audits } = useEhss();
@@ -124,16 +138,14 @@ export function DashboardClient() {
       .slice(0, 5);
   }, [selected, windowSummaries]);
 
-  const pareto = observationBreakdown(observations).map((o) => ({
-    label: `${o.code} — ${OBSERVATION_BY_CODE[o.code].label}`,
-    count: o.count,
-    share: o.share,
-  }));
-
-  const trend = averageByQuarter(windowSummaries).map((p) => ({
-    label: quarterLabel(p.quarter),
-    value: p.score,
-  }));
+  const observationTrend = useMemo(
+    () => observationTrendByQuarter(observations),
+    [observations],
+  );
+  const contractorLines = useMemo(
+    () => contractorSeriesByQuarter(windowSummaries),
+    [windowSummaries],
+  );
 
   const weakest = weakestSubSections(windowSummaries, 6);
   const timeframeLabel = timeframeById(timeframe).label;
@@ -189,12 +201,18 @@ export function DashboardClient() {
           label="Average score"
           value={formatScore(programAvg)}
           hint={timeframeLabel.toLowerCase()}
+          tone={toneFor(programAvg)}
         />
-        <StatTile label="Rating" value={ratingFor(programAvg) ?? "—"} />
+        <StatTile
+          label="Rating"
+          value={ratingFor(programAvg) ?? "—"}
+          tone={toneFor(programAvg)}
+        />
         <StatTile
           label="Reviews in scope"
           value={String(finalized(windowSummaries).length)}
           hint={`${stats.length} contractor${stats.length === 1 ? "" : "s"}`}
+          tone="neutral"
         />
         <StatTile
           label={`${quarterLabel(currentQuarter)} coverage`}
@@ -204,6 +222,7 @@ export function DashboardClient() {
               ? "all active contractors reviewed"
               : `${activeInScope.length - covered} review${activeInScope.length - covered === 1 ? "" : "s"} outstanding`
           }
+          tone={covered === activeInScope.length ? "good" : "warning"}
         />
       </div>
 
@@ -229,31 +248,58 @@ export function DashboardClient() {
           selectedId={selectedId}
           onSelect={setSelectedId}
         />
+        <div className="rating-key">
+          {RATING_KEY.map((k) => (
+            <span key={k.label}>
+              <i style={{ background: k.varName }} />
+              {k.label}
+            </span>
+          ))}
+        </div>
       </section>
 
       {selected && (
-        <ContractorDrilldown
-          stats={selected}
-          issues={selectedIssues}
-          priorityAreas={selectedAreas}
-          timeframeLabel={timeframeLabel}
+        <FloatingPanel
+          title={contractorLabel({
+            name: selected.contractorName,
+            code: selected.contractorCode,
+          })}
+          subtitle={`${selected.subRegionName} · ${timeframeLabel} · ${selected.audits.length} review${selected.audits.length === 1 ? "" : "s"}`}
           onClose={() => setSelectedId(null)}
-        />
+        >
+          <ContractorDrilldown
+            stats={selected}
+            issues={selectedIssues}
+            priorityAreas={selectedAreas}
+          />
+        </FloatingPanel>
       )}
 
       <div className="grid-2">
         <section className="card">
-          <h2>Programme trend</h2>
-          <p className="sub">Average score per quarter, contractors in scope</p>
-          <TrendChart points={trend} />
+          <h2>Score trajectories</h2>
+          <p className="sub">
+            Every contractor across the quarters in scope — hover or click a
+            line to follow one
+          </p>
+          <ContractorTrendLines
+            quarters={contractorLines.quarters}
+            series={contractorLines.series}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
         </section>
 
         <section className="card">
-          <h2>Observation causes</h2>
+          <h2>Observation trends</h2>
           <p className="sub">
-            Standardized gap classifications ({observations.length} in scope)
+            What is driving the gaps, quarter by quarter ({observations.length}{" "}
+            in scope)
           </p>
-          <ParetoBars data={pareto} />
+          <ObservationTrendLines
+            quarters={observationTrend.quarters}
+            series={observationTrend.series}
+          />
         </section>
       </div>
 

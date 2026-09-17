@@ -20,35 +20,18 @@ export function ContractorDrilldown({
   stats,
   issues,
   priorityAreas,
-  timeframeLabel,
-  onClose,
 }: {
   stats: ContractorStats;
   issues: IssueRow[];
   priorityAreas: AreaTrend[];
-  timeframeLabel: string;
-  onClose: () => void;
 }) {
+  // The weighted scorecard figure — the same number the league table plots.
   const trend = stats.audits
-    .filter((a) => a.total !== null)
-    .map((a) => ({ label: quarterLabel(a.quarter), value: a.total! }));
+    .filter((a) => a.overall !== null)
+    .map((a) => ({ label: quarterLabel(a.quarter), value: a.overall! }));
 
   return (
-    <section className="card drilldown">
-      <div className="drilldown-head">
-        <div>
-          <h2>{stats.contractorName}</h2>
-          <p className="sub">
-            {stats.subRegionName} · {timeframeLabel} · {stats.audits.length}{" "}
-            review{stats.audits.length === 1 ? "" : "s"}
-            {!stats.active && " · inactive (project completed)"}
-          </p>
-        </div>
-        <button className="ghost" type="button" onClick={onClose}>
-          Close
-        </button>
-      </div>
-
+    <div>
       <div className="kpi-row">
         <div className="stat-tile">
           <div className="label">
@@ -202,6 +185,6 @@ export function ContractorDrilldown({
           </tbody>
         </table>
       )}
-    </section>
+    </div>
   );
 }

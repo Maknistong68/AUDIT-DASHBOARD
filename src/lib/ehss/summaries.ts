@@ -604,3 +604,57 @@ export function strengthAreas(trends: AreaTrend[], limit: number): AreaTrend[] {
     )
     .slice(0, limit);
 }
+
+/* ------------------------------------------------------------------ */
+/* Trends over quarters                                                */
+/* ------------------------------------------------------------------ */
+
+/** Observation counts per classification per quarter — "are documentation
+ * gaps rising while implementation gaps fall?" */
+export function observationTrendByQuarter(
+  rows: ObservationRow[],
+): { quarters: string[]; series: Array<{ code: ObservationCode; values: number[] }> } {
+  const quarters = [...new Set(rows.map((r) => r.quarter))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const codes: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
+  const series = codes.map((code) => ({
+    code,
+    values: quarters.map(
+      (q) =>
+        rows.filter((r) => r.quarter === q && r.observation === code).length,
+    ),
+  }));
+  return { quarters, series };
+}
+
+export interface ContractorSeries {
+  contractorId: string;
+  label: string;
+  /** Score per quarter, aligned to the shared quarter axis; null = no review. */
+  values: Array<number | null>;
+}
+
+/** One score series per contractor on a shared quarter axis. */
+export function contractorSeriesByQuarter(
+  summaries: AuditSummary[],
+): { quarters: string[]; series: ContractorSeries[] } {
+  const rows = finalized(summaries);
+  const quarters = [...new Set(rows.map((s) => s.quarter))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  const byContractor = new Map<string, AuditSummary[]>();
+  for (const s of rows) {
+    const list = byContractor.get(s.contractorId) ?? [];
+    list.push(s);
+    byContractor.set(s.contractorId, list);
+  }
+  const series = [...byContractor.entries()].map(([contractorId, list]) => ({
+    contractorId,
+    label: `${list[0]!.contractorName} (${list[0]!.contractorCode})`,
+    values: quarters.map(
+      (q) => list.find((s) => s.quarter === q)?.overall ?? null,
+    ),
+  }));
+  return { quarters, series };
+}

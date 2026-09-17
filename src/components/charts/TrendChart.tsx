@@ -26,9 +26,23 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
   const iw = W - pad.left - pad.right;
   const ih = H - pad.top - pad.bottom;
 
+  // Scores sit in a narrow band, so a fixed 0–100 axis flattens the shape.
+  // Fit to the data with headroom (min 25-point span) and keep 90% visible.
+  const vals = points.map((p) => p.value);
+  const centre = (Math.min(...vals) + Math.max(...vals)) / 2;
+  const span = Math.max(25, Math.max(...vals) - Math.min(...vals) + 10);
+  let yMin = Math.max(0, Math.floor((centre - span / 2) / 5) * 5);
+  let yMax = Math.min(100, Math.ceil((centre + span / 2) / 5) * 5);
+  if (yMax < 92) yMax = Math.min(100, yMax + 5);
+  if (yMax - yMin < 20) yMin = Math.max(0, yMax - 20);
+  const ticks = [0, 1, 2, 3, 4].map(
+    (k) => Math.round((yMin + ((yMax - yMin) * k) / 4) * 10) / 10,
+  );
+
   const x = (i: number) =>
     pad.left + (points.length === 1 ? iw / 2 : (i / (points.length - 1)) * iw);
-  const y = (v: number) => pad.top + ih - (v / 100) * ih;
+  const y = (v: number) =>
+    pad.top + ih - ((v - yMin) / (yMax - yMin)) * ih;
 
   const linePath = points
     .map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`)
@@ -36,6 +50,9 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
   const areaPath =
     `${linePath} L${x(points.length - 1).toFixed(1)},${(pad.top + ih).toFixed(1)}` +
     ` L${x(0).toFixed(1)},${(pad.top + ih).toFixed(1)} Z`;
+
+  // The 90% target, drawn when it falls inside the fitted axis.
+  const showTarget = yMin <= 90 && yMax >= 90;
 
   function onMove(e: React.PointerEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -65,14 +82,14 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
         onPointerLeave={() => setHover(null)}
       >
         {/* gridlines: hairline, recessive, clean steps */}
-        {[0, 25, 50, 75, 100].map((v) => (
+        {ticks.map((v, k) => (
           <g key={v}>
             <line
               x1={pad.left}
               x2={W - pad.right}
               y1={y(v)}
               y2={y(v)}
-              stroke={v === 0 ? "var(--baseline)" : "var(--grid)"}
+              stroke={k === 0 ? "var(--baseline)" : "var(--grid)"}
               strokeWidth={1}
             />
             <text
@@ -87,6 +104,16 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
           </g>
         ))}
 
+        {showTarget && (
+          <line
+            x1={pad.left}
+            x2={W - pad.right}
+            y1={y(90)}
+            y2={y(90)}
+            stroke="var(--status-good)"
+            strokeWidth={1}
+          />
+        )}
         <path d={areaPath} fill="var(--accent)" opacity={0.1} />
         <path
           d={linePath}
