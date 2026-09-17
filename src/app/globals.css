@@ -30,12 +30,17 @@
   --series-3: #1baf7a;
   --series-4: #eda100;
 
-  /* Rating bands: the ordered scale the score is read against */
-  --band-compliant: #0ca30c;
-  --band-mostly: #1baf7a;
-  --band-moderate: #eda100;
-  --band-minimal: #ec835a;
-  --band-non: #d03b3b;
+  /* Rating bands — the project's traffic-light scale (green → red), taken
+     from the EHSS scorecard legend. Ordered status, not categorical
+     identity: position, the printed value, the key and the badge label all
+     carry the meaning, so colour is never the only channel. Steps are
+     darkened just enough to stay visible on the light surface — the
+     reference yellow sits at 1.05:1, which renders as a blank gap. */
+  --band-compliant: #00a64f;  /* 90–100  (ref #00B050) */
+  --band-mostly: #7fbf3f;     /* 80–89   (ref #92D050) */
+  --band-moderate: #d9b400;   /* 70–79   (ref #FFFF00) */
+  --band-minimal: #e88a00;    /* 60–69   (ref #FFC000) */
+  --band-non: #e62e2e;        /* below 60 (ref #FF0000) */
 
   --tile-wash: linear-gradient(160deg, rgba(42, 120, 214, 0.07), transparent 62%);
 }
@@ -64,8 +69,12 @@
     --series-3: #199e70;
     --series-4: #c98500;
 
-    --band-mostly: #199e70;
-    --band-moderate: #c98500;
+    /* Dark surface lets the reference colours run brighter */
+    --band-compliant: #22b85c;
+    --band-mostly: #92d050;
+    --band-moderate: #f5d000;
+    --band-minimal: #ffb020;
+    --band-non: #ff5c5c;
 
     --tile-wash: linear-gradient(160deg, rgba(57, 135, 229, 0.12), transparent 62%);
   }
@@ -238,10 +247,13 @@ a {
   background: var(--tile-accent, var(--accent));
 }
 
-.stat-tile.tone-good { --tile-accent: var(--status-good); }
-.stat-tile.tone-warning { --tile-accent: var(--status-warning); }
-.stat-tile.tone-serious { --tile-accent: var(--status-serious); }
-.stat-tile.tone-critical { --tile-accent: var(--status-critical); }
+.stat-tile.tone-compliant { --tile-accent: var(--band-compliant); }
+.stat-tile.tone-mostly { --tile-accent: var(--band-mostly); }
+.stat-tile.tone-moderate { --tile-accent: var(--band-moderate); }
+.stat-tile.tone-minimal { --tile-accent: var(--band-minimal); }
+.stat-tile.tone-non { --tile-accent: var(--band-non); }
+.stat-tile.tone-good { --tile-accent: var(--band-compliant); }
+.stat-tile.tone-warning { --tile-accent: var(--band-moderate); }
 .stat-tile.tone-neutral { --tile-accent: var(--baseline); }
 
 .stat-tile .label {
@@ -313,17 +325,25 @@ table.data a:hover {
 
 .meter .track {
   width: 110px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--accent-track);
+  height: 8px;
+  border-radius: 4px;
+  /* Neutral track: the fill carries the rating colour, so a tinted track
+     would wash it out. */
+  background: var(--grid);
   overflow: hidden;
 }
 
 .meter .fill {
   height: 100%;
-  background: var(--accent);
-  border-radius: 0 3px 3px 0;
+  background: var(--meter-fill, var(--accent));
+  border-radius: 4px;
 }
+
+.meter.band-compliant { --meter-fill: var(--band-compliant); }
+.meter.band-mostly { --meter-fill: var(--band-mostly); }
+.meter.band-moderate { --meter-fill: var(--band-moderate); }
+.meter.band-minimal { --meter-fill: var(--band-minimal); }
+.meter.band-non { --meter-fill: var(--band-non); }
 
 .meter .pct {
   font-variant-numeric: tabular-nums;
@@ -356,6 +376,13 @@ table.data a:hover {
 .badge.serious .dot { background: var(--status-serious); }
 .badge.critical .dot { background: var(--status-critical); }
 .badge.accent .dot { background: var(--accent); }
+
+/* Rating badges use the traffic-light bands, so a badge and its bar match */
+.badge.band-compliant .dot { background: var(--band-compliant); }
+.badge.band-mostly .dot { background: var(--band-mostly); }
+.badge.band-moderate .dot { background: var(--band-moderate); }
+.badge.band-minimal .dot { background: var(--band-minimal); }
+.badge.band-non .dot { background: var(--band-non); }
 
 /* ---- Forms & buttons ---- */
 
@@ -785,11 +812,11 @@ table.data td.strong {
 }
 
 td.cell-good {
-  background: rgba(12, 163, 12, 0.1);
+  background: color-mix(in srgb, var(--band-compliant) 16%, transparent);
 }
 
 td.cell-weak {
-  background: rgba(208, 59, 59, 0.1);
+  background: color-mix(in srgb, var(--band-non) 14%, transparent);
 }
 
 .inactive-tag {
@@ -969,4 +996,12 @@ td.cell-weak {
   height: 10px;
   border-radius: 3px;
   display: inline-block;
+}
+
+.band-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
 }

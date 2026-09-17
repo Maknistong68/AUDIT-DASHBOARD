@@ -16,19 +16,19 @@ export function AuditStatusBadge({ status }: { status: EhssAuditStatus }) {
   );
 }
 
-/** Rating bands from the workbook. Color supplements the label, never alone. */
-const RATING_TONE: Record<string, string> = {
-  Compliant: "good",
-  "Mostly Compliant": "good",
-  "Moderately Compliant": "warning",
-  "Minimally Compliant": "serious",
-  "Non-Compliant": "critical",
+/** Rating badge: the band's colour supplements its name, never replaces it. */
+const BAND_CLASS: Record<string, string> = {
+  Compliant: "band-compliant",
+  "Mostly Compliant": "band-mostly",
+  "Moderately Compliant": "band-moderate",
+  "Minimally Compliant": "band-minimal",
+  "Non-Compliant": "band-non",
 };
 
 export function RatingBadge({ rating }: { rating: string | null }) {
   if (!rating) return <span style={{ color: "var(--muted)" }}>—</span>;
   return (
-    <span className={`badge ${RATING_TONE[rating] ?? ""}`}>
+    <span className={`badge ${BAND_CLASS[rating] ?? ""}`}>
       <span className="dot" aria-hidden />
       {rating}
     </span>

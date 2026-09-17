@@ -5,6 +5,8 @@
  * Full / Partial / No / N-A answers, and the workbook's scoring formula.
  */
 
+import { bandFor, type Band } from "./bands";
+
 /** Answer options — the workbook's dropdown (Full / Partial / No / N/A). */
 export type EhssAnswer = "full" | "partial" | "no" | "na";
 
@@ -99,23 +101,14 @@ export const OBSERVATION_BY_CODE: Record<ObservationCode, ObservationOption> =
     OBSERVATION_OPTIONS.map((o) => [o.code, o]),
   ) as Record<ObservationCode, ObservationOption>;
 
-/** Rating bands from the workbook's score summary. */
-export interface RatingBand {
-  label: string;
-  min: number; // percent, inclusive
-}
+/** Rating bands — defined once in ./bands, which also carries their colours,
+ * so the label a badge shows and the colour a bar takes can never drift. */
+export type RatingBand = Band;
 
-export const RATING_BANDS: RatingBand[] = [
-  { label: "Compliant", min: 90 },
-  { label: "Mostly Compliant", min: 80 },
-  { label: "Moderately Compliant", min: 70 },
-  { label: "Minimally Compliant", min: 60 },
-  { label: "Non-Compliant", min: 0 },
-];
+export { BANDS as RATING_BANDS, bandFor } from "./bands";
 
 export function ratingFor(percent: number | null): string | null {
-  if (percent === null) return null;
-  return RATING_BANDS.find((b) => percent >= b.min)?.label ?? null;
+  return bandFor(percent)?.label ?? null;
 }
 
 export type EhssAuditStatus = "draft" | "submitted" | "approved";

@@ -21,6 +21,7 @@ import {
   ratingFor,
 } from "@/lib/ehss/model";
 import { contractorLabel } from "@/lib/ehss/mock";
+import { bandFor } from "@/lib/ehss/bands";
 import {
   TIMEFRAMES,
   areaTrends,
@@ -35,16 +36,6 @@ import {
   weakestSubSections,
   type TimeframeId,
 } from "@/lib/ehss/summaries";
-
-/** Tile accent follows the rating band the value falls in. */
-function toneFor(score: number | null): "good" | "warning" | "serious" | "critical" | "neutral" {
-  if (score === null) return "neutral";
-  if (score >= 90) return "good";
-  if (score >= 80) return "good";
-  if (score >= 70) return "warning";
-  if (score >= 60) return "serious";
-  return "critical";
-}
 
 export function DashboardClient() {
   const { subRegions, contractors, audits } = useEhss();
@@ -201,12 +192,12 @@ export function DashboardClient() {
           label="Average score"
           value={formatScore(programAvg)}
           hint={timeframeLabel.toLowerCase()}
-          tone={toneFor(programAvg)}
+          tone={bandFor(programAvg)?.id}
         />
         <StatTile
           label="Rating"
           value={ratingFor(programAvg) ?? "—"}
-          tone={toneFor(programAvg)}
+          tone={bandFor(programAvg)?.id}
         />
         <StatTile
           label="Reviews in scope"
@@ -222,7 +213,7 @@ export function DashboardClient() {
               ? "all active contractors reviewed"
               : `${activeInScope.length - covered} review${activeInScope.length - covered === 1 ? "" : "s"} outstanding`
           }
-          tone={covered === activeInScope.length ? "good" : "warning"}
+          tone={covered === activeInScope.length ? "compliant" : "moderate"}
         />
       </div>
 

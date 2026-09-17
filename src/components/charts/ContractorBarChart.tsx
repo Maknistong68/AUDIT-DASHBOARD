@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatScore } from "@/lib/format";
+import { BANDS, bandColor } from "@/lib/ehss/bands";
 
 export interface ContractorBarDatum {
   id: string;
@@ -15,26 +16,10 @@ export interface ContractorBarDatum {
   delta: number | null;
 }
 
-/** Bars are coloured by the rating band the score falls in — an ordered
- * status scale, not a rank: the colour follows the value, so it never moves
- * when the filter changes the order. Every band is also named in the key
- * and the tooltip, so nothing rests on colour alone. */
-const BAND_VAR = (score: number | null): string => {
-  if (score === null) return "var(--muted)";
-  if (score >= 90) return "var(--band-compliant)";
-  if (score >= 80) return "var(--band-mostly)";
-  if (score >= 70) return "var(--band-moderate)";
-  if (score >= 60) return "var(--band-minimal)";
-  return "var(--band-non)";
-};
-
-export const RATING_KEY: Array<{ label: string; varName: string }> = [
-  { label: "Compliant 90+", varName: "var(--band-compliant)" },
-  { label: "Mostly 80–89", varName: "var(--band-mostly)" },
-  { label: "Moderately 70–79", varName: "var(--band-moderate)" },
-  { label: "Minimally 60–69", varName: "var(--band-minimal)" },
-  { label: "Non-compliant <60", varName: "var(--band-non)" },
-];
+export const RATING_KEY = BANDS.map((b) => ({
+  label: `${b.label} ${b.range}`,
+  varName: b.varName,
+}));
 
 /**
  * League table of contractors for the selected timeframe. Bars are clickable
@@ -179,7 +164,7 @@ export function ContractorBarChart({
                 <>
                   <path
                     d={barPath(w, yTop)}
-                    fill={BAND_VAR(d.value)}
+                    fill={bandColor(d.value)}
                     opacity={dimmed ? 0.3 : hover === i ? 0.85 : 1}
                   />
                   <text

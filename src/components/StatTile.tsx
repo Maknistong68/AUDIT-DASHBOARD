@@ -8,7 +8,13 @@ export function StatTile({
   value: string;
   hint?: string;
   /** Accent stripe: follows the rating band, never the rank. */
-  tone?: "good" | "warning" | "serious" | "critical" | "neutral";
+  tone?:
+    | "compliant"
+    | "mostly"
+    | "moderate"
+    | "minimal"
+    | "non"
+    | "neutral";
 }) {
   return (
     <div className={`stat-tile${tone ? ` tone-${tone}` : ""}`}>

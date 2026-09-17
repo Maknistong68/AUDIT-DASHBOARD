@@ -37,14 +37,19 @@ export default async function AdminPage() {
           from the calculation. Sub-section = points ÷ applicable weight;
           section = mean of sub-sections; total = mean of sections.
         </p>
-        <table className="data" style={{ maxWidth: 420 }}>
+        <table className="data" style={{ maxWidth: 460 }}>
           <tbody>
-            {RATING_BANDS.map((b, i) => (
+            {RATING_BANDS.map((b) => (
               <tr key={b.label}>
-                <td>{b.label}</td>
-                <td className="num">
-                  {i === 0 ? `${b.min}–100%` : `${b.min}–${RATING_BANDS[i - 1]!.min - 1}%`}
+                <td style={{ width: 28 }}>
+                  <span
+                    className="band-swatch"
+                    style={{ background: b.varName }}
+                    aria-hidden
+                  />
                 </td>
+                <td>{b.label}</td>
+                <td className="num">{b.range}</td>
               </tr>
             ))}
           </tbody>
