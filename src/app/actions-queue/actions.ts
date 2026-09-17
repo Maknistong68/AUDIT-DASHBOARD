@@ -3,12 +3,18 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isDemoMode } from "@/lib/demo/mode";
 
 /** Advance a corrective action on a finalized audit. Permission (the audit's
  * own auditor or an admin) is enforced by public.update_corrective_action. */
 export async function updateCorrectiveAction(
   formData: FormData,
 ): Promise<void> {
+  if (isDemoMode()) {
+    redirect(
+      `/actions-queue?error=${encodeURIComponent("Demo mode — changes aren't saved.")}`,
+    );
+  }
   const auditId = String(formData.get("audit_id") ?? "");
   const questionId = String(formData.get("question_id") ?? "");
   const status = String(formData.get("status") ?? "");

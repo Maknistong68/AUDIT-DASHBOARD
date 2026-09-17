@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isDemoMode } from "@/lib/demo/mode";
 
 /**
  * Admin mutations for reference data and user roles. RLS is the real gate
@@ -14,7 +15,12 @@ function back(path: string, error?: string): never {
   redirect(error ? `${path}?error=${encodeURIComponent(error)}` : path);
 }
 
+function guardDemo(path: string): void {
+  if (isDemoMode()) back(path, "Demo mode — changes aren't saved.");
+}
+
 export async function addContractor(formData: FormData): Promise<void> {
+  guardDemo("/admin/contractors");
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
   if (!code || !name) back("/admin/contractors", "Code and name are required.");
@@ -34,6 +40,7 @@ export async function addContractor(formData: FormData): Promise<void> {
 }
 
 export async function setContractorActive(formData: FormData): Promise<void> {
+  guardDemo("/admin/contractors");
   const id = String(formData.get("id") ?? "");
   const active = String(formData.get("active") ?? "") === "true";
 
@@ -48,6 +55,7 @@ export async function setContractorActive(formData: FormData): Promise<void> {
 }
 
 export async function addNcCategory(formData: FormData): Promise<void> {
+  guardDemo("/admin/nc-categories");
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim() || null;
@@ -70,6 +78,7 @@ export async function addNcCategory(formData: FormData): Promise<void> {
 }
 
 export async function setNcCategoryActive(formData: FormData): Promise<void> {
+  guardDemo("/admin/nc-categories");
   const id = String(formData.get("id") ?? "");
   const active = String(formData.get("active") ?? "") === "true";
 
@@ -85,6 +94,7 @@ export async function setNcCategoryActive(formData: FormData): Promise<void> {
 }
 
 export async function addQuestion(formData: FormData): Promise<void> {
+  guardDemo("/admin/questions");
   const auditTypeId = String(formData.get("audit_type_id") ?? "");
   const path = `/admin/questions?type=${auditTypeId}`;
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
@@ -118,6 +128,7 @@ export async function addQuestion(formData: FormData): Promise<void> {
 }
 
 export async function updateQuestion(formData: FormData): Promise<void> {
+  guardDemo("/admin/questions");
   const id = String(formData.get("id") ?? "");
   const auditTypeId = String(formData.get("audit_type_id") ?? "");
   const path = `/admin/questions?type=${auditTypeId}`;
@@ -136,6 +147,7 @@ export async function updateQuestion(formData: FormData): Promise<void> {
 }
 
 export async function setUserRole(formData: FormData): Promise<void> {
+  guardDemo("/admin/users");
   const id = String(formData.get("id") ?? "");
   const role = String(formData.get("role") ?? "");
   if (!["admin", "auditor", "viewer"].includes(role)) {

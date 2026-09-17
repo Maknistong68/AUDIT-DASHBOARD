@@ -98,6 +98,17 @@ npm run build           # production build
 PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
 ```
 
+## Demo mode (no database)
+
+When Supabase env vars are absent (or `NEXT_PUBLIC_DEMO_MODE=1`), the app
+runs entirely on a built-in dataset (`src/lib/demo/`): no database, no
+authentication — a lightweight onboarding page (name + role, stored in a
+cookie) replaces login. All dashboards are populated (Contractor One/Two/
+Three, six audits), the draft audit's scoring form works live, and every
+mutation is blocked with a "demo mode" message. **Deploy to Vercel with no
+env vars and you get this demo.** Setting the two Supabase env vars switches
+the app back to real database mode automatically.
+
 ## Deploying
 
 Step-by-step Supabase + Vercel instructions: **`docs/DEPLOYMENT.md`**.

@@ -48,6 +48,24 @@ of those.
 
 ## Architecture
 
+### Demo mode vs. database mode
+
+The app has two data sources behind one data layer (`src/lib/data.ts`),
+which every page reads through — pages never call Supabase directly:
+
+- **Demo mode** (`src/lib/demo/mode.ts`: active when Supabase env vars are
+  absent, or `NEXT_PUBLIC_DEMO_MODE=1`): serves the built-in dataset in
+  `src/lib/demo/data.ts` (kept equivalent to `supabase/mock_data.sql` —
+  change one, change the other). No auth — middleware gates on a
+  `demo_profile` cookie set by the `/welcome` onboarding page, and every
+  server action starts with an `isDemoMode()` guard returning a "demo mode"
+  error. A Vercel deploy with no env vars is the demo.
+- **Database mode**: the original Supabase + RLS path, restored simply by
+  configuring the env vars.
+
+New pages must go through `src/lib/data.ts` (add a function with both
+branches) and new server actions need the demo guard.
+
 ### The database is the source of truth; the client mirrors it
 
 Scoring exists twice, deliberately identical:

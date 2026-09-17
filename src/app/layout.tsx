@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import type { ProfileRow } from "@/lib/db";
+import { getCurrentUser } from "@/lib/data";
+import { isDemoMode } from "@/lib/demo/mode";
 
 export const metadata: Metadata = {
   title: "Audit Dashboard",
@@ -11,27 +10,13 @@ export const metadata: Metadata = {
     "Contractor audit scoring and compliance-trend analytics platform",
 };
 
-async function currentProfile(): Promise<ProfileRow | null> {
-  if (!hasSupabaseEnv()) return null;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, role")
-    .eq("id", user.id)
-    .single();
-  return (data as ProfileRow | null) ?? null;
-}
-
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const profile = await currentProfile();
+  const user = await getCurrentUser();
+  const demo = isDemoMode();
 
   return (
     <html lang="en">
@@ -41,21 +26,22 @@ export default async function RootLayout({
             <Link className="brand" href="/">
               Audit Dashboard
             </Link>
-            {profile && (
+            {user && (
               <>
                 <nav>
                   <Link href="/">Overview</Link>
                   <Link href="/contractors">Contractors</Link>
                   <Link href="/audits">Audits</Link>
                   <Link href="/actions-queue">Actions</Link>
-                  {profile.role === "admin" && <Link href="/admin">Admin</Link>}
+                  {user.role === "admin" && <Link href="/admin">Admin</Link>}
                 </nav>
                 <span className="who">
-                  {profile.full_name ?? "Signed in"} · {profile.role}
+                  {user.name ?? "Signed in"} · {user.role}
+                  {demo ? " · demo" : ""}
                 </span>
                 <form action="/auth/signout" method="post">
                   <button className="ghost" type="submit">
-                    Sign out
+                    {demo ? "Restart demo" : "Sign out"}
                   </button>
                 </form>
               </>

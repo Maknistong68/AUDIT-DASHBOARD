@@ -1,13 +1,24 @@
-import { hasSupabaseEnv } from "@/lib/supabase/env";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import { isDemoMode } from "@/lib/demo/mode";
 import { NewAuditForm } from "./NewAuditForm";
 import type { AuditTypeRow, ContractorRow } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewAuditPage() {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
+  if (isDemoMode()) {
+    return (
+      <section className="card" style={{ maxWidth: 480 }}>
+        <h2>New audit</h2>
+        <p className="sub">
+          Creating audits needs the database and is disabled in the demo — but
+          you can try the scoring form on the{" "}
+          <Link href="/audits/a7">draft audit</Link>.
+        </p>
+      </section>
+    );
+  }
 
   const supabase = await createClient();
   const [contractorsRes, typesRes] = await Promise.all([

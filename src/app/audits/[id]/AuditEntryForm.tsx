@@ -45,6 +45,7 @@ export function AuditEntryForm({
   auditStatus,
   canEdit,
   isAdmin,
+  demoMode = false,
   questions,
   responses,
   ncCategories,
@@ -53,6 +54,7 @@ export function AuditEntryForm({
   auditStatus: AuditStatus;
   canEdit: boolean;
   isAdmin: boolean;
+  demoMode?: boolean;
   questions: AuditQuestionRow[];
   responses: AuditResponseRow[];
   ncCategories: NcCategoryRow[];
@@ -288,7 +290,13 @@ export function AuditEntryForm({
             {message}
           </span>
         )}
-        {canEdit && (
+        {canEdit && demoMode && (
+          <span style={{ color: "var(--muted)", fontSize: 12.5 }}>
+            Demo — the live score responds to your changes, but nothing is
+            saved.
+          </span>
+        )}
+        {canEdit && !demoMode && (
           <>
             <button
               className="ghost"
@@ -318,7 +326,7 @@ export function AuditEntryForm({
             </button>
           </>
         )}
-        {isAdmin && auditStatus === "submitted" && (
+        {isAdmin && !demoMode && auditStatus === "submitted" && (
           <button
             className="primary"
             type="button"

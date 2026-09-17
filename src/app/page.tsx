@@ -1,19 +1,17 @@
 import Link from "next/link";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import {
+  getAuditScores,
+  getLatestScores,
+  getNcBreakdown,
+  getWeakestQuestions,
+} from "@/lib/data";
 import { StatTile } from "@/components/StatTile";
 import { ScoreMeter } from "@/components/ScoreMeter";
 import { TrendChart, type TrendChartPoint } from "@/components/charts/TrendChart";
 import { ParetoBars } from "@/components/charts/ParetoBars";
 import { ncCategoryBreakdown } from "@/lib/scoring";
 import { formatScore } from "@/lib/format";
-import type {
-  AuditScoreRow,
-  ContractorLatestScoreRow,
-  NcBreakdownRow,
-  QuestionPerformanceRow,
-} from "@/lib/db";
+import type { AuditScoreRow } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -38,25 +36,12 @@ function monthlyAverages(rows: AuditScoreRow[]): TrendChartPoint[] {
 }
 
 export default async function OverviewPage() {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
-
-  const supabase = await createClient();
-
-  const [scoresRes, latestRes, ncRes, questionsRes] = await Promise.all([
-    supabase.from("v_audit_scores").select("*").order("audit_date"),
-    supabase.from("v_contractor_latest_scores").select("*"),
-    supabase.from("v_nc_breakdown").select("*"),
-    supabase
-      .from("v_question_performance")
-      .select("*")
-      .order("compliance_rate", { ascending: true })
-      .limit(8),
+  const [scores, latest, ncRows, weakest] = await Promise.all([
+    getAuditScores(),
+    getLatestScores(),
+    getNcBreakdown(),
+    getWeakestQuestions(8),
   ]);
-
-  const scores = (scoresRes.data ?? []) as AuditScoreRow[];
-  const latest = (latestRes.data ?? []) as ContractorLatestScoreRow[];
-  const ncRows = (ncRes.data ?? []) as NcBreakdownRow[];
-  const weakest = (questionsRes.data ?? []) as QuestionPerformanceRow[];
 
   const scored = latest.filter((l) => l.latest_score !== null);
   const programAvg =

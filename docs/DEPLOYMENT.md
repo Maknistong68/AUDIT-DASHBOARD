@@ -1,5 +1,18 @@
 # Deployment — Supabase + Vercel
 
+## Option A — demo mode, no database (fastest)
+
+Import the repository into Vercel (framework preset: Next.js) and deploy
+with **no environment variables**. The app detects the missing Supabase
+config and runs in demo mode: a name-and-role onboarding page instead of
+login, built-in sample data (Contractor One/Two/Three, six audits) filling
+every dashboard, a live scoring form on the draft audit, and all writes
+disabled with a "demo mode" message. Later, adding the two env vars from
+Option B (plus a redeploy) switches the same deployment to the real
+database with authentication — no code change.
+
+## Option B — full deployment with Supabase
+
 Three steps: apply the database, create your account, deploy the frontend.
 Nothing here needs the service-role key; the app runs entirely on the anon
 key with RLS as the security boundary.

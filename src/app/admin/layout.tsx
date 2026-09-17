@@ -1,24 +1,16 @@
 import Link from "next/link";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import { getCurrentUser } from "@/lib/data";
+import { isDemoMode } from "@/lib/demo/mode";
+import { DemoAdminView } from "./DemoAdminView";
 
 export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
+  const user = await getCurrentUser();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).single()
-    : { data: null };
-
-  if ((profile as { role: string } | null)?.role !== "admin") {
+  if (user?.role !== "admin") {
     return (
       <div className="card">
         <h2>Admins only</h2>
@@ -28,6 +20,10 @@ export default async function AdminLayout({
         </p>
       </div>
     );
+  }
+
+  if (isDemoMode()) {
+    return <DemoAdminView />;
   }
 
   return (

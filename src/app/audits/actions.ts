@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isDemoMode } from "@/lib/demo/mode";
 import type {
   AuditResult,
   CorrectiveActionStatus,
@@ -14,10 +15,15 @@ export interface ActionState {
   savedAt?: number;
 }
 
+const DEMO_ERROR: ActionState = {
+  error: "Demo mode — changes aren't saved.",
+};
+
 export async function createAudit(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_ERROR;
   const contractorId = String(formData.get("contractor_id") ?? "");
   const auditTypeId = String(formData.get("audit_type_id") ?? "");
   const auditDate = String(formData.get("audit_date") ?? "");
@@ -65,6 +71,7 @@ export async function saveResponses(
   auditId: string,
   responses: ResponseInput[],
 ): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_ERROR;
   if (responses.length === 0) {
     return { error: "Nothing to save yet — set a result on at least one question." };
   }
@@ -95,6 +102,7 @@ export async function saveResponses(
 }
 
 export async function submitAudit(auditId: string): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_ERROR;
   const supabase = await createClient();
 
   const [auditRes, questionCountRes, responseCountRes] = await Promise.all([
@@ -139,6 +147,7 @@ export async function submitAudit(auditId: string): Promise<ActionState> {
 }
 
 export async function approveAudit(auditId: string): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_ERROR;
   const supabase = await createClient();
   const { error } = await supabase
     .from("audits")
@@ -154,6 +163,7 @@ export async function approveAudit(auditId: string): Promise<ActionState> {
 }
 
 export async function deleteAudit(auditId: string): Promise<ActionState> {
+  if (isDemoMode()) return DEMO_ERROR;
   const supabase = await createClient();
   const { error, count } = await supabase
     .from("audits")

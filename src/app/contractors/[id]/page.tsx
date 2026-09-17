@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import {
+  getContractor,
+  getContractorScores,
+  getNcBreakdown,
+} from "@/lib/data";
 import { StatTile } from "@/components/StatTile";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { ParetoBars } from "@/components/charts/ParetoBars";
 import { CorrectiveActionBadge } from "@/components/Badges";
 import { ncCategoryBreakdown, trendDelta } from "@/lib/scoring";
 import { formatDate, formatScore } from "@/lib/format";
-import type { AuditScoreRow, ContractorRow, NcBreakdownRow } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,25 +19,14 @@ export default async function ContractorPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
   const { id } = await params;
 
-  const supabase = await createClient();
-  const [contractorRes, scoresRes, ncRes] = await Promise.all([
-    supabase.from("contractors").select("*").eq("id", id).maybeSingle(),
-    supabase
-      .from("v_audit_scores")
-      .select("*")
-      .eq("contractor_id", id)
-      .order("audit_date"),
-    supabase.from("v_nc_breakdown").select("*").eq("contractor_id", id),
+  const [contractor, scores, ncRows] = await Promise.all([
+    getContractor(id),
+    getContractorScores(id),
+    getNcBreakdown(id),
   ]);
-
-  const contractor = contractorRes.data as ContractorRow | null;
   if (!contractor) notFound();
-
-  const scores = (scoresRes.data ?? []) as AuditScoreRow[];
-  const ncRows = (ncRes.data ?? []) as NcBreakdownRow[];
 
   const scored = scores.filter((s) => s.score !== null);
   const latest = scored[scored.length - 1];
@@ -59,13 +49,15 @@ export default async function ContractorPage({
         <StatTile
           label={`${contractor.code} · latest score`}
           value={formatScore(latest ? Number(latest.score) : null)}
-          hint={latest ? `${latest.audit_type_name}, ${formatDate(latest.audit_date)}` : "no finalized audits"}
+          hint={
+            latest
+              ? `${latest.audit_type_name}, ${formatDate(latest.audit_date)}`
+              : "no finalized audits"
+          }
         />
         <StatTile
           label="Trend since first audit"
-          value={
-            delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta} pts`
-          }
+          value={delta === null ? "—" : `${delta > 0 ? "+" : ""}${delta} pts`}
         />
         <StatTile label="Finalized audits" value={String(scores.length)} />
         <StatTile

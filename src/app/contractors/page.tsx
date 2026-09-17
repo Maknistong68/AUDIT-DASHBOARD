@@ -1,24 +1,17 @@
 import Link from "next/link";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import { getContractors, getLatestScores } from "@/lib/data";
 import { ScoreMeter } from "@/components/ScoreMeter";
 import { formatDate } from "@/lib/format";
-import type { ContractorLatestScoreRow, ContractorRow } from "@/lib/db";
+import type { ContractorLatestScoreRow } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export default async function ContractorsPage() {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
-
-  const supabase = await createClient();
-  const [contractorsRes, latestRes] = await Promise.all([
-    supabase.from("contractors").select("*").eq("active", true).order("name"),
-    supabase.from("v_contractor_latest_scores").select("*"),
+  const [contractors, latest] = await Promise.all([
+    getContractors(),
+    getLatestScores(),
   ]);
 
-  const contractors = (contractorsRes.data ?? []) as ContractorRow[];
-  const latest = (latestRes.data ?? []) as ContractorLatestScoreRow[];
   const byContractor = new Map<string, ContractorLatestScoreRow[]>();
   for (const l of latest) {
     const list = byContractor.get(l.contractor_id) ?? [];
@@ -31,10 +24,7 @@ export default async function ContractorsPage() {
       <h2>Contractors</h2>
       <p className="sub">Latest finalized score per audit type</p>
       {contractors.length === 0 ? (
-        <div className="chart-empty">
-          No contractors yet — an admin adds them in the database (or a future
-          admin screen).
-        </div>
+        <div className="chart-empty">No contractors yet.</div>
       ) : (
         <table className="data">
           <thead>

@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { hasSupabaseEnv } from "@/lib/supabase/env";
-import { createClient } from "@/lib/supabase/server";
-import { SetupNotice } from "@/components/SetupNotice";
+import { getCurrentUser, getNcBreakdown, getOwnedAuditIds } from "@/lib/data";
+import { isDemoMode } from "@/lib/demo/mode";
 import { AdminError } from "@/components/AdminError";
 import { CorrectiveActionBadge } from "@/components/Badges";
 import { CORRECTIVE_ACTION_LABELS, formatDate } from "@/lib/format";
 import { updateCorrectiveAction } from "./actions";
-import type { NcBreakdownRow } from "@/lib/db";
 import type { CorrectiveActionStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -20,30 +18,19 @@ export default async function ActionsQueuePage({
 }: {
   searchParams: Promise<{ error?: string; all?: string }>;
 }) {
-  if (!hasSupabaseEnv()) return <SetupNotice />;
   const { error, all } = await searchParams;
   const showAll = all === "1";
+  const demo = isDemoMode();
 
-  const supabase = await createClient();
-  const [ncRes, auditsRes, userRes] = await Promise.all([
-    supabase.from("v_nc_breakdown").select("*").order("audit_date"),
-    supabase.from("audits").select("id, auditor_id"),
-    supabase.auth.getUser(),
+  const [allRows, user] = await Promise.all([
+    getNcBreakdown(),
+    getCurrentUser(),
   ]);
+  const ownAudits = user
+    ? await getOwnedAuditIds(user.id)
+    : new Set<string>();
+  const isAdmin = user?.role === "admin";
 
-  const userId = userRes.data.user?.id;
-  const { data: profileData } = userId
-    ? await supabase.from("profiles").select("role").eq("id", userId).single()
-    : { data: null };
-  const isAdmin = (profileData as { role: string } | null)?.role === "admin";
-
-  const ownAudits = new Set(
-    ((auditsRes.data ?? []) as { id: string; auditor_id: string }[])
-      .filter((a) => a.auditor_id === userId)
-      .map((a) => a.id),
-  );
-
-  const allRows = (ncRes.data ?? []) as NcBreakdownRow[];
   const rows = showAll
     ? allRows
     : allRows.filter(
@@ -56,9 +43,9 @@ export default async function ActionsQueuePage({
     <section className="card">
       <h2>Corrective actions</h2>
       <p className="sub">
-        Follow-up on non-compliances from finalized audits. The audit&apos;s
-        auditor and admins can advance the status here; the underlying audit
-        stays locked.
+        {demo
+          ? "Follow-up on non-compliances from finalized audits (read-only in the demo)."
+          : "Follow-up on non-compliances from finalized audits. The audit's auditor and admins can advance the status here; the underlying audit stays locked."}
       </p>
       <p>
         {showAll ? (
@@ -87,7 +74,8 @@ export default async function ActionsQueuePage({
           </thead>
           <tbody>
             {rows.map((r) => {
-              const canEdit = isAdmin || ownAudits.has(r.audit_id);
+              const canEdit =
+                !demo && (isAdmin || ownAudits.has(r.audit_id));
               return (
                 <tr key={`${r.audit_id}-${r.question_id}`}>
                   <td>
