@@ -6,22 +6,20 @@ import {
   OBSERVATION_BY_CODE,
   OBSERVATION_OPTIONS,
   quarterLabel,
-  type EhssContractor,
-  type SubRegion,
 } from "@/lib/ehss/model";
-import type { ObservationRow } from "@/lib/ehss/summaries";
+import { useEhss } from "@/lib/ehss/store";
+import { contractorLabel } from "@/lib/ehss/mock";
+import { collectObservations } from "@/lib/ehss/summaries";
 
 const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
 
-export function FindingsClient({
-  subRegions,
-  contractors,
-  observations,
-}: {
-  subRegions: SubRegion[];
-  contractors: EhssContractor[];
-  observations: ObservationRow[];
-}) {
+export function FindingsClient() {
+  const { subRegions, contractors, audits } = useEhss();
+  const observations = useMemo(
+    () => collectObservations(audits, contractors),
+    [audits, contractors],
+  );
+
   const [subRegionId, setSubRegionId] = useState("all");
   const [contractorId, setContractorId] = useState("all");
   const [observation, setObservation] = useState("all");
@@ -78,7 +76,7 @@ export function FindingsClient({
             <option value="all">All contractors</option>
             {contractorOptions.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {contractorLabel(c)}
               </option>
             ))}
           </select>

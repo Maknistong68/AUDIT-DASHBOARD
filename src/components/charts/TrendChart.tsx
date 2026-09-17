@@ -126,7 +126,7 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
         <text
           x={x(points.length - 1)}
           y={y(points[points.length - 1]!.value) - 10}
-          textAnchor="middle"
+          textAnchor={points.length === 1 ? "middle" : "end"}
           fontSize={12}
           fontWeight={650}
           fill="var(--ink-1)"

@@ -2,116 +2,144 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useEhss } from "@/lib/ehss/store";
 import { StatTile } from "@/components/StatTile";
 import { ScoreMeter } from "@/components/ScoreMeter";
-import { RatingBadge } from "@/components/Badges";
+import { ContractorBarChart } from "@/components/charts/ContractorBarChart";
+import { ContractorDrilldown } from "@/components/ContractorDrilldown";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { ParetoBars } from "@/components/charts/ParetoBars";
 import { formatScore } from "@/lib/format";
 import {
   OBSERVATION_BY_CODE,
   quarterLabel,
+  quarterOf,
   ratingFor,
-  type EhssContractor,
-  type SubRegion,
 } from "@/lib/ehss/model";
+import { contractorLabel } from "@/lib/ehss/mock";
 import {
+  TIMEFRAMES,
+  areaTrends,
   averageByQuarter,
+  collectObservations,
+  contractorStats,
   finalized,
-  latestByContractor,
+  observationBreakdown,
+  summarizeAll,
+  timeframeById,
+  topIssues,
   weakestSubSections,
-  type AuditSummary,
-  type ObservationRow,
+  type TimeframeId,
 } from "@/lib/ehss/summaries";
 
-export function DashboardClient({
-  subRegions,
-  contractors,
-  summaries,
-  observations,
-}: {
-  subRegions: SubRegion[];
-  contractors: EhssContractor[];
-  summaries: AuditSummary[];
-  observations: ObservationRow[];
-}) {
-  const [subRegionId, setSubRegionId] = useState<string>("all");
-  const [contractorId, setContractorId] = useState<string>("all");
+export function DashboardClient() {
+  const { subRegions, contractors, audits } = useEhss();
 
-  const contractorOptions =
-    subRegionId === "all"
-      ? contractors
-      : contractors.filter((c) => c.subRegionId === subRegionId);
+  const [subRegionId, setSubRegionId] = useState("all");
+  const [timeframe, setTimeframe] = useState<TimeframeId>("last4");
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const filtered = useMemo(
+  const inScope = useMemo(
     () =>
-      summaries.filter(
-        (s) =>
-          (subRegionId === "all" || s.subRegionId === subRegionId) &&
-          (contractorId === "all" || s.contractorId === contractorId),
+      contractors.filter(
+        (c) =>
+          (subRegionId === "all" || c.subRegionId === subRegionId) &&
+          (includeInactive || c.active),
       ),
-    [summaries, subRegionId, contractorId],
+    [contractors, subRegionId, includeInactive],
   );
-  const filteredObs = useMemo(
-    () =>
-      observations.filter(
-        (o) =>
-          (subRegionId === "all" || o.subRegionId === subRegionId) &&
-          (contractorId === "all" || o.contractorId === contractorId),
-      ),
-    [observations, subRegionId, contractorId],
+  const scopeIds = useMemo(() => new Set(inScope.map((c) => c.id)), [inScope]);
+
+  const scopedAudits = useMemo(
+    () => audits.filter((a) => scopeIds.has(a.contractorId)),
+    [audits, scopeIds],
   );
 
-  const latest = latestByContractor(filtered);
-  const scored = latest.filter((s) => s.total !== null);
-  const avg =
+  const summaries = useMemo(
+    () => summarizeAll(scopedAudits, contractors, subRegions),
+    [scopedAudits, contractors, subRegions],
+  );
+
+  const stats = useMemo(
+    () => contractorStats(summaries, timeframe),
+    [summaries, timeframe],
+  );
+
+  /** Audit ids inside the current window — every panel below is scoped to them. */
+  const windowAuditIds = useMemo(
+    () => new Set(stats.flatMap((s) => s.audits.map((a) => a.id))),
+    [stats],
+  );
+  const windowAudits = useMemo(
+    () => scopedAudits.filter((a) => windowAuditIds.has(a.id)),
+    [scopedAudits, windowAuditIds],
+  );
+  const windowSummaries = useMemo(
+    () => summaries.filter((s) => windowAuditIds.has(s.id)),
+    [summaries, windowAuditIds],
+  );
+
+  const observations = useMemo(
+    () => collectObservations(windowAudits, contractors),
+    [windowAudits, contractors],
+  );
+
+  const scored = stats.filter((s) => s.avgScore !== null);
+  const programAvg =
     scored.length > 0
       ? Math.round(
-          (scored.reduce((sum, s) => sum + s.total!, 0) / scored.length) * 10,
+          (scored.reduce((sum, s) => sum + s.avgScore!, 0) / scored.length) * 10,
         ) / 10
       : null;
 
-  const trend = averageByQuarter(filtered).map((p) => ({
+  // Quarterly obligation: every active contractor needs a review each quarter.
+  const currentQuarter = quarterOf(new Date());
+  const activeInScope = inScope.filter((c) => c.active);
+  const reviewedThisQuarter = new Set(
+    audits
+      .filter((a) => a.quarter === currentQuarter && a.status !== "draft")
+      .map((a) => a.contractorId),
+  );
+  const covered = activeInScope.filter((c) =>
+    reviewedThisQuarter.has(c.id),
+  ).length;
+
+  const selected = stats.find((s) => s.contractorId === selectedId) ?? null;
+  const selectedIssues = useMemo(() => {
+    if (!selected) return [];
+    const ids = new Set(selected.audits.map((a) => a.id));
+    return topIssues(
+      windowAudits.filter((a) => ids.has(a.id)),
+      5,
+    );
+  }, [selected, windowAudits]);
+
+  const selectedAreas = useMemo(() => {
+    if (!selected) return [];
+    const ids = new Set(selected.audits.map((a) => a.id));
+    return areaTrends(windowSummaries.filter((s) => ids.has(s.id)))
+      .filter((a) => a.gap !== null && a.gap > 0)
+      .sort((a, b) => b.gap! - a.gap!)
+      .slice(0, 5);
+  }, [selected, windowSummaries]);
+
+  const pareto = observationBreakdown(observations).map((o) => ({
+    label: `${o.code} — ${OBSERVATION_BY_CODE[o.code].label}`,
+    count: o.count,
+    share: o.share,
+  }));
+
+  const trend = averageByQuarter(windowSummaries).map((p) => ({
     label: quarterLabel(p.quarter),
     value: p.score,
   }));
 
-  const sectionAverages = ["A", "B", "C"].map((code) => {
-    const scores = latest
-      .map((s) => s.sections.find((x) => x.code === code))
-      .filter((x) => x && x.score !== null) as { title: string; score: number }[];
-    return {
-      code,
-      title: scores[0]?.title ?? code,
-      avg:
-        scores.length > 0
-          ? Math.round(
-              (scores.reduce((sum, x) => sum + x.score, 0) / scores.length) * 10,
-            ) / 10
-          : null,
-    };
-  });
-
-  const pareto = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const o of filteredObs) {
-      counts.set(o.observation, (counts.get(o.observation) ?? 0) + 1);
-    }
-    const total = filteredObs.length;
-    return [...counts.entries()]
-      .map(([code, count]) => ({
-        label: `${code} — ${OBSERVATION_BY_CODE[code as keyof typeof OBSERVATION_BY_CODE].label}`,
-        count,
-        share: total ? Math.round((count / total) * 1000) / 10 : 0,
-      }))
-      .sort((a, b) => b.count - a.count);
-  }, [filteredObs]);
-
-  const weakest = weakestSubSections(filtered, 8);
+  const weakest = weakestSubSections(windowSummaries, 6);
+  const timeframeLabel = timeframeById(timeframe).label;
 
   return (
     <div className="stack">
-      {/* Filters scope everything below them */}
       <div className="filter-row">
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Sub-region</span>
@@ -119,7 +147,7 @@ export function DashboardClient({
             value={subRegionId}
             onChange={(e) => {
               setSubRegionId(e.target.value);
-              setContractorId("all");
+              setSelectedId(null);
             }}
           >
             <option value="all">All sub-regions</option>
@@ -131,141 +159,129 @@ export function DashboardClient({
           </select>
         </label>
         <label className="field" style={{ marginBottom: 0 }}>
-          <span>Contractor</span>
+          <span>Timeframe</span>
           <select
-            value={contractorId}
-            onChange={(e) => setContractorId(e.target.value)}
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value as TimeframeId)}
           >
-            <option value="all">All contractors</option>
-            {contractorOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
+            {TIMEFRAMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
               </option>
             ))}
           </select>
+        </label>
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={includeInactive}
+            onChange={(e) => {
+              setIncludeInactive(e.target.checked);
+              setSelectedId(null);
+            }}
+          />
+          Include inactive contractors
         </label>
       </div>
 
       <div className="kpi-row">
         <StatTile
           label="Average score"
-          value={formatScore(avg)}
-          hint="latest audit per contractor"
+          value={formatScore(programAvg)}
+          hint={timeframeLabel.toLowerCase()}
+        />
+        <StatTile label="Rating" value={ratingFor(programAvg) ?? "—"} />
+        <StatTile
+          label="Reviews in scope"
+          value={String(finalized(windowSummaries).length)}
+          hint={`${stats.length} contractor${stats.length === 1 ? "" : "s"}`}
         />
         <StatTile
-          label="Rating"
-          value={ratingFor(avg) ?? "—"}
-        />
-        <StatTile
-          label="Audits completed"
-          value={String(finalized(filtered).length)}
-        />
-        <StatTile
-          label="Gap observations"
-          value={String(filteredObs.length)}
-          hint="Partial or No answers"
+          label={`${quarterLabel(currentQuarter)} coverage`}
+          value={`${covered}/${activeInScope.length}`}
+          hint={
+            covered === activeInScope.length
+              ? "all active contractors reviewed"
+              : `${activeInScope.length - covered} review${activeInScope.length - covered === 1 ? "" : "s"} outstanding`
+          }
         />
       </div>
 
+      <section className="card">
+        <h2>Contractor scores — {timeframeLabel.toLowerCase()}</h2>
+        <p className="sub">
+          {includeInactive ? "All" : "Active"} contractors in scope. Select a
+          bar to see that contractor&apos;s trend, section performance and top
+          issues for this timeframe.
+        </p>
+        <ContractorBarChart
+          data={stats.map((s) => ({
+            id: s.contractorId,
+            label: contractorLabel({
+              name: s.contractorName,
+              code: s.contractorCode,
+            }),
+            value: s.avgScore,
+            reviews: s.audits.length,
+            rating: s.rating,
+            delta: s.delta,
+          }))}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      </section>
+
+      {selected && (
+        <ContractorDrilldown
+          stats={selected}
+          issues={selectedIssues}
+          priorityAreas={selectedAreas}
+          timeframeLabel={timeframeLabel}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+
       <div className="grid-2">
         <section className="card">
-          <h2>Score trend by quarter</h2>
-          <p className="sub">Average of finalized audits in scope</p>
+          <h2>Programme trend</h2>
+          <p className="sub">Average score per quarter, contractors in scope</p>
           <TrendChart points={trend} />
         </section>
 
         <section className="card">
           <h2>Observation causes</h2>
-          <p className="sub">Standardized gap classifications (OB2–OB5)</p>
+          <p className="sub">
+            Standardized gap classifications ({observations.length} in scope)
+          </p>
           <ParetoBars data={pareto} />
         </section>
       </div>
 
-      <div className="grid-2">
-        <section className="card">
-          <h2>Section performance</h2>
-          <p className="sub">Average of each contractor&apos;s latest audit</p>
+      <section className="card">
+        <h2>Weakest sub-sections</h2>
+        <p className="sub">Lowest average across the reviews in scope</p>
+        {weakest.length === 0 ? (
+          <div className="chart-empty">No finalized reviews in scope.</div>
+        ) : (
           <table className="data">
             <tbody>
-              {sectionAverages.map((s) => (
-                <tr key={s.code}>
-                  <td>
-                    <strong>{s.code}</strong>
+              {weakest.map((w) => (
+                <tr key={w.code}>
+                  <td style={{ width: 44 }}>
+                    <strong>{w.code}</strong>
                   </td>
-                  <td>{s.title}</td>
-                  <td>
-                    <ScoreMeter score={s.avg} />
+                  <td>{w.title}</td>
+                  <td style={{ width: 190 }}>
+                    <ScoreMeter score={w.avg} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </section>
-
-        <section className="card">
-          <h2>Weakest sub-sections</h2>
-          <p className="sub">Lowest average score in scope</p>
-          {weakest.length === 0 ? (
-            <div className="chart-empty">No finalized audits in scope.</div>
-          ) : (
-            <table className="data">
-              <tbody>
-                {weakest.map((w) => (
-                  <tr key={w.code}>
-                    <td>
-                      <strong>{w.code}</strong>
-                    </td>
-                    <td>{w.title}</td>
-                    <td>
-                      <ScoreMeter score={w.avg} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-      </div>
-
-      <section className="card">
-        <h2>Contractor standings</h2>
-        <p className="sub">Latest finalized audit per contractor in scope</p>
-        {latest.length === 0 ? (
-          <div className="chart-empty">No finalized audits in scope.</div>
-        ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Contractor</th>
-                <th>Sub-region</th>
-                <th>Quarter</th>
-                <th>Score</th>
-                <th>Rating</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...latest]
-                .sort((a, b) => (a.total ?? -1) - (b.total ?? -1))
-                .map((s) => (
-                  <tr key={s.contractorId}>
-                    <td>
-                      <Link href={`/contractors/${s.contractorId}`}>
-                        {s.contractorName}
-                      </Link>
-                    </td>
-                    <td>{s.subRegionName}</td>
-                    <td>{quarterLabel(s.quarter)}</td>
-                    <td>
-                      <ScoreMeter score={s.total} />
-                    </td>
-                    <td>
-                      <RatingBadge rating={s.rating} />
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
         )}
+        <p className="sub" style={{ marginTop: 12 }}>
+          <Link href="/findings">Open the findings register →</Link>
+        </p>
       </section>
     </div>
   );

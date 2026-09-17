@@ -1,19 +1,5 @@
-import { audits, contractors, subRegions } from "@/lib/ehss/mock";
-import { collectObservations, summarizeAll } from "@/lib/ehss/summaries";
 import { DashboardClient } from "./DashboardClient";
 
-export const dynamic = "force-dynamic";
-
 export default function OverviewPage() {
-  const summaries = summarizeAll(audits, contractors, subRegions);
-  const observations = collectObservations(audits, contractors);
-
-  return (
-    <DashboardClient
-      subRegions={subRegions}
-      contractors={contractors}
-      summaries={summaries}
-      observations={observations}
-    />
-  );
+  return <DashboardClient />;
 }

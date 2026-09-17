@@ -74,7 +74,7 @@ a {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 10px 14px;
   padding: 14px 0;
   border-bottom: 1px solid var(--grid);
   margin-bottom: 24px;
@@ -90,15 +90,17 @@ a {
 
 .topbar nav {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
+  flex-wrap: wrap;
 }
 
 .topbar nav a {
   text-decoration: none;
   color: var(--ink-2);
-  padding: 5px 10px;
+  padding: 5px 9px;
   border-radius: 6px;
+  white-space: nowrap;
 }
 
 .topbar nav a:hover {
@@ -108,7 +110,8 @@ a {
 
 .topbar .who {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12.5px;
+  white-space: nowrap;
 }
 
 .admin-nav {
@@ -573,4 +576,204 @@ button.ghost:hover { background: var(--accent-wash); }
 .login-card {
   max-width: 360px;
   margin: 10vh auto 0;
+}
+
+/* ---- Checkbox filter ---- */
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding-bottom: 8px;
+}
+
+/* ---- Drill-down panel ---- */
+
+.drilldown {
+  border-left: 3px solid var(--accent);
+}
+
+.drilldown-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.drilldown-head h2 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+
+.panel-title {
+  margin: 18px 0 6px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.issue-text {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin-top: 2px;
+  max-width: 460px;
+}
+
+/* ---- Coverage table ---- */
+
+.coverage-missing {
+  color: var(--status-serious);
+  font-weight: 600;
+}
+
+/* Chart bars are clickable: keep the keyboard ring, drop the mouse outline
+   (selection is already shown by emphasis). */
+svg g[role="button"]:focus {
+  outline: none;
+}
+
+svg g[role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Issue counts stay on one line */
+table.data td.num {
+  white-space: nowrap;
+}
+
+/* ---- Executive brief ---- */
+
+.brief-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.brief-head h2 {
+  font-size: 17px;
+}
+
+.brief-headline {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brief-score {
+  font-size: 44px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.brief-meta {
+  color: var(--muted);
+  font-size: 12.5px;
+  margin-top: 4px;
+}
+
+.brief-focus {
+  border-left: 3px solid var(--status-serious);
+}
+
+.brief-good {
+  border-left: 3px solid var(--status-good);
+}
+
+.brief-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.brief-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--grid);
+}
+
+.brief-list li:last-child {
+  border-bottom: none;
+}
+
+.brief-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.brief-item-title {
+  font-weight: 600;
+}
+
+.brief-item-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.brief-item-note {
+  color: var(--ink-2);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+/* ---- Master scorecard ---- */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table.scorecard {
+  min-width: 720px;
+}
+
+table.scorecard .th-weight {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+table.data td.strong {
+  font-weight: 650;
+}
+
+td.cell-good {
+  background: rgba(12, 163, 12, 0.1);
+}
+
+td.cell-weak {
+  background: rgba(208, 59, 59, 0.1);
+}
+
+.inactive-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--grid);
+  border-radius: 5px;
+  padding: 0 5px;
+}
+
+/* ---- Discipline score entry ---- */
+
+.discipline-panel {
+  border: 1px solid var(--grid);
+  border-radius: 9px;
+  padding: 14px 16px;
+  margin: 14px 0 6px;
+}
+
+.discipline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.discipline-grid input {
+  max-width: none;
 }

@@ -132,9 +132,14 @@ export interface SubRegion {
 
 export interface EhssContractor {
   id: string;
+  /** Project / work-order number, as used on the scorecard: "Al Fahd (1272)". */
   code: string;
   name: string; // organizational name only — never a person
   subRegionId: string;
+  /** Contractors are deactivated when their project completes: they keep
+   * their audit history but drop out of the active league table and out of
+   * the quarterly review obligation. */
+  active: boolean;
 }
 
 export interface EhssAudit {
@@ -144,10 +149,39 @@ export interface EhssAudit {
   auditDate: string; // ISO date
   inspectionNo: string; // e.g. "HSW-03"
   status: EhssAuditStatus;
-  responses: Record<string, EhssResponse>; // question code -> response
+  /** Health & Safety checklist answers (question code -> response). */
+  responses: Record<string, EhssResponse>;
+  /**
+   * Recorded discipline scores (0-100). Health & Safety is taken from the
+   * checklist whenever the checklist has been answered, and from this value
+   * otherwise — the other four disciplines always come from here until their
+   * own checklists exist.
+   */
+  disciplineScores: import("./disciplines").DisciplineScores;
 }
 
 export function quarterLabel(quarter: string): string {
   const [year, q] = quarter.split("-");
   return `${q} ${year}`;
+}
+
+/** The quarter a date falls in, as "YYYY-Qn". */
+export function quarterOf(date: Date): string {
+  return `${date.getFullYear()}-Q${Math.floor(date.getMonth() / 3) + 1}`;
+}
+
+/** Chronologically next quarter, e.g. "2026-Q4" -> "2027-Q1". */
+export function nextQuarter(quarter: string): string {
+  const [yearStr, qStr] = quarter.split("-");
+  const year = Number(yearStr);
+  const q = Number((qStr ?? "Q1").slice(1));
+  return q === 4 ? `${year + 1}-Q1` : `${year}-Q${q + 1}`;
+}
+
+/** Chronologically previous quarter, e.g. "2026-Q1" -> "2025-Q4". */
+export function previousQuarter(quarter: string): string {
+  const [yearStr, qStr] = quarter.split("-");
+  const year = Number(yearStr);
+  const q = Number((qStr ?? "Q1").slice(1));
+  return q === 1 ? `${year - 1}-Q4` : `${year}-Q${q - 1}`;
 }

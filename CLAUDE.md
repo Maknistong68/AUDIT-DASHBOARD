@@ -19,8 +19,9 @@ transitive advisory — don't remove either without re-running `npm audit`.
 ## What this app is
 
 An **EHSS quarterly audit scoring and trend platform** for Oxagon
-contractors, modeled 1:1 on the *Excellence EHSS Quarterly Performance
-Review* Excel workbook. Two invariants shape everything:
+contractors, modeled on the *Excellence EHSS Quarterly Performance Review*
+workbook and the master contractor scorecard. Two invariants shape
+everything:
 
 1. **No personal data.** Contractor-level results only; no worker records,
    photos, or auditor phone numbers. Demo data uses generic names.
@@ -30,6 +31,21 @@ Review* Excel workbook. Two invariants shape everything:
    free-text or photo fields.
 
 ## Architecture
+
+### Scoring is two layers
+
+1. **Disciplines** (`disciplines.ts`): the scorecard's five weighted
+   disciplines — H&S 40%, Critical Risk 25%, Environment 10%, Security 10%,
+   Worker Welfare 15%. `weightedOverall()` is the contractor's quarterly
+   score and renormalizes over whichever disciplines are scored.
+   `disciplines.test.ts` pins it to the source scorecard row by row — treat
+   those numbers as the contract.
+2. **The H&S checklist** (below) scores the Health & Safety discipline in
+   detail. The other four carry a recorded score until their own checklists
+   exist. `AuditSummary.total` is the checklist total; `AuditSummary.overall`
+   is the weighted scorecard figure — dashboards and rankings use `overall`.
+   A recorded `disciplineScores.hs` wins over the checklist total (historical
+   transcription); submitting a review writes the checklist total into it.
 
 ### The EHSS domain (`src/lib/ehss/`) is the core
 
@@ -47,22 +63,36 @@ Review* Excel workbook. Two invariants shape everything:
 - **`scoring.test.ts`** — pins the engine to the workbook's real numbers
   (A 46.94, B 74.60, C 61, total 60.85). If scoring changes, these
   fixtures are the contract — update only with a matching workbook change.
-- **`mock.ts`** — the demo dataset: 2 sub-regions, 5 contractors, quarterly
-  2026 audits with deterministically generated answers; audit `e11` is the
-  workbook fixture verbatim. `summaries.ts` holds the derived, serializable
-  views (client-safe — no server imports) used by pages and the dashboard.
+- **`mock.ts`** — the dataset: 2 sub-regions, the 11 real contractors from
+  the scorecard (identified by project number via `contractorLabel`), and
+  four quarters of reviews. 2026-Q3 discipline scores are transcribed from
+  the scorecard; earlier quarters are derived by a per-contractor trend.
+  `afh1272`'s 2026-Q3 is the workbook audit verbatim (its H&S comes from the
+  checklist, so it reads 60.85 rather than the sheet's manually adjusted
+  62.0); `tdp`'s 2026-Q3 is an open draft.
+- **`summaries.ts`** — derived, client-safe views: timeframe windows
+  (`windowByContractor`, latest / last3 / last4 / all), `contractorStats`
+  (the league table), `topIssues` (weighted points lost per question), and
+  `areaTrends`/`focusAreas`/`strengthAreas`, which power the executive
+  brief's "no improvement across N reviews" lines. Area trends average per
+  quarter, so they work programme-wide as well as per contractor.
 
 ### App shell (Next.js 15 App Router, demo mode)
 
 - **No database, no auth.** Middleware gates on the `demo_profile` cookie
   set by `/welcome` (name + role); role only affects UI affordances.
   Analytics always exclude draft audits.
-- `/` renders `DashboardClient` — all filtering (sub-region, contractor)
-  happens client-side over props serialized from the mock module. New
-  dashboard features: compute in `summaries.ts`, filter in the client.
-- The entry form (`app/audits/[id]/EhssAuditForm.tsx`) is client-side
-  state only; nothing persists (demo). Live scores come from the same
-  `scoreAudit` the tests validate.
+- **`store.tsx` is the data layer.** `EhssStoreProvider` (mounted in the root
+  layout) merges the `mock.ts` baseline with user overrides persisted in
+  `localStorage`: new reviews, edited answers, discipline scores, contractor
+  activation. Pages read it through `useEhss()`, so most pages are client
+  components; server pages only read the cookie and pass `role`/params down.
+  State starts as the baseline so SSR matches the first client render —
+  a page looking up a possibly user-created record must wait for `hydrated`
+  before deciding it is missing.
+- New dashboard features: compute in `summaries.ts`, filter in the client.
+- `/brief` is the executive one-pager (what to focus on / what is working) —
+  the view the project director actually reads; keep it to one page.
 - Charts are hand-built SVG (`src/components/charts/`), single accent hue;
   rating badges use the status palette with labels (never color alone).
   Design tokens live in `app/globals.css` (light + dark).

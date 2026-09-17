@@ -1,8 +1,11 @@
 /**
- * Demo dataset: Oxagon's two sub-regions, contractors in each, and quarterly
- * EHSS audits across 2026. Answers are generated deterministically per
- * contractor/quarter quality profile; one audit (Contractor Four, Q3) is the
- * source workbook's real answer set, so its scores match the Excel exactly.
+ * Demo dataset: Oxagon's two sub-regions, their contractors, and quarterly
+ * EHSS reviews from 2025-Q3 to 2026-Q3. Answers are generated
+ * deterministically from a per-audit quality profile; one audit (Contractor
+ * Four, 2026-Q3) is the source workbook's real answer set, so its scores
+ * match the Excel exactly.
+ *
+ * This is the baseline the browser store layers user edits on top of.
  */
 
 import { CHECKLIST, WORKBOOK_FIXTURE_ANSWERS } from "./checklist";
@@ -15,6 +18,7 @@ import type {
   ObservationCode,
   SubRegion,
 } from "./model";
+import type { DisciplineId, DisciplineScores } from "./disciplines";
 
 export const subRegions: SubRegion[] = [
   { id: "sr1", name: "Sub Region 1" },
@@ -22,12 +26,24 @@ export const subRegions: SubRegion[] = [
 ];
 
 export const contractors: EhssContractor[] = [
-  { id: "c1", code: "CON-01", name: "Contractor One", subRegionId: "sr1" },
-  { id: "c2", code: "CON-02", name: "Contractor Two", subRegionId: "sr1" },
-  { id: "c3", code: "CON-03", name: "Contractor Three", subRegionId: "sr1" },
-  { id: "c4", code: "CON-04", name: "Contractor Four", subRegionId: "sr2" },
-  { id: "c5", code: "CON-05", name: "Contractor Five", subRegionId: "sr2" },
+  // Sub Region 1
+  { id: "ppco",  code: "1322", name: "PPCO",          subRegionId: "sr1", active: true },
+  { id: "afh882", code: "0882", name: "Al Fahd",      subRegionId: "sr1", active: true },
+  { id: "sibs",  code: "0838", name: "SIBS",          subRegionId: "sr1", active: true },
+  { id: "abya",  code: "1112", name: "Abyatona",      subRegionId: "sr1", active: true },
+  { id: "rpco",  code: "1440", name: "RPCO",          subRegionId: "sr1", active: true },
+  { id: "tdp",   code: "892",  name: "TDP",           subRegionId: "sr1", active: true },
+  { id: "thys",  code: "731",  name: "Thyssenkrupp",  subRegionId: "sr1", active: true },
+  // Sub Region 2
+  { id: "sarco", code: "0876", name: "Sarco Disa",    subRegionId: "sr2", active: true },
+  { id: "afh1272", code: "1272", name: "Al Fahd",     subRegionId: "sr2", active: true },
+  { id: "afh823", code: "823",  name: "Al Fahd",      subRegionId: "sr2", active: true },
+  { id: "ech",   code: "1131", name: "ECH",           subRegionId: "sr2", active: true },
 ];
+
+/** Display name as it appears on the scorecard: "Al Fahd (1272)". */
+export const contractorLabel = (c: { name: string; code: string }) =>
+  `${c.name} (${c.code})`;
 
 const FLAT = flattenChecklist(CHECKLIST);
 const GAP_OBSERVATIONS: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
@@ -97,40 +113,119 @@ function draftResponses(seed: number, quality: number): Record<string, EhssRespo
   return responses;
 }
 
-interface AuditDef {
-  id: string;
-  contractorId: string;
-  quarter: string;
-  auditDate: string;
-  inspectionNo: string;
-  status: EhssAudit["status"];
-  responses: Record<string, EhssResponse>;
-}
+/** 2026-Q3 discipline scores, transcribed from the Oxagon master scorecard:
+ * [Health & Safety, Critical Risk, Environment, Security, Worker Welfare].
+ * Earlier quarters are derived from these with a per-contractor trend. */
+const SCORECARD: Record<string, [number, number, number, number, number]> = {
+  ppco:    [76, 81, 94, 89, 77],
+  afh882:  [72, 81, 94, 86, 87],
+  sibs:    [70, 85, 85, 68, 78],
+  abya:    [63, 88, 89, 81, 75],
+  rpco:    [70, 84, 95, 77, 82],
+  tdp:     [75, 86, 78, 89, 77],
+  thys:    [80, 92, 86, 89, 77],
+  sarco:   [75, 95, 99, 97, 88],
+  afh1272: [62, 89, 97, 89, 86],
+  afh823:  [67, 97, 97, 75, 89],
+  ech:     [89, 92, 91, 97, 89],
+};
 
-const defs: AuditDef[] = [
-  // Contractor One (SR1) — improving
-  { id: "e01", contractorId: "c1", quarter: "2026-Q1", auditDate: "2026-02-11", inspectionNo: "HSW-01", status: "approved",  responses: genResponses(11, 0.58) },
-  { id: "e02", contractorId: "c1", quarter: "2026-Q2", auditDate: "2026-05-13", inspectionNo: "HSW-02", status: "approved",  responses: genResponses(12, 0.71) },
-  { id: "e03", contractorId: "c1", quarter: "2026-Q3", auditDate: "2026-08-12", inspectionNo: "HSW-03", status: "submitted", responses: genResponses(13, 0.84) },
-  // Contractor Two (SR1) — declining
-  { id: "e04", contractorId: "c2", quarter: "2026-Q1", auditDate: "2026-02-25", inspectionNo: "HSW-01", status: "approved",  responses: genResponses(21, 0.8) },
-  { id: "e05", contractorId: "c2", quarter: "2026-Q2", auditDate: "2026-05-27", inspectionNo: "HSW-02", status: "approved",  responses: genResponses(22, 0.74) },
-  { id: "e06", contractorId: "c2", quarter: "2026-Q3", auditDate: "2026-08-26", inspectionNo: "HSW-03", status: "submitted", responses: genResponses(23, 0.66) },
-  // Contractor Three (SR1) — new, Q3 audit still in progress
-  { id: "e07", contractorId: "c3", quarter: "2026-Q2", auditDate: "2026-06-03", inspectionNo: "HSW-01", status: "approved",  responses: genResponses(31, 0.62) },
-  { id: "e08", contractorId: "c3", quarter: "2026-Q3", auditDate: "2026-09-16", inspectionNo: "HSW-02", status: "draft",     responses: draftResponses(32, 0.68) },
-  // Contractor Four (SR2) — Q3 is the workbook's real audit
-  { id: "e09", contractorId: "c4", quarter: "2026-Q1", auditDate: "2026-01-21", inspectionNo: "HSW-01", status: "approved",  responses: genResponses(41, 0.55) },
-  { id: "e10", contractorId: "c4", quarter: "2026-Q2", auditDate: "2026-04-22", inspectionNo: "HSW-02", status: "approved",  responses: genResponses(43, 0.6) },
-  { id: "e11", contractorId: "c4", quarter: "2026-Q3", auditDate: "2026-07-19", inspectionNo: "HSW-03", status: "submitted", responses: workbookResponses() },
-  // Contractor Five (SR2) — strong and steady
-  { id: "e12", contractorId: "c5", quarter: "2026-Q1", auditDate: "2026-03-04", inspectionNo: "HSW-01", status: "approved",  responses: genResponses(51, 0.88) },
-  { id: "e13", contractorId: "c5", quarter: "2026-Q2", auditDate: "2026-06-10", inspectionNo: "HSW-02", status: "approved",  responses: genResponses(52, 0.9) },
-  { id: "e14", contractorId: "c5", quarter: "2026-Q3", auditDate: "2026-09-02", inspectionNo: "HSW-03", status: "submitted", responses: genResponses(53, 0.93) },
+/** Points per quarter of improvement leading up to 2026-Q3 (negative for a
+ * contractor whose performance is slipping). */
+const TREND: Record<string, number> = {
+  ppco: 2, afh882: 1.5, sibs: -1.5, abya: 3, rpco: -1, tdp: 0.5,
+  thys: 2.5, sarco: 1, afh1272: -2.5, afh823: 2, ech: 1.5,
+};
+
+const QUARTERS: Array<[string, string]> = [
+  ["2025-Q4", "2025-11-18"],
+  ["2026-Q1", "2026-02-17"],
+  ["2026-Q2", "2026-05-19"],
+  ["2026-Q3", "2026-08-25"],
 ];
 
-export const audits: EhssAudit[] = defs;
+const DISCIPLINE_IDS: DisciplineId[] = ["hs", "crc", "env", "sec", "ww"];
+const SEEDS: Record<string, number> = {
+  ppco: 11, afh882: 21, sibs: 31, abya: 41, rpco: 51, tdp: 61,
+  thys: 71, sarco: 81, afh1272: 91, afh823: 101, ech: 111,
+};
+
+const clampScore = (n: number) =>
+  Math.round(Math.max(35, Math.min(99, n)) * 10) / 10;
+
+/** Discipline scores for a quarter: the scorecard values at 2026-Q3, walked
+ * backwards by the contractor's trend with a little deterministic variation. */
+function scoresFor(
+  contractorId: string,
+  quartersBack: number,
+): DisciplineScores {
+  const base = SCORECARD[contractorId]!;
+  const trend = TREND[contractorId] ?? 0;
+  const seed = SEEDS[contractorId] ?? 7;
+  const out: DisciplineScores = {};
+  DISCIPLINE_IDS.forEach((id, i) => {
+    if (quartersBack === 0) {
+      out[id] = base[i]!;
+      return;
+    }
+    const noise = (det(seed + i, quartersBack) - 0.5) * 3;
+    out[id] = clampScore(base[i]! - trend * quartersBack + noise);
+  });
+  return out;
+}
+
+function buildAudits(): EhssAudit[] {
+  const out: EhssAudit[] = [];
+
+  for (const contractor of contractors) {
+    QUARTERS.forEach(([quarter, date], qi) => {
+      const quartersBack = QUARTERS.length - 1 - qi;
+      const seed = (SEEDS[contractor.id] ?? 7) + qi;
+      const scores = scoresFor(contractor.id, quartersBack);
+
+      // TDP's current-quarter review is still being filled in.
+      const isOpenDraft = contractor.id === "tdp" && quarter === "2026-Q3";
+      // Al Fahd (1272) is the workbook's own audit — project 4800001272.
+      const isWorkbook = contractor.id === "afh1272" && quarter === "2026-Q3";
+
+      if (isOpenDraft) {
+        out.push({
+          id: `${contractor.id}-${quarter}`,
+          contractorId: contractor.id,
+          quarter,
+          auditDate: "2026-09-16",
+          inspectionNo: `EHSS-${quarter}-${contractor.code}`,
+          status: "draft",
+          responses: draftResponses(seed, scores.hs! / 100),
+          disciplineScores: {},
+        });
+        return;
+      }
+
+      out.push({
+        id: `${contractor.id}-${quarter}`,
+        contractorId: contractor.id,
+        quarter,
+        auditDate: isWorkbook ? "2026-07-19" : date,
+        inspectionNo: isWorkbook
+          ? "HSW-03"
+          : `EHSS-${quarter}-${contractor.code}`,
+        status: quarter === "2026-Q3" ? "submitted" : "approved",
+        responses: isWorkbook
+          ? workbookResponses()
+          : genResponses(seed, scores.hs! / 100),
+        // The workbook review's H&S score comes from its checklist answers.
+        disciplineScores: isWorkbook
+          ? { crc: scores.crc, env: scores.env, sec: scores.sec, ww: scores.ww }
+          : scores,
+      });
+    });
+  }
+
+  return out;
+}
+
+export const audits: EhssAudit[] = buildAudits();
 
 export const contractorById = new Map(contractors.map((c) => [c.id, c]));
 export const subRegionById = new Map(subRegions.map((s) => [s.id, s]));
-export const auditById = new Map(audits.map((a) => [a.id, a]));

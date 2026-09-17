@@ -18,19 +18,38 @@ import { formatScore } from "@/lib/format";
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
 const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
 
+const confirmDiscard = () =>
+  window.confirm("Discard this draft review? This cannot be undone.");
+
 export function EhssAuditForm({
   initialResponses,
   canEdit,
   status,
+  isAdmin = false,
+  onSave,
+  onSubmit,
+  onApprove,
+  onDelete,
 }: {
   initialResponses: Record<string, EhssResponse>;
   canEdit: boolean;
   status: EhssAuditStatus;
+  isAdmin?: boolean;
+  onSave?: (responses: Record<string, EhssResponse>) => void;
+  onSubmit?: (responses: Record<string, EhssResponse>) => void;
+  onApprove?: () => void;
+  onDelete?: () => void;
 }) {
   const [responses, setResponses] =
     useState<Record<string, EhssResponse>>(initialResponses);
+  const [dirty, setDirty] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const setAnswer = (code: string, answer: EhssAnswer) => {
+    setDirty(true);
+    setMessage(null);
+    setError(null);
     setResponses((prev) => {
       const cur = prev[code];
       const keepGapObs =
@@ -49,6 +68,9 @@ export function EhssAuditForm({
   };
 
   const setObservation = (code: string, observation: ObservationCode | null) => {
+    setDirty(true);
+    setMessage(null);
+    setError(null);
     setResponses((prev) => ({
       ...prev,
       [code]: { answer: prev[code]!.answer, observation },
@@ -185,11 +207,68 @@ export function EhssAuditForm({
             {missingObservations === 1 ? "" : "s"} still need a classification
           </span>
         )}
+        {error && <span className="form-error">{error}</span>}
+        {message && (
+          <span style={{ color: "var(--success-text)", fontSize: 13 }}>
+            {message}
+          </span>
+        )}
         <span className="spacer" />
         {canEdit && (
-          <span style={{ color: "var(--muted)", fontSize: 12.5 }}>
-            Demo — scores update live; nothing is saved.
-          </span>
+          <>
+            {onDelete && (
+              <button
+                className="ghost"
+                type="button"
+                onClick={() => {
+                  if (progress.answered > 0 && !confirmDiscard()) return;
+                  onDelete();
+                }}
+              >
+                Discard
+              </button>
+            )}
+            <button
+              className="ghost"
+              type="button"
+              disabled={!dirty}
+              onClick={() => {
+                onSave?.(responses);
+                setDirty(false);
+                setMessage("Saved.");
+              }}
+            >
+              {dirty ? "Save" : "Saved"}
+            </button>
+            <button
+              className="primary"
+              type="button"
+              onClick={() => {
+                if (progress.answered < progress.total) {
+                  setError(
+                    `Answer all ${progress.total} questions before submitting (${progress.answered} done).`,
+                  );
+                  return;
+                }
+                if (missingObservations > 0) {
+                  setError(
+                    "Every Partial or No answer needs an observation classification.",
+                  );
+                  return;
+                }
+                onSubmit?.(responses);
+                setDirty(false);
+                setMessage("Review submitted.");
+              }}
+            >
+              Submit review
+            </button>
+          </>
+        )}
+        {isAdmin && status === "submitted" && onApprove && (
+          <button className="primary" type="button" onClick={onApprove}>
+            Approve
+          </button>
         )}
       </div>
     </div>
