@@ -98,6 +98,13 @@ npm run build           # production build
 PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
 ```
 
+## Deploying
+
+Step-by-step Supabase + Vercel instructions: **`docs/DEPLOYMENT.md`**.
+`supabase/setup.sql` applies the whole schema in one SQL-editor paste, and
+`supabase/mock_data.sql` loads a demo dataset (Contractor One/Two/Three)
+so the dashboards are populated on first login.
+
 ## Deployment target
 
 Vercel (Next.js frontend) + Supabase (Postgres, Auth, RLS). Because the audit
