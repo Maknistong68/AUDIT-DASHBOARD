@@ -13,6 +13,7 @@ import { ContractorDrilldown } from "@/components/ContractorDrilldown";
 import { ContractorSparkGrid } from "@/components/charts/ContractorSparkGrid";
 import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
 import { DomainGapHeatmap } from "@/components/charts/DomainGapHeatmap";
+import { CriticalRiskBars } from "@/components/charts/CriticalRiskBars";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { formatScore } from "@/lib/format";
 import {
@@ -22,6 +23,7 @@ import {
   ratingFor,
 } from "@/lib/ehss/model";
 import { contractorLabel } from "@/lib/ehss/mock";
+import { CRITICAL_RISKS } from "@/lib/ehss/critical-risks";
 import { bandFor } from "@/lib/ehss/bands";
 import {
   TIMEFRAMES,
@@ -30,6 +32,7 @@ import {
   contractorSeriesByQuarter,
   contractorStats,
   finalized,
+  criticalRiskStats,
   domainGapMatrix,
   observationTrendByQuarter,
   summarizeAll,
@@ -139,6 +142,17 @@ export function DashboardClient() {
     () => domainGapMatrix(observations),
     [observations],
   );
+  const crcStats = useMemo(
+    () =>
+      criticalRiskStats(windowSummaries)
+        .filter((r) => r.avg !== null)
+        .sort((a, b) => a.avg! - b.avg!),
+    [windowSummaries],
+  );
+  const crcOutOfScope = CRITICAL_RISKS.filter(
+    (r) => !crcStats.some((s) => s.id === r.id),
+  );
+
   const contractorLines = useMemo(
     () => contractorSeriesByQuarter(windowSummaries),
     [windowSummaries],
@@ -293,6 +307,25 @@ export function DashboardClient() {
           scores but no checklist yet, so they carry no findings.
         </p>
         <DomainGapHeatmap matrix={gapMatrix} />
+      </section>
+
+      <section className="card">
+        <h2>Critical Risk Control — by hazardous work</h2>
+        <p className="sub">
+          The CRC focus audit, ranked worst first. Each contractor is scored
+          only on the hazards its scope of work involves, so a hazard outside
+          scope is excluded rather than counted as zero. Bars start at 60%
+          and the tick marks the 90% target. Select a hazard for the
+          contractors behind it.
+          {crcOutOfScope.length > 0 && (
+            <>
+              {" "}
+              Not in any contractor&apos;s scope this timeframe:{" "}
+              {crcOutOfScope.map((r) => r.label).join(", ")}.
+            </>
+          )}
+        </p>
+        <CriticalRiskBars stats={crcStats} />
       </section>
 
       <div className="grid-2">

@@ -154,6 +154,13 @@ export interface EhssAudit {
    * own checklists exist.
    */
   disciplineScores: import("./disciplines").DisciplineScores;
+  /**
+   * Critical Risk Control focus audit — a score per hazardous-work item the
+   * contractor's scope involves. Hazards outside scope are absent, never 0.
+   * Like Health & Safety, a recorded `disciplineScores.crc` wins over the
+   * figure derived from these.
+   */
+  criticalRisks: import("./critical-risks").CriticalRiskScores;
 }
 
 export function quarterLabel(quarter: string): string {

@@ -7,6 +7,12 @@ import { CHECKLIST } from "./checklist";
 import { flattenChecklist, scoreAudit } from "./scoring";
 import { DOMAINS, type DomainId } from "./domains";
 import {
+  CRITICAL_RISKS,
+  crcScore,
+  type CriticalRiskId,
+  type CriticalRiskScores,
+} from "./critical-risks";
+import {
   DISCIPLINES,
   TARGET_SCORE,
   gapToTarget,
@@ -54,6 +60,8 @@ export interface AuditSummary {
   disciplineScores: DisciplineScores;
   /** Weighted average across the five disciplines: the scorecard figure. */
   overall: number | null;
+  /** CRC focus-audit scores per hazardous-work item in the contractor's scope. */
+  criticalRisks: CriticalRiskScores;
   rating: string | null;
   sections: SectionSummary[];
   subSections: SubSectionSummary[];
@@ -86,11 +94,13 @@ export function summarizeAudit(
   subRegion: SubRegion,
 ): AuditSummary {
   const score = scoreAudit(CHECKLIST, audit.responses);
-  // The recorded H&S score wins when present (transcribed scorecard value);
-  // otherwise the checklist total stands in.
+  // The recorded score wins when present (transcribed scorecard value);
+  // otherwise the detailed audit stands in — the checklist total for H&S,
+  // the mean of the hazards in scope for Critical Risk Control.
   const disciplineScores: DisciplineScores = {
     ...audit.disciplineScores,
     hs: audit.disciplineScores.hs ?? score.total ?? undefined,
+    crc: audit.disciplineScores.crc ?? crcScore(audit.criticalRisks) ?? undefined,
   };
   const overall = weightedOverall(disciplineScores);
   return {
@@ -107,6 +117,7 @@ export function summarizeAudit(
     status: audit.status,
     total: score.total,
     disciplineScores,
+    criticalRisks: audit.criticalRisks,
     overall,
     rating: ratingFor(overall),
     sections: score.sections.map((s) => ({
@@ -736,4 +747,89 @@ export function domainGapMatrix(rows: ObservationRow[]): DomainGapMatrix {
     max,
     total: rows.length,
   };
+}
+
+/** One hazardous-work item across the reviews in scope. */
+export interface CriticalRiskStat {
+  id: CriticalRiskId;
+  label: string;
+  domain: DomainId;
+  /** Mean score across the reviews where the hazard was in scope. */
+  avg: number | null;
+  /** How far the mean sits below the 90% target (0 when at or above). */
+  gap: number | null;
+  /** Reviews that scored this hazard. */
+  reviews: number;
+  /** Distinct contractors carrying the hazard in scope. */
+  contractors: number;
+  /** Contractors scoring below target on it, worst first. */
+  belowTarget: Array<{ contractorId: string; label: string; score: number }>;
+}
+
+/**
+ * Critical Risk Control performance per hazard across a set of reviews.
+ * Hazards outside every contractor's scope drop out entirely rather than
+ * appearing as zero, and the list is ranked worst-first so the focus audits
+ * to book next are at the top.
+ *
+ * `belowTarget` collapses to one row per contractor (its mean on that
+ * hazard), so a contractor audited four quarters is named once.
+ */
+export function criticalRiskStats(
+  summaries: AuditSummary[],
+): CriticalRiskStat[] {
+  const scored = finalized(summaries);
+
+  return CRITICAL_RISKS.map((risk) => {
+    const byContractor = new Map<string, { label: string; values: number[] }>();
+    const values: number[] = [];
+
+    for (const s of scored) {
+      const value = s.criticalRisks[risk.id];
+      if (value === undefined) continue;
+      values.push(value);
+      const entry = byContractor.get(s.contractorId) ?? {
+        label: `${s.contractorName} (${s.contractorCode})`,
+        values: [],
+      };
+      entry.values.push(value);
+      byContractor.set(s.contractorId, entry);
+    }
+
+    const avg =
+      values.length === 0
+        ? null
+        : round(values.reduce((sum, v) => sum + v, 0) / values.length);
+
+    const belowTarget = [...byContractor.entries()]
+      .map(([contractorId, { label, values: v }]) => ({
+        contractorId,
+        label,
+        score: round(v.reduce((sum, x) => sum + x, 0) / v.length),
+      }))
+      .filter((c) => c.score < TARGET_SCORE)
+      .sort((a, b) => a.score - b.score);
+
+    return {
+      id: risk.id,
+      label: risk.label,
+      domain: risk.domain,
+      avg,
+      gap: gapToTarget(avg),
+      reviews: values.length,
+      contractors: byContractor.size,
+      belowTarget,
+    };
+  }).filter((r) => r.reviews > 0);
+}
+
+/** The hazards most in need of attention: lowest mean first. */
+export function weakestCriticalRisks(
+  summaries: AuditSummary[],
+  limit: number,
+): CriticalRiskStat[] {
+  return criticalRiskStats(summaries)
+    .filter((r) => r.avg !== null)
+    .sort((a, b) => a.avg! - b.avg!)
+    .slice(0, limit);
 }

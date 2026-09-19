@@ -19,6 +19,11 @@ import type {
   SubRegion,
 } from "./model";
 import type { DisciplineId, DisciplineScores } from "./disciplines";
+import {
+  CRITICAL_RISKS,
+  type CriticalRiskId,
+  type CriticalRiskScores,
+} from "./critical-risks";
 
 export const subRegions: SubRegion[] = [
   { id: "sr1", name: "Sub Region 1" },
@@ -174,6 +179,54 @@ function scoresFor(
   return out;
 }
 
+/**
+ * Which hazards a contractor carries in scope — stable across its quarters,
+ * because a scope of work does not change between audits. Driving and heat
+ * apply to everyone; blasting and marine work to very few.
+ */
+function scopedHazards(contractorId: string): typeof CRITICAL_RISKS {
+  const seed = SEEDS[contractorId] ?? 7;
+  return CRITICAL_RISKS.filter(
+    (risk, i) => det(seed + 257, i) < risk.prevalence,
+  );
+}
+
+/**
+ * Programme-wide tendency per hazard, in points either side of a
+ * contractor's own CRC average. DEMO SHAPE ONLY — invented so the hazard
+ * ranking has signal to read (height and lifting habitually weak, driving
+ * and fire well controlled); it is not transcribed from any real audit.
+ */
+const HAZARD_BIAS: Record<CriticalRiskId, number> = {
+  ground: 1, confined: -4, energized: -2, explosives: 0, fire: 3,
+  hotwork: -1, lifting: -5, plant: 2, temporary: -3, driving: 4,
+  height: -6, heat: 2, roads: 1, water: -2,
+};
+
+/**
+ * Per-hazard CRC scores that average to the recorded discipline score.
+ * Deviations are centred on zero before clamping so the mean holds, which
+ * keeps the hazard breakdown consistent with the scorecard figure while
+ * preserving the relative bias between hazards.
+ */
+function hazardScores(contractorId: string, target: number, qi: number): CriticalRiskScores {
+  const risks = scopedHazards(contractorId);
+  if (risks.length === 0) return {};
+  const seed = (SEEDS[contractorId] ?? 7) + qi * 13;
+  const raw = risks.map(
+    (risk, i) => HAZARD_BIAS[risk.id] + (det(seed + 61, i) - 0.5) * 14,
+  );
+  const mean = raw.reduce((sum, v) => sum + v, 0) / raw.length;
+  const centred = raw.map((v) => clampScore(v - mean + target));
+  const drift =
+    target - centred.reduce((sum, v) => sum + v, 0) / centred.length;
+  const out: CriticalRiskScores = {};
+  risks.forEach((risk, i) => {
+    out[risk.id] = clampScore(centred[i]! + drift);
+  });
+  return out;
+}
+
 function buildAudits(): EhssAudit[] {
   const out: EhssAudit[] = [];
 
@@ -198,6 +251,7 @@ function buildAudits(): EhssAudit[] {
           status: "draft",
           responses: draftResponses(seed, scores.hs! / 100),
           disciplineScores: {},
+          criticalRisks: {},
         });
         return;
       }
@@ -218,6 +272,7 @@ function buildAudits(): EhssAudit[] {
         disciplineScores: isWorkbook
           ? { crc: scores.crc, env: scores.env, sec: scores.sec, ww: scores.ww }
           : scores,
+        criticalRisks: hazardScores(contractor.id, scores.crc!, qi),
       });
     });
   }

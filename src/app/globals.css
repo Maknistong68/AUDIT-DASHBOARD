@@ -1079,6 +1079,11 @@ td.cell-weak {
 
 .heatmap-wrap {
   overflow-x: auto;
+  /* The table has a min-width, and a flex/grid item defaults to min-width
+     auto — without this the wrapper stretches to the table instead of
+     scrolling it, and the whole page scrolls sideways on a phone. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 table.heatmap {
@@ -1146,4 +1151,156 @@ table.heatmap th[scope="row"] {
 .heat-total {
   font-weight: 650;
   color: var(--ink-2);
+}
+
+/* ---- Critical Risk Control — ranked hazard bars ---- */
+
+.crc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.crc-row + .crc-row {
+  border-top: 1px solid var(--border);
+}
+
+.crc-head {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(150px, 1.25fr) minmax(90px, 2fr) 58px 118px;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  padding: 9px 4px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  color: inherit;
+  font: inherit;
+}
+
+.crc-head:hover {
+  background: var(--page);
+}
+
+.crc-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.crc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-1);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.crc-pillar {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.crc-bar {
+  position: relative;
+  display: block;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--grid);
+  overflow: hidden;
+}
+
+.crc-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+}
+
+.crc-target {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--ink-1);
+  /* Reads over both the empty track and a bar that has passed it. */
+  opacity: 0.75;
+}
+
+.crc-score {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-1);
+}
+
+.crc-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.crc-detail {
+  padding: 2px 4px 12px 4px;
+}
+
+.crc-contractors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.crc-contractors li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+}
+
+.crc-contractors i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.crc-contractors strong {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .crc-head {
+    grid-template-columns: 1fr 52px;
+    grid-template-areas: "label score" "bar bar" "meta meta";
+    gap: 4px 10px;
+  }
+  .crc-label { grid-area: label; }
+  .crc-score { grid-area: score; }
+  .crc-bar { grid-area: bar; }
+  .crc-meta { grid-area: meta; text-align: left; }
+}
+
+/* CRC focus-audit entry: out-of-scope hazards recede but stay readable. */
+table.crc-entry tr.is-out td {
+  opacity: 0.55;
+}
+
+table.crc-entry input[type="number"] {
+  width: 90px;
+  text-align: right;
 }

@@ -20,6 +20,13 @@ import {
   type DisciplineId,
   type DisciplineScores,
 } from "@/lib/ehss/disciplines";
+import {
+  CRITICAL_RISKS,
+  crcScore,
+  type CriticalRiskId,
+  type CriticalRiskScores,
+} from "@/lib/ehss/critical-risks";
+import { DOMAIN_BY_ID } from "@/lib/ehss/domains";
 import { EhssAuditForm } from "./EhssAuditForm";
 import type { UserRole } from "@/lib/types";
 
@@ -28,11 +35,13 @@ import type { UserRole } from "@/lib/types";
 function DisciplinePanel({
   scores,
   checklistScore,
+  crcAuditScore,
   canEdit,
   onSave,
 }: {
   scores: DisciplineScores;
   checklistScore: number | null;
+  crcAuditScore: number | null;
   canEdit: boolean;
   onSave: (scores: DisciplineScores) => void;
 }) {
@@ -42,6 +51,7 @@ function DisciplinePanel({
   const effective: DisciplineScores = {
     ...draft,
     hs: draft.hs ?? checklistScore ?? undefined,
+    crc: draft.crc ?? crcAuditScore ?? undefined,
   };
   const overall = weightedOverall(effective);
 
@@ -62,8 +72,9 @@ function DisciplinePanel({
             Discipline scores
           </h3>
           <p className="sub" style={{ margin: "2px 0 0" }}>
-            Health &amp; Safety comes from the checklist below; the other four
-            are recorded from their own audits.
+            Health &amp; Safety comes from the checklist below and Critical
+            Risk Control from the hazard scores; the other three are recorded
+            from their own audits.
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -91,6 +102,12 @@ function DisciplinePanel({
                     ? "not scored yet"
                     : `${effective.hs.toFixed(1)}% (checklist)`
                 }
+              />
+            ) : d.id === "crc" && crcAuditScore !== null && draft.crc === undefined ? (
+              <input
+                type="text"
+                readOnly
+                value={`${crcAuditScore.toFixed(1)}% (hazard scores)`}
               />
             ) : (
               <input
@@ -125,6 +142,135 @@ function DisciplinePanel({
   );
 }
 
+/**
+ * The Critical Risk Control focus audit: one score per hazardous-work item.
+ * A hazard is only scored when the contractor's scope of work involves it —
+ * "in scope" is an explicit checkbox rather than an empty field, so a hazard
+ * the contractor genuinely does not do can never be confused with one the
+ * auditor forgot.
+ */
+function CriticalRiskPanel({
+  risks,
+  canEdit,
+  onSave,
+}: {
+  risks: CriticalRiskScores;
+  canEdit: boolean;
+  onSave: (risks: CriticalRiskScores) => void;
+}) {
+  const [draft, setDraft] = useState<CriticalRiskScores>(risks);
+  const [saved, setSaved] = useState(false);
+
+  const inScope = CRITICAL_RISKS.filter((r) => draft[r.id] !== undefined);
+  const derived = crcScore(draft);
+
+  const setScore = (id: CriticalRiskId, raw: string) => {
+    const value = raw === "" ? 0 : Number(raw);
+    setSaved(false);
+    setDraft((prev) => ({
+      ...prev,
+      [id]: Number.isNaN(value) ? 0 : Math.max(0, Math.min(100, value)),
+    }));
+  };
+
+  const toggle = (id: CriticalRiskId, on: boolean) => {
+    setSaved(false);
+    setDraft((prev) => {
+      const next = { ...prev };
+      if (on) next[id] = prev[id] ?? 0;
+      else delete next[id];
+      return next;
+    });
+  };
+
+  return (
+    <div className="discipline-panel">
+      <div className="drilldown-head">
+        <div>
+          <h3 className="panel-title" style={{ margin: 0 }}>
+            Critical Risk Control — focus audit
+          </h3>
+          <p className="sub" style={{ margin: "2px 0 0" }}>
+            Score only the hazardous work this contractor actually does.{" "}
+            {inScope.length} of {CRITICAL_RISKS.length} hazard
+            {inScope.length === 1 ? "" : "s"} in scope; the rest are excluded
+            from the average rather than scored zero.
+          </p>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div className="brief-score" style={{ fontSize: 28 }}>
+            {formatScore(derived)}
+          </div>
+          <RatingBadge rating={ratingFor(derived)} />
+        </div>
+      </div>
+      <table className="data crc-entry">
+        <thead>
+          <tr>
+            <th style={{ width: 80 }}>In scope</th>
+            <th>Hazardous work</th>
+            <th style={{ width: 90 }}>Pillar</th>
+            <th style={{ width: 110 }} className="num">
+              Score
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {CRITICAL_RISKS.map((risk) => {
+            const scoped = draft[risk.id] !== undefined;
+            return (
+              <tr key={risk.id} className={scoped ? undefined : "is-out"}>
+                <td>
+                  <input
+                    type="checkbox"
+                    checked={scoped}
+                    disabled={!canEdit}
+                    aria-label={`${risk.label} in scope`}
+                    onChange={(e) => toggle(risk.id, e.target.checked)}
+                  />
+                </td>
+                <td>{risk.label}</td>
+                <td style={{ color: "var(--muted)" }}>
+                  {DOMAIN_BY_ID[risk.domain].label}
+                </td>
+                <td className="num">
+                  {scoped ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.1}
+                      disabled={!canEdit}
+                      value={draft[risk.id] ?? ""}
+                      onChange={(e) => setScore(risk.id, e.target.value)}
+                    />
+                  ) : (
+                    <span style={{ color: "var(--muted)" }}>not in scope</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {canEdit && (
+        <p>
+          <button
+            className="ghost"
+            type="button"
+            onClick={() => {
+              onSave(draft);
+              setSaved(true);
+            }}
+          >
+            {saved ? "Saved" : "Save critical-risk scores"}
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function AuditDetailClient({
   auditId,
   role,
@@ -140,6 +286,7 @@ export function AuditDetailClient({
     audits,
     saveResponses,
     saveDisciplineScores,
+    saveCriticalRisks,
     setAuditStatus,
     deleteAudit,
   } = useEhss();
@@ -163,6 +310,7 @@ export function AuditDetailClient({
   const isAdmin = role === "admin";
   const canEdit = audit.status === "draft" && (isAdmin || role === "auditor");
   const checklistScore = scoreAudit(CHECKLIST, audit.responses).total;
+  const crcAuditScore = crcScore(audit.criticalRisks);
 
   return (
     <div className="stack">
@@ -182,8 +330,16 @@ export function AuditDetailClient({
           key={`${audit.id}-disciplines`}
           scores={audit.disciplineScores}
           checklistScore={checklistScore}
+          crcAuditScore={crcAuditScore}
           canEdit={canEdit}
           onSave={(scores) => saveDisciplineScores(audit.id, scores)}
+        />
+
+        <CriticalRiskPanel
+          key={`${audit.id}-crc`}
+          risks={audit.criticalRisks}
+          canEdit={canEdit}
+          onSave={(risks) => saveCriticalRisks(audit.id, risks)}
         />
 
         <EhssAuditForm

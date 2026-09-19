@@ -33,6 +33,7 @@ import type {
   SubRegion,
 } from "./model";
 import type { DisciplineScores } from "./disciplines";
+import type { CriticalRiskScores } from "./critical-risks";
 
 const STORAGE_KEY = "ehss-demo-v1";
 
@@ -104,6 +105,7 @@ interface StoreValue {
     responses: Record<string, EhssResponse>,
   ) => void;
   saveDisciplineScores: (auditId: string, scores: DisciplineScores) => void;
+  saveCriticalRisks: (auditId: string, risks: CriticalRiskScores) => void;
   setAuditStatus: (auditId: string, status: EhssAuditStatus) => void;
   deleteAudit: (auditId: string) => void;
   resetDemo: () => void;
@@ -152,6 +154,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
         status: "draft",
         responses: {},
         disciplineScores: {},
+        criticalRisks: {},
       };
       update((prev) => ({ ...prev, audits: { ...prev.audits, [id]: audit } }));
       return id;
@@ -188,6 +191,22 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
           audits: {
             ...prev.audits,
             [auditId]: { ...audit, disciplineScores: scores },
+          },
+        };
+      }),
+    [update, currentAudit],
+  );
+
+  const saveCriticalRisks = useCallback(
+    (auditId: string, risks: CriticalRiskScores) =>
+      update((prev) => {
+        const audit = currentAudit(auditId, prev);
+        if (!audit) return prev;
+        return {
+          ...prev,
+          audits: {
+            ...prev.audits,
+            [auditId]: { ...audit, criticalRisks: risks },
           },
         };
       }),
@@ -233,6 +252,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       createAudit,
       saveResponses,
       saveDisciplineScores,
+      saveCriticalRisks,
       setAuditStatus,
       deleteAudit,
       resetDemo,
@@ -245,6 +265,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       createAudit,
       saveResponses,
       saveDisciplineScores,
+      saveCriticalRisks,
       setAuditStatus,
       deleteAudit,
       resetDemo,
