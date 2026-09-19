@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { audits, contractorLabel, contractors, subRegions } from "./mock";
 import { weightedOverall } from "./disciplines";
+import { CHECKLIST } from "./checklist";
+import { DOMAIN_BY_ID } from "./domains";
 import {
   areaTrends,
+  domainBreakdown,
+  domainGapMatrix,
   collectObservations,
   contractorStats,
   finalized,
@@ -217,5 +221,77 @@ describe("findings", () => {
     expect(rows.every((r) => r.observation !== "OB1")).toBe(true);
     const breakdown = observationBreakdown(rows);
     expect(breakdown.reduce((sum, b) => sum + b.count, 0)).toBe(rows.length);
+  });
+});
+
+describe("SHEW domains", () => {
+  const rows = collectObservations(audits, contractors);
+
+  it("tags every checklist question with a domain", () => {
+    const flat = CHECKLIST.flatMap((s) =>
+      s.subSections.flatMap((ss) => ss.questions),
+    );
+    expect(flat).toHaveLength(81);
+    for (const q of flat) {
+      expect(DOMAIN_BY_ID[q.domain], q.code).toBeDefined();
+    }
+  });
+
+  it("splits the Health & Safety checklist across Safety, Health and cross-cutting", () => {
+    const flat = CHECKLIST.flatMap((s) =>
+      s.subSections.flatMap((ss) => ss.questions),
+    );
+    const count = (d: string) => flat.filter((q) => q.domain === d).length;
+    expect(count("safety")).toBe(31);
+    expect(count("health")).toBe(8);
+    expect(count("cross")).toBe(42);
+    // No Environment, Welfare or Security questions until those checklists
+    // are added — the pillars exist but carry nothing yet.
+    expect(count("environment")).toBe(0);
+    expect(count("welfare")).toBe(0);
+    expect(count("security")).toBe(0);
+  });
+
+  it("puts hazard controls in Safety and medical controls in Health", () => {
+    const byCode = new Map(
+      CHECKLIST.flatMap((s) =>
+        s.subSections.flatMap((ss) => ss.questions.map((q) => [q.code, q])),
+      ),
+    );
+    expect(byCode.get("B4.1")!.domain).toBe("safety");  // work permits
+    expect(byCode.get("B10.1")!.domain).toBe("safety"); // PPE
+    expect(byCode.get("C2.11")!.domain).toBe("safety"); // lifting plan
+    expect(byCode.get("B11.1")!.domain).toBe("health"); // medical facilities
+    expect(byCode.get("C2.12")!.domain).toBe("health"); // fatigue management
+    expect(byCode.get("A1")!.domain).toBe("cross");     // strategic plan
+    expect(byCode.get("B6.1")!.domain).toBe("cross");   // subcontractor mgmt
+  });
+
+  it("carries the domain onto every finding", () => {
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(DOMAIN_BY_ID[r.domain]).toBeDefined();
+  });
+
+  it("builds a pillar x gap-type matrix whose cells sum to the findings", () => {
+    const m = domainGapMatrix(rows);
+    expect(m.observations).toEqual(["OB2", "OB3", "OB4", "OB5"]);
+    expect(m.cells.reduce((sum, c) => sum + c.count, 0)).toBe(rows.length);
+    expect(m.domains.reduce((sum, d) => sum + d.total, 0)).toBe(rows.length);
+    expect(m.max).toBe(Math.max(...m.cells.map((c) => c.count)));
+    // Only pillars that actually have findings appear as rows.
+    expect(m.domains.map((d) => d.id).sort()).toEqual([
+      "cross",
+      "health",
+      "safety",
+    ]);
+  });
+
+  it("breaks findings down by pillar with shares that total 100", () => {
+    const breakdown = domainBreakdown(rows);
+    expect(breakdown.reduce((sum, b) => sum + b.count, 0)).toBe(rows.length);
+    expect(breakdown.reduce((sum, b) => sum + b.share, 0)).toBeCloseTo(100, 0);
+    // Sorted most findings first.
+    const counts = breakdown.map((b) => b.count);
+    expect([...counts].sort((a, b) => b - a)).toEqual(counts);
   });
 });

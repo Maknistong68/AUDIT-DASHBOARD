@@ -5,6 +5,7 @@
 
 import { CHECKLIST } from "./checklist";
 import { flattenChecklist, scoreAudit } from "./scoring";
+import { DOMAINS, type DomainId } from "./domains";
 import {
   DISCIPLINES,
   TARGET_SCORE,
@@ -68,6 +69,8 @@ export interface ObservationRow {
   questionText: string;
   subSectionTitle: string | null;
   sectionCode: string;
+  /** SHEW pillar the audited control belongs to. */
+  domain: DomainId;
   answer: "partial" | "no";
   observation: ObservationCode;
 }
@@ -322,6 +325,7 @@ export function collectObservations(
         questionText: item.question.text,
         subSectionTitle: item.subSectionTitle,
         sectionCode: item.section,
+        domain: item.question.domain,
         answer: r.answer,
         observation: r.observation,
       });
@@ -657,4 +661,79 @@ export function contractorSeriesByQuarter(
     ),
   }));
   return { quarters, series };
+}
+
+/* ------------------------------------------------------------------ */
+/* SHEW domains                                                        */
+/* ------------------------------------------------------------------ */
+
+export interface DomainCount {
+  domain: DomainId;
+  label: string;
+  count: number;
+  share: number;
+}
+
+/** Findings grouped by SHEW pillar, most first. */
+export function domainBreakdown(rows: ObservationRow[]): DomainCount[] {
+  const counts = new Map<DomainId, number>();
+  for (const r of rows) counts.set(r.domain, (counts.get(r.domain) ?? 0) + 1);
+  const total = rows.length;
+  return DOMAINS.filter((d) => (counts.get(d.id) ?? 0) > 0)
+    .map((d) => ({
+      domain: d.id,
+      label: d.label,
+      count: counts.get(d.id)!,
+      share: total ? round((counts.get(d.id)! / total) * 100) : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export interface DomainGapCell {
+  domain: DomainId;
+  observation: ObservationCode;
+  count: number;
+}
+
+export interface DomainGapMatrix {
+  domains: Array<{ id: DomainId; label: string; total: number }>;
+  observations: ObservationCode[];
+  cells: DomainGapCell[];
+  max: number;
+  total: number;
+}
+
+/**
+ * The cross-tab that says where to aim: SHEW pillar against the kind of gap.
+ * "Safety × implementation" means the rules exist and are not being followed
+ * on site; "Health × documentation" is a paperwork problem. They need
+ * completely different interventions.
+ */
+export function domainGapMatrix(rows: ObservationRow[]): DomainGapMatrix {
+  const observations: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
+  const present = DOMAINS.filter((d) =>
+    rows.some((r) => r.domain === d.id),
+  );
+  const cells: DomainGapCell[] = [];
+  let max = 0;
+  for (const d of present) {
+    for (const o of observations) {
+      const count = rows.filter(
+        (r) => r.domain === d.id && r.observation === o,
+      ).length;
+      if (count > max) max = count;
+      cells.push({ domain: d.id, observation: o, count });
+    }
+  }
+  return {
+    domains: present.map((d) => ({
+      id: d.id,
+      label: d.label,
+      total: rows.filter((r) => r.domain === d.id).length,
+    })),
+    observations,
+    cells,
+    max,
+    total: rows.length,
+  };
 }

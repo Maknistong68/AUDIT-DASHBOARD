@@ -75,7 +75,12 @@ describe("scoring — validated against the workbook's own filled audit", () => 
 });
 
 describe("scoring edge cases", () => {
-  const q = (code: string, weight: number) => ({ code, weight, text: code });
+  const q = (code: string, weight: number) => ({
+    code,
+    weight,
+    text: code,
+    domain: "safety" as const,
+  });
 
   it("scores all-Full as 100 and all-No as 0", () => {
     const qs = [q("X1", 4), q("X2", 1)];

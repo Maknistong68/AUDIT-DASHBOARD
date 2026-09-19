@@ -12,6 +12,7 @@ import {
 import { ContractorDrilldown } from "@/components/ContractorDrilldown";
 import { ContractorSparkGrid } from "@/components/charts/ContractorSparkGrid";
 import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
+import { DomainGapHeatmap } from "@/components/charts/DomainGapHeatmap";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { formatScore } from "@/lib/format";
 import {
@@ -29,6 +30,7 @@ import {
   contractorSeriesByQuarter,
   contractorStats,
   finalized,
+  domainGapMatrix,
   observationTrendByQuarter,
   summarizeAll,
   timeframeById,
@@ -131,6 +133,10 @@ export function DashboardClient() {
 
   const observationTrend = useMemo(
     () => observationTrendByQuarter(observations),
+    [observations],
+  );
+  const gapMatrix = useMemo(
+    () => domainGapMatrix(observations),
     [observations],
   );
   const contractorLines = useMemo(
@@ -278,6 +284,15 @@ export function DashboardClient() {
           selectedId={selectedId}
           onSelect={setSelectedId}
         />
+      </section>
+
+      <section className="card">
+        <h2>Where the gaps are — SHEW pillar against gap type</h2>
+        <p className="sub">
+          {gapMatrix.total} findings in scope. Environment and Welfare have
+          scores but no checklist yet, so they carry no findings.
+        </p>
+        <DomainGapHeatmap matrix={gapMatrix} />
       </section>
 
       <div className="grid-2">

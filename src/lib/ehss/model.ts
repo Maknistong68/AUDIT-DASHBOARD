@@ -6,6 +6,7 @@
  */
 
 import { bandFor, type Band } from "./bands";
+import type { DomainId } from "./domains";
 
 /** Answer options — the workbook's dropdown (Full / Partial / No / N/A). */
 export type EhssAnswer = "full" | "partial" | "no" | "na";
@@ -28,6 +29,8 @@ export interface ChecklistQuestion {
   code: string; // A1, B6.3, C2.14 …
   weight: number; // 1–4
   text: string;
+  /** SHEW pillar this control belongs to — see ./domains. */
+  domain: DomainId;
 }
 
 export interface ChecklistSubSection {

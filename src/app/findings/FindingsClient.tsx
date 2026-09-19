@@ -10,6 +10,7 @@ import {
 import { useEhss } from "@/lib/ehss/store";
 import { contractorLabel } from "@/lib/ehss/mock";
 import { collectObservations } from "@/lib/ehss/summaries";
+import { DOMAINS, DOMAIN_BY_ID } from "@/lib/ehss/domains";
 
 const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
 
@@ -23,6 +24,7 @@ export function FindingsClient() {
   const [subRegionId, setSubRegionId] = useState("all");
   const [contractorId, setContractorId] = useState("all");
   const [observation, setObservation] = useState("all");
+  const [domain, setDomain] = useState("all");
 
   const contractorOptions =
     subRegionId === "all"
@@ -36,7 +38,8 @@ export function FindingsClient() {
           (o) =>
             (subRegionId === "all" || o.subRegionId === subRegionId) &&
             (contractorId === "all" || o.contractorId === contractorId) &&
-            (observation === "all" || o.observation === observation),
+            (observation === "all" || o.observation === observation) &&
+            (domain === "all" || o.domain === domain),
         )
         .sort(
           (a, b) =>
@@ -44,7 +47,7 @@ export function FindingsClient() {
             a.contractorName.localeCompare(b.contractorName) ||
             a.questionCode.localeCompare(b.questionCode),
         ),
-    [observations, subRegionId, contractorId, observation],
+    [observations, subRegionId, contractorId, observation, domain],
   );
 
   return (
@@ -82,6 +85,17 @@ export function FindingsClient() {
           </select>
         </label>
         <label className="field" style={{ marginBottom: 0 }}>
+          <span>SHEW pillar</span>
+          <select value={domain} onChange={(e) => setDomain(e.target.value)}>
+            <option value="all">All pillars</option>
+            {DOMAINS.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field" style={{ marginBottom: 0 }}>
           <span>Classification</span>
           <select
             value={observation}
@@ -111,6 +125,7 @@ export function FindingsClient() {
               <tr>
                 <th>Quarter</th>
                 <th>Contractor</th>
+                <th>Pillar</th>
                 <th>Question</th>
                 <th>Area</th>
                 <th>Answer</th>
@@ -130,6 +145,7 @@ export function FindingsClient() {
                       {o.contractorName}
                     </Link>
                   </td>
+                  <td>{DOMAIN_BY_ID[o.domain].label}</td>
                   <td>
                     <strong>{o.questionCode}</strong>
                   </td>
