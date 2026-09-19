@@ -134,7 +134,7 @@ export function ContractorSparkGrid({
                   d={d}
                   fill="none"
                   stroke={colour}
-                  strokeWidth={2}
+                  strokeWidth={2.2}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   opacity={hover && hover !== s.contractorId ? 0.55 : 1}
@@ -143,10 +143,10 @@ export function ContractorSparkGrid({
                   <circle
                     cx={x(end.index)}
                     cy={y(end.value)}
-                    r={3}
+                    r={3.4}
                     fill={colour}
                     stroke="var(--surface-1)"
-                    strokeWidth={1.5}
+                    strokeWidth={2}
                   />
                 )}
               </svg>

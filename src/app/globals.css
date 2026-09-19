@@ -1,17 +1,34 @@
-/* Design tokens — light is the base; dark redefines the same roles.
-   Chart colors follow the validated reference palette (docs: dataviz). */
+/* ===========================================================================
+   Design system — "frosted glass" material, iOS-flavoured.
+
+   Two layers of colour live here and they must not be confused:
+
+   1. SEMANTIC TOKENS (--ink-*, --accent, --band-*, --series-*) carry meaning.
+      They are unchanged from the validated reference palette (docs: dataviz)
+      and are what every chart mark reads.
+   2. MATERIAL TOKENS (--mat-*, --glass-*, --shadow-*) carry depth only. They
+      are translucent and are never used to encode data.
+
+   --surface-1 stays OPAQUE on purpose: SVG has no backdrop-filter, so chart
+   rings and surface gaps need a real colour. It is set to the composite the
+   glass actually resolves to over the page background, which is also the
+   surface the palette was validated against:
+     light #f8fafd · dark #171a21
+   =========================================================================== */
 
 :root {
   color-scheme: light;
 
-  --page: #f9f9f7;
-  --surface-1: #fcfcfb;
-  --ink-1: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --baseline: #c3c2b7;
-  --border: rgba(11, 11, 11, 0.1);
+  /* ---- Page & ink ---- */
+  --page: #eaeef5;
+  --page-deep: #dde4ef;
+  --surface-1: #f8fafd;      /* opaque composite of the glass — charts use this */
+  --ink-1: #0b0e14;
+  --ink-2: #454a55;
+  --muted: #656b7a;          /* >=4.5:1 on every glass composite, tinted tiles included */
+  --grid: #d9dee8;
+  --baseline: #b9c1d0;
+  --border: rgba(11, 14, 20, 0.09);
 
   --accent: #2a78d6;        /* categorical slot 1 / sequential hue */
   --accent-strong: #1c5cab; /* sequential 550 */
@@ -42,25 +59,68 @@
   --band-minimal: #e88a00;    /* 60–69   (ref #FFC000) */
   --band-non: #e62e2e;        /* below 60 (ref #FF0000) */
 
-  --tile-wash: linear-gradient(160deg, rgba(42, 120, 214, 0.07), transparent 62%);
+  /* ---- Material: translucent depth, never meaning ---- */
+  --glass-blur: 20px;
+  --glass-sat: 180%;
+  --mat-1: rgba(255, 255, 255, 0.72);   /* cards, tiles */
+  --mat-2: rgba(255, 255, 255, 0.5);    /* nested panels, controls */
+  --mat-3: rgba(255, 255, 255, 0.92);   /* raised thumbs, tooltips */
+  /* Bars and sheets sit OVER scrolling content, so they are barely
+     translucent — at card opacity the text underneath reads through them
+     and the surface stops looking like a surface. */
+  --mat-bar: rgba(252, 253, 255, 0.94);
+  --mat-sheet: rgba(252, 253, 255, 0.95);
+  /* The whole url() lives in the token, because a var() inside a quoted
+     data URI is never substituted. */
+  --chevron-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23656b7a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.8 6 6.4l5-4.6'/%3E%3C/svg%3E");
+  --mat-sunken: rgba(11, 14, 20, 0.05); /* inset tracks */
+  --mat-edge: rgba(255, 255, 255, 0.85); /* specular top edge */
+  --mat-line: rgba(11, 14, 20, 0.08);    /* hairline */
+  --mat-hover: rgba(255, 255, 255, 0.6);
+  --scrim: rgba(24, 30, 42, 0.38);
+
+  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 26px -12px rgba(16, 24, 40, 0.18);
+  --shadow-2: 0 2px 6px rgba(16, 24, 40, 0.07), 0 22px 48px -18px rgba(16, 24, 40, 0.28);
+  --shadow-3: 0 8px 18px rgba(16, 24, 40, 0.1), 0 44px 90px -24px rgba(16, 24, 40, 0.4);
+  --shadow-press: 0 1px 2px rgba(16, 24, 40, 0.12);
+
+  /* ---- Radius scale: generous, iOS-like, nested concentrically ---- */
+  --r-1: 10px;   /* chips, dots, swatches */
+  --r-2: 14px;   /* buttons, inputs */
+  --r-3: 18px;   /* inner panels, rows */
+  --r-4: 24px;   /* cards, tiles */
+  --r-5: 30px;   /* sheets, hero surfaces */
+  --r-pill: 999px;
+
+  /* ---- Motion: an iOS-ish ease-out, with a gentle overshoot for entrances */
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  --tile-wash: radial-gradient(
+    120% 140% at 100% 0%,
+    /* Light enough that --muted keeps its AA ratio in the tinted corner. */
+    color-mix(in srgb, var(--tile-accent, var(--accent)) 11%, transparent),
+    transparent 62%
+  );
 }
 
 @media (prefers-color-scheme: dark) {
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
-    --page: #0d0d0d;
-    --surface-1: #1a1a19;
+    --page: #080a0f;
+    --page-deep: #04050a;
+    --surface-1: #171a21;
     --ink-1: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --baseline: #383835;
-    --border: rgba(255, 255, 255, 0.1);
+    --ink-2: #c3c7d1;
+    --muted: #8d94a3;
+    --grid: #282c36;
+    --baseline: #3a3f4b;
+    --border: rgba(255, 255, 255, 0.12);
 
     --accent: #3987e5;
     --accent-strong: #86b6ef;
     --accent-track: #184f95;
-    --accent-wash: rgba(57, 135, 229, 0.12);
+    --accent-wash: rgba(57, 135, 229, 0.14);
 
     --success-text: #0ca30c;
 
@@ -76,7 +136,22 @@
     --band-minimal: #ffb020;
     --band-non: #ff5c5c;
 
-    --tile-wash: linear-gradient(160deg, rgba(57, 135, 229, 0.12), transparent 62%);
+    --mat-1: rgba(32, 37, 48, 0.66);
+    --mat-2: rgba(255, 255, 255, 0.05);
+    --mat-3: rgba(38, 43, 55, 0.94);
+    --mat-bar: rgba(22, 25, 33, 0.93);
+    --mat-sheet: rgba(24, 27, 35, 0.95);
+    --chevron-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238d94a3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.8 6 6.4l5-4.6'/%3E%3C/svg%3E");
+    --mat-sunken: rgba(0, 0, 0, 0.3);
+    --mat-edge: rgba(255, 255, 255, 0.16);
+    --mat-line: rgba(255, 255, 255, 0.09);
+    --mat-hover: rgba(255, 255, 255, 0.08);
+    --scrim: rgba(0, 0, 0, 0.58);
+
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 26px -12px rgba(0, 0, 0, 0.7);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.5), 0 22px 48px -18px rgba(0, 0, 0, 0.8);
+    --shadow-3: 0 8px 18px rgba(0, 0, 0, 0.5), 0 44px 90px -24px rgba(0, 0, 0, 0.9);
+    --shadow-press: 0 1px 2px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -84,83 +159,218 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--page);
   color: var(--ink-1);
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 14px;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
   line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Glass needs something behind it; the wash below is that something. */
+  overflow-x: hidden;
+}
+
+/* Ambient wash: fixed, so cards blur against a stable field while scrolling.
+   Kept low-chroma — it is decoration, never a data channel. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10vmax;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42vmax 34vmax at 6% -10%, color-mix(in srgb, var(--accent) 58%, transparent), transparent 64%),
+    radial-gradient(38vmax 30vmax at 98% -2%, color-mix(in srgb, var(--series-3) 46%, transparent), transparent 64%),
+    radial-gradient(34vmax 28vmax at 78% 46%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 66%),
+    radial-gradient(44vmax 36vmax at 34% 104%, color-mix(in srgb, var(--series-2) 34%, transparent), transparent 66%),
+    linear-gradient(180deg, var(--page) 0%, var(--page-deep) 100%);
+}
+
+/* The bars float clear of the screen edge; without this, content scrolling
+   through that gap sits crisply on top of the frame. Blurring the strip is
+   what makes the bar look like it is over the content, not beside it. */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: max(12px, env(safe-area-inset-top));
+  z-index: 29;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 a {
   color: inherit;
 }
 
+h1, h2, h3 {
+  letter-spacing: -0.021em;
+}
+
+/* Big numerals read as one shape, the way iOS sets them. */
+.value,
+.brief-score,
+.live-score,
+.spark-score,
+.crc-score,
+.heat-cell,
+.pct,
+td.num,
+th.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
 /* ---- Shell ---- */
 
 .shell {
-  max-width: 1080px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 0 20px 48px;
+  padding: 0 clamp(14px, 3vw, 28px) 56px;
 }
 
+/* ---- Top bar: a floating glass island that sticks to the top ---- */
+
 .topbar {
+  position: sticky;
+  top: 10px;
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--grid);
-  margin-bottom: 24px;
-  flex-wrap: wrap;
+  margin: 12px 0 22px;
+  padding: 9px 10px 9px 18px;
+  border-radius: var(--r-pill);
+  background: var(--mat-bar);
+  border: 1px solid var(--mat-line);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--mat-edge);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  flex-wrap: nowrap;
+}
+
+.topbar form {
+  flex: none;
 }
 
 .topbar .brand {
-  font-weight: 650;
+  font-weight: 640;
   font-size: 15px;
+  letter-spacing: -0.02em;
   text-decoration: none;
-  margin-right: 8px;
+  white-space: nowrap;
+  flex: 0 1 auto;
+  /* Shrinkable, so a long brand can never be what pushes the page sideways. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar nav {
   display: flex;
   gap: 2px;
   flex: 1;
-  flex-wrap: wrap;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.topbar nav::-webkit-scrollbar {
+  display: none;
 }
 
 .topbar nav a {
   text-decoration: none;
   color: var(--ink-2);
-  padding: 5px 9px;
-  border-radius: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
   white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
 }
 
 .topbar nav a:hover {
-  background: var(--accent-wash);
+  background: var(--mat-hover);
   color: var(--ink-1);
+}
+
+/* Current section: a filled pill, the way a tab bar marks its tab. */
+.topbar nav a[aria-current="page"] {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .topbar .who {
   color: var(--muted);
   font-size: 12.5px;
   white-space: nowrap;
+  flex: none;
+}
+
+/* The mobile tab bar is rendered on every page but only shown on phones. */
+.tabbar {
+  display: none;
+}
+
+/* Phone-only entry to the admin Reference screen; TopNav carries it on a
+   wide screen, where this is hidden. */
+.admin-shortcut {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 550;
+}
+
+.admin-shortcut svg {
+  width: 17px;
+  height: 17px;
+}
+
+.admin-shortcut[aria-current="page"] {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
 }
 
 .admin-nav {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .admin-nav a {
   text-decoration: none;
   color: var(--ink-2);
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
   font-size: 13px;
-  border: 1px solid var(--grid);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
 }
 
 .admin-nav a:hover {
@@ -171,80 +381,123 @@ a {
 /* ---- Cards & layout ---- */
 
 .card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 20px;
+  position: relative;
+  background: var(--mat-1);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-4);
+  padding: clamp(16px, 2.2vw, 24px);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  /* Keeps rounded children from poking through the corner radius. */
+  isolation: isolate;
+}
+
+/* Specular top edge — the one detail that makes glass read as glass. */
+.card::before,
+.stat-tile::before,
+.panel-floating::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--mat-edge) 22%, var(--mat-edge) 78%, transparent);
+  pointer-events: none;
 }
 
 .card > h2 {
-  margin: 0 0 2px;
-  font-size: 14.5px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  margin: 0 0 3px;
+  font-size: 16px;
+  font-weight: 640;
+  letter-spacing: -0.02em;
 }
 
 .card .sub {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   color: var(--muted);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .grid-2 {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: clamp(12px, 1.6vw, 18px);
+  margin-bottom: 18px;
+}
+
+/* A grid item defaults to min-width:auto, so one wide table inside a card
+   stretches its track — and with it the page. Letting the item shrink hands
+   the overflow to the card's own scroll containers, where it belongs. */
+.grid-2 > *,
+.stack > * {
+  min-width: 0;
 }
 
 .stack > * + * {
-  margin-top: 16px;
-}
-
-@media (max-width: 760px) {
-  .grid-2 {
-    grid-template-columns: 1fr;
-  }
+  margin-top: clamp(12px, 1.6vw, 18px);
 }
 
 /* ---- Filters (one row, above the content they scope) ---- */
 
 .filter-row {
   display: flex;
-  gap: 16px;
+  gap: 12px 18px;
   align-items: flex-end;
   flex-wrap: wrap;
+  padding: 12px 16px;
+  border-radius: var(--r-4);
+  background: var(--mat-1);
+  border: 1px solid var(--mat-line);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
 
 .filter-row select {
-  min-width: 200px;
+  min-width: 220px;
 }
 
-/* ---- Stat tiles ---- */
+/* ---- Stat tiles: iOS home-screen widgets ---- */
 
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: clamp(10px, 1.4vw, 16px);
+  margin-bottom: 18px;
 }
 
 .stat-tile {
   position: relative;
-  background: var(--surface-1);
+  background: var(--mat-1);
   background-image: var(--tile-wash);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 18px 14px 20px;
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-4);
+  padding: 16px 18px 17px;
   overflow: hidden;
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
 
-.stat-tile::before {
+/* The tone accent: a rounded capsule, not an edge-to-edge rule. Supplementary
+   only — the label, the value and (where present) the rating badge already
+   say what the tile says. */
+.stat-tile::after {
   content: "";
   position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
+  left: 8px;
+  top: 16px;
+  bottom: 16px;
+  width: 4px;
+  border-radius: var(--r-pill);
   background: var(--tile-accent, var(--accent));
+  opacity: 0.9;
+}
+
+.stat-tile > * {
+  position: relative;
+  padding-left: 8px;
 }
 
 .stat-tile.tone-compliant { --tile-accent: var(--band-compliant); }
@@ -258,85 +511,130 @@ a {
 
 .stat-tile .label {
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .stat-tile .value {
-  font-size: 30px;
-  font-weight: 600;
-  line-height: 1.2;
-  margin-top: 2px;
+  font-size: clamp(28px, 3.4vw, 34px);
+  font-weight: 640;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-top: 3px;
+}
+
+/* Word values (a rating name) step down so the row keeps one height. */
+.stat-tile .value.is-wordy {
+  font-size: clamp(17px, 1.9vw, 21px);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .stat-tile .hint {
   color: var(--muted);
-  font-size: 12px;
-  margin-top: 2px;
+  font-size: 12.5px;
+  margin-top: 4px;
 }
 
-/* ---- Tables ---- */
+/* ---- Tables: inset-grouped lists ---- */
+
+.table-scroll {
+  overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--r-3);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
 
 table.data {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 table.data th {
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: var(--muted);
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--grid);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mat-line);
+  white-space: nowrap;
 }
 
 table.data td {
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--grid);
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--mat-line);
   vertical-align: middle;
 }
 
-table.data tr:last-child td {
+table.data tbody tr {
+  transition: background-color 140ms var(--ease);
+}
+
+table.data tbody tr:hover {
+  background: var(--mat-hover);
+}
+
+table.data tbody tr:last-child td {
   border-bottom: none;
 }
+
+/* Rounded ends on the list, the way a grouped table view is drawn. */
+table.data tbody tr:first-child td:first-child { border-top-left-radius: var(--r-3); }
+table.data tbody tr:first-child td:last-child { border-top-right-radius: var(--r-3); }
+table.data tbody tr:last-child td:first-child { border-bottom-left-radius: var(--r-3); }
+table.data tbody tr:last-child td:last-child { border-bottom-right-radius: var(--r-3); }
 
 table.data td.num,
 table.data th.num {
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 table.data a {
   color: var(--accent-strong);
   text-decoration: none;
+  font-weight: 500;
 }
 
 table.data a:hover {
   text-decoration: underline;
 }
 
-/* ---- Meter (score bar): sequential fill on a same-ramp track ---- */
+/* ---- Meter (score bar): sequential fill in a sunken capsule ---- */
 
 .meter {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .meter .track {
   width: 110px;
-  height: 8px;
-  border-radius: 4px;
+  height: 10px;
+  border-radius: var(--r-pill);
   /* Neutral track: the fill carries the rating colour, so a tinted track
      would wash it out. */
-  background: var(--grid);
+  background: var(--mat-sunken);
+  box-shadow: inset 0 1px 2px rgba(11, 14, 20, 0.12);
   overflow: hidden;
+  flex: none;
 }
 
 .meter .fill {
+  display: block;
   height: 100%;
-  background: var(--meter-fill, var(--accent));
-  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--meter-fill, var(--accent)) 82%, white),
+    var(--meter-fill, var(--accent))
+  );
+  border-radius: var(--r-pill);
+  transition: width 420ms var(--ease);
 }
 
 .meter.band-compliant { --meter-fill: var(--band-compliant); }
@@ -346,8 +644,8 @@ table.data a:hover {
 .meter.band-non { --meter-fill: var(--band-non); }
 
 .meter .pct {
-  font-variant-numeric: tabular-nums;
-  min-width: 44px;
+  min-width: 46px;
+  font-weight: 560;
 }
 
 /* ---- Badges (status: always icon/label, never color alone) ---- */
@@ -355,11 +653,13 @@ table.data a:hover {
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  font-weight: 500;
+  padding: 4px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
   color: var(--ink-2);
   white-space: nowrap;
 }
@@ -369,20 +669,22 @@ table.data a:hover {
   height: 7px;
   border-radius: 50%;
   background: var(--muted);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muted) 18%, transparent);
+  flex: none;
 }
 
-.badge.good .dot { background: var(--status-good); }
-.badge.warning .dot { background: var(--status-warning); }
-.badge.serious .dot { background: var(--status-serious); }
-.badge.critical .dot { background: var(--status-critical); }
-.badge.accent .dot { background: var(--accent); }
+.badge.good .dot { background: var(--status-good); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-good) 18%, transparent); }
+.badge.warning .dot { background: var(--status-warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-warning) 18%, transparent); }
+.badge.serious .dot { background: var(--status-serious); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-serious) 18%, transparent); }
+.badge.critical .dot { background: var(--status-critical); box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-critical) 18%, transparent); }
+.badge.accent .dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
 
 /* Rating badges use the traffic-light bands, so a badge and its bar match */
-.badge.band-compliant .dot { background: var(--band-compliant); }
-.badge.band-mostly .dot { background: var(--band-mostly); }
-.badge.band-moderate .dot { background: var(--band-moderate); }
-.badge.band-minimal .dot { background: var(--band-minimal); }
-.badge.band-non .dot { background: var(--band-non); }
+.badge.band-compliant .dot { background: var(--band-compliant); box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-compliant) 18%, transparent); }
+.badge.band-mostly .dot { background: var(--band-mostly); box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-mostly) 18%, transparent); }
+.badge.band-moderate .dot { background: var(--band-moderate); box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-moderate) 18%, transparent); }
+.badge.band-minimal .dot { background: var(--band-minimal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-minimal) 18%, transparent); }
+.badge.band-non .dot { background: var(--band-non); box-shadow: 0 0 0 3px color-mix(in srgb, var(--band-non) 18%, transparent); }
 
 /* ---- Forms & buttons ---- */
 
@@ -390,12 +692,12 @@ label.field {
   display: block;
   font-size: 12.5px;
   color: var(--ink-2);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 label.field > span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   font-weight: 600;
 }
 
@@ -403,64 +705,138 @@ input[type="text"],
 input[type="email"],
 input[type="password"],
 input[type="date"],
-select {
+input[type="number"],
+select,
+textarea {
   width: 100%;
-  max-width: 360px;
-  padding: 7px 10px;
-  border: 1px solid var(--baseline);
-  border-radius: 7px;
-  background: var(--surface-1);
+  max-width: 380px;
+  padding: 10px 14px;
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-2);
+  background: var(--mat-2);
   color: var(--ink-1);
   font: inherit;
+  font-size: 14px;
+  box-shadow: inset 0 1px 2px rgba(11, 14, 20, 0.05);
+  transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+input:hover,
+select:hover {
+  border-color: var(--baseline);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px var(--accent-wash);
+  outline: none;
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  flex: none;
+  border-radius: 7px;
+  border: 1.5px solid var(--baseline);
+  background: var(--mat-2);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.4 6.4 11.3 12.5 5'/%3E%3C/svg%3E");
+  background-size: 15px 15px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Native chevron replaced with one that matches the rounded language. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: var(--chevron-url);
+  background-position: calc(100% - 14px) center;
+  background-size: 11px 8px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
 }
 
 input:focus-visible,
 select:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2.5px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-2);
 }
 
 button.primary,
 button.ghost {
   font: inherit;
-  border-radius: 7px;
-  padding: 7px 16px;
+  font-size: 14px;
+  font-weight: 560;
+  border-radius: var(--r-pill);
+  padding: 10px 20px;
   cursor: pointer;
+  min-height: 40px;
+  transition: transform 140ms var(--ease), background-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
 }
 
 button.primary {
-  background: var(--accent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
   color: #fff;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, var(--accent-strong) 70%, transparent);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.14),
+    0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
 button.primary:hover { background: var(--accent-strong); }
 
+/* The press: a small scale-down, the way an iOS control acknowledges touch. */
+button.primary:active,
+button.ghost:active {
+  transform: scale(0.965);
+  box-shadow: var(--shadow-press);
+}
+
 button.primary:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 button.ghost {
-  background: transparent;
+  background: var(--mat-2);
   color: var(--ink-1);
-  border: 1px solid var(--baseline);
+  border: 1px solid var(--mat-line);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-button.ghost:hover { background: var(--accent-wash); }
+button.ghost:hover { background: var(--mat-hover); }
 
 .form-error {
   color: var(--status-critical);
   font-size: 13px;
-  margin: 8px 0;
+  margin: 10px 0;
 }
 
 .notice {
-  border-left: 3px solid var(--accent);
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: var(--accent-wash);
-  border-radius: 0 8px 8px 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  border-radius: var(--r-3);
   font-size: 13px;
 }
 
@@ -470,26 +846,31 @@ button.ghost:hover { background: var(--accent-wash); }
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 26px 0 4px;
-  padding-bottom: 6px;
-  border-bottom: 2px solid var(--baseline);
+  gap: 10px;
+  margin: 28px 0 6px;
+  padding: 10px 14px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 640;
+  flex-wrap: wrap;
 }
 
 .section-score {
-  font-variant-numeric: tabular-nums;
   color: var(--accent-strong);
   font-weight: 650;
+  font-variant-numeric: tabular-nums;
   margin-left: 10px;
 }
 
 .q-weight {
   color: var(--muted);
   font-size: 11.5px;
-  border: 1px solid var(--grid);
-  border-radius: 5px;
-  padding: 0 5px;
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
   white-space: nowrap;
 }
 
@@ -497,20 +878,29 @@ button.ghost:hover { background: var(--accent-wash); }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin: 18px 0 6px;
-  font-size: 12px;
-  font-weight: 650;
+  gap: 10px;
+  margin: 20px 0 6px;
+  font-size: 11.5px;
+  font-weight: 640;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
 .q-item {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 10px 16px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--grid);
+  gap: 10px 18px;
+  padding: 14px;
+  margin-bottom: 6px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  border: 1px solid transparent;
+  transition: background-color 140ms var(--ease);
+}
+
+.q-item:hover {
+  background: var(--mat-hover);
 }
 
 .q-item .code {
@@ -522,32 +912,40 @@ button.ghost:hover { background: var(--accent-wash); }
   color: var(--ink-2);
 }
 
+/* Segmented control, iOS-style: a sunken track with a raised thumb. */
 .result-toggle {
   display: inline-flex;
-  border: 1px solid var(--baseline);
-  border-radius: 8px;
-  overflow: hidden;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  box-shadow: inset 0 1px 2px rgba(11, 14, 20, 0.1);
   align-self: start;
 }
 
 .result-toggle button {
   font: inherit;
   font-size: 12.5px;
+  font-weight: 550;
   border: none;
   background: transparent;
   color: var(--ink-2);
-  padding: 6px 12px;
+  padding: 7px 14px;
+  min-height: 34px;
   cursor: pointer;
-  border-left: 1px solid var(--baseline);
+  border-radius: var(--r-pill);
+  transition: background-color 180ms var(--ease), color 180ms var(--ease),
+    box-shadow 180ms var(--ease);
 }
 
-.result-toggle button:first-child {
-  border-left: none;
+.result-toggle button:hover {
+  color: var(--ink-1);
 }
 
 .result-toggle button[aria-pressed="true"] {
   background: var(--accent);
   color: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.24);
 }
 
 .q-detail {
@@ -562,49 +960,35 @@ button.ghost:hover { background: var(--accent-wash); }
 }
 
 .q-detail select {
-  min-width: 230px;
+  min-width: 240px;
 }
 
+/* The submit bar docks to the bottom of the card as a frosted toolbar. */
 .entry-footer {
   position: sticky;
   bottom: 0;
-  background: var(--surface-1);
-  border-top: 1px solid var(--grid);
-  margin: 0 -20px -18px;
-  padding: 12px 20px;
-  border-radius: 0 0 10px 10px;
+  z-index: 2;
+  background: var(--mat-bar);
+  border-top: 1px solid var(--mat-line);
+  margin: 16px calc(clamp(16px, 2.2vw, 24px) * -1) calc(clamp(16px, 2.2vw, 24px) * -1);
+  padding: 14px clamp(16px, 2.2vw, 24px);
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
+  border-radius: 0 0 var(--r-4) var(--r-4);
   display: flex;
   align-items: center;
   gap: 12px 16px;
   flex-wrap: wrap;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
 
 .entry-footer .live-score {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 .entry-footer .spacer { flex: 1; }
-
-@media (max-width: 640px) {
-  .q-item {
-    grid-template-columns: 1fr;
-  }
-
-  .result-toggle {
-    align-self: stretch;
-    display: flex;
-  }
-
-  .result-toggle button {
-    flex: 1;
-    padding: 8px 4px;
-  }
-
-  .entry-footer .spacer {
-    display: none;
-  }
-}
 
 /* ---- Charts ---- */
 
@@ -615,11 +999,13 @@ button.ghost:hover { background: var(--accent-wash); }
 .chart-tooltip {
   position: absolute;
   pointer-events: none;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-  padding: 7px 10px;
+  background: var(--mat-3);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-2);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  padding: 9px 12px;
   font-size: 12.5px;
   white-space: nowrap;
   z-index: 5;
@@ -627,7 +1013,8 @@ button.ghost:hover { background: var(--accent-wash); }
 
 .chart-tooltip .val {
   font-weight: 650;
-  font-size: 14px;
+  font-size: 15px;
+  letter-spacing: -0.02em;
 }
 
 .chart-tooltip .lbl {
@@ -637,26 +1024,74 @@ button.ghost:hover { background: var(--accent-wash); }
 .chart-empty {
   color: var(--muted);
   font-size: 13px;
-  padding: 24px 0;
+  padding: 28px 0;
   text-align: center;
+  background: var(--mat-2);
+  border-radius: var(--r-3);
 }
 
-/* ---- Login ---- */
+/* ---- Login / welcome ---- */
 
 .login-card {
-  max-width: 360px;
-  margin: 10vh auto 0;
+  max-width: 400px;
+  margin: 8vh auto 0;
+  border-radius: var(--r-5);
+  box-shadow: var(--shadow-2);
 }
 
-/* ---- Checkbox filter ---- */
+/* ---- iOS switch, from a plain checkbox ---- */
 
 .checkbox-field {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  font-size: 12.5px;
+  gap: 10px;
+  font-size: 13px;
   color: var(--ink-2);
   padding-bottom: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-field input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  /* Overrides the rounded checkbox above: a standalone filter reads better
+     as a switch than as a tick-box. */
+  width: 44px;
+  height: 26px;
+  background-image: none;
+  margin: 0;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  border: 1px solid var(--mat-line);
+  box-shadow: inset 0 1px 2px rgba(11, 14, 20, 0.12);
+  cursor: pointer;
+  transition: background-color 220ms var(--ease);
+}
+
+.checkbox-field input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.3);
+  transition: transform 220ms var(--spring);
+}
+
+.checkbox-field input[type="checkbox"]:checked {
+  background: var(--band-compliant);
+  background-image: none;
+  border-color: transparent;
+}
+
+.checkbox-field input[type="checkbox"]:checked::after {
+  transform: translateX(18px);
 }
 
 /* ---- Drill-down panel ---- */
@@ -671,23 +1106,24 @@ button.ghost:hover { background: var(--accent-wash); }
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 14px;
+  flex-wrap: wrap;
 }
 
 .drilldown-head h2 {
   margin: 0 0 2px;
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .panel-title {
-  margin: 18px 0 6px;
-  font-size: 13px;
-  font-weight: 650;
+  margin: 22px 0 8px;
+  font-size: 13.5px;
+  font-weight: 640;
 }
 
 .issue-text {
   color: var(--ink-2);
   font-size: 12.5px;
-  margin-top: 2px;
+  margin-top: 3px;
   max-width: 460px;
 }
 
@@ -705,7 +1141,7 @@ svg g[role="button"]:focus {
 }
 
 svg g[role="button"]:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2.5px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -725,33 +1161,50 @@ table.data td.num {
 }
 
 .brief-head h2 {
-  font-size: 17px;
+  font-size: 18px;
 }
 
 .brief-headline {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  /* The rating pill cannot break mid-label, so the row breaks instead. */
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-radius: var(--r-4);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
 }
 
 .brief-score {
-  font-size: 44px;
-  font-weight: 650;
+  font-size: clamp(38px, 5vw, 48px);
+  font-weight: 660;
   line-height: 1;
+  letter-spacing: -0.035em;
 }
 
 .brief-meta {
   color: var(--muted);
   font-size: 12.5px;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
+/* The two verdict cards are tinted rather than striped — the heading still
+   says which is which. */
 .brief-focus {
-  border-left: 3px solid var(--status-serious);
+  background-image: radial-gradient(
+    120% 130% at 0% 0%,
+    color-mix(in srgb, var(--status-serious) 14%, transparent),
+    transparent 58%
+  );
 }
 
 .brief-good {
-  border-left: 3px solid var(--status-good);
+  background-image: radial-gradient(
+    120% 130% at 0% 0%,
+    color-mix(in srgb, var(--status-good) 13%, transparent),
+    transparent 58%
+  );
 }
 
 .brief-list {
@@ -761,12 +1214,17 @@ table.data td.num {
 }
 
 .brief-list li {
-  padding: 9px 0;
-  border-bottom: 1px solid var(--grid);
+  padding: 11px 14px;
+  border-radius: var(--r-3);
+  transition: background-color 140ms var(--ease);
 }
 
-.brief-list li:last-child {
-  border-bottom: none;
+.brief-list li + li {
+  border-top: 1px solid var(--mat-line);
+}
+
+.brief-list li:hover {
+  background: var(--mat-hover);
 }
 
 .brief-item-head {
@@ -788,23 +1246,30 @@ table.data td.num {
 .brief-item-note {
   color: var(--ink-2);
   font-size: 12.5px;
-  margin-top: 2px;
+  margin-top: 3px;
 }
 
 /* ---- Master scorecard ---- */
 
-.table-scroll {
-  overflow-x: auto;
+table.scorecard {
+  min-width: 760px;
 }
 
-table.scorecard {
-  min-width: 720px;
+/* Ten columns: at the shared cell padding the scorecard overruns the card on
+   a full-width desktop by a few dozen pixels, which parks the row's action
+   off-screen. Tighter gutters bring it inside; it still scrolls on a phone. */
+table.scorecard th,
+table.scorecard td {
+  padding-left: 9px;
+  padding-right: 9px;
 }
 
 table.scorecard .th-weight {
   font-weight: 400;
   color: var(--muted);
   font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 table.data td.strong {
@@ -823,25 +1288,27 @@ td.cell-weak {
   margin-left: 8px;
   font-size: 11px;
   color: var(--muted);
-  border: 1px solid var(--grid);
-  border-radius: 5px;
-  padding: 0 5px;
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
 }
 
 /* ---- Discipline score entry ---- */
 
 .discipline-panel {
-  border: 1px solid var(--grid);
-  border-radius: 9px;
-  padding: 14px 16px;
-  margin: 14px 0 6px;
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  border-radius: var(--r-3);
+  padding: 16px 18px;
+  margin: 16px 0 6px;
 }
 
 .discipline-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 14px;
 }
 
 .discipline-grid input {
@@ -853,8 +1320,8 @@ td.cell-weak {
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 16px;
-  margin-top: 10px;
+  gap: 6px 18px;
+  margin-top: 12px;
   font-size: 11.5px;
   color: var(--ink-2);
 }
@@ -869,7 +1336,7 @@ td.cell-weak {
   display: inline-block;
   width: 14px;
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-pill);
   background: var(--muted);
 }
 
@@ -881,7 +1348,7 @@ td.cell-weak {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .tooltip-row .val {
@@ -891,42 +1358,44 @@ td.cell-weak {
   text-align: right;
 }
 
-/* ---- Floating drill-down panel ---- */
+/* ---- Floating drill-down: a sheet ---- */
 
 .panel-backdrop {
   position: fixed;
   inset: 0;
   z-index: 40;
-  background: rgba(11, 11, 11, 0.42);
-  backdrop-filter: blur(3px);
+  background: var(--scrim);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
   display: flex;
   align-items: flex-start;
   justify-content: center;
   padding: 5vh 16px 24px;
   overflow-y: auto;
+  animation: scrim-in 200ms var(--ease);
 }
 
 .panel-floating {
   position: relative;
-  width: min(880px, 100%);
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  width: min(940px, 100%);
+  background: var(--mat-sheet);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-5);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(30px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
   outline: none;
-  animation: panel-in 140ms ease-out;
+  animation: panel-in 320ms var(--spring);
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
 }
 
 @keyframes panel-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.985);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .panel-floating {
-    animation: none;
+    transform: translateY(18px) scale(0.97);
   }
 }
 
@@ -938,49 +1407,64 @@ td.cell-weak {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px 12px;
-  background: var(--surface-1);
-  border-bottom: 1px solid var(--grid);
-  border-radius: 14px 14px 0 0;
+  padding: 20px 22px 14px;
+  background: var(--mat-sheet);
+  border-bottom: 1px solid var(--mat-line);
+  border-radius: var(--r-5) var(--r-5) 0 0;
+  backdrop-filter: blur(30px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
 }
 
 .panel-floating-head h2 {
   margin: 0;
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 650;
 }
 
 .panel-floating-head .sub {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
+/* Round close affordance, like a sheet's dismiss button. */
 .panel-close {
-  border: 1px solid var(--baseline);
-  background: transparent;
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
   color: var(--ink-2);
-  border-radius: 7px;
-  width: 30px;
-  height: 30px;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
   font-size: 13px;
   cursor: pointer;
   flex: none;
+  display: grid;
+  place-items: center;
+  transition: background-color 160ms var(--ease), transform 140ms var(--ease);
 }
 
 .panel-close:hover {
-  background: var(--accent-wash);
+  background: var(--mat-hover);
   color: var(--ink-1);
 }
 
+.panel-close:active {
+  transform: scale(0.9);
+}
+
 .panel-floating-body {
-  padding: 16px 20px 20px;
+  padding: 18px 22px 24px;
 }
 
 /* Rating key under the league table */
 .rating-key {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  margin-top: 12px;
+  gap: 8px 16px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
   font-size: 11.5px;
   color: var(--ink-2);
 }
@@ -988,21 +1472,21 @@ td.cell-weak {
 .rating-key span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 
 .rating-key i {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--r-pill);
   display: inline-block;
 }
 
 .band-swatch {
   display: inline-block;
-  width: 18px;
+  width: 20px;
   height: 14px;
-  border-radius: 3px;
+  border-radius: 5px;
   border: 1px solid var(--border);
 }
 
@@ -1010,29 +1494,36 @@ td.cell-weak {
 
 .spark-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 10px;
 }
 
 .spark {
   text-align: left;
   font: inherit;
-  background: var(--surface-1);
-  border: 1px solid var(--grid);
-  border-radius: 9px;
-  padding: 9px 10px 7px;
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-3);
+  padding: 11px 12px 9px;
   cursor: pointer;
-  transition: border-color 120ms ease, transform 120ms ease;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease),
+    transform 160ms var(--ease), box-shadow 160ms var(--ease);
 }
 
 .spark:hover {
+  background: var(--mat-1);
   border-color: var(--baseline);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+}
+
+.spark:active {
+  transform: scale(0.98);
 }
 
 .spark.is-selected {
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 .spark-head {
@@ -1040,7 +1531,7 @@ td.cell-weak {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .spark-name {
@@ -1053,14 +1544,13 @@ td.cell-weak {
 }
 
 .spark-score {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
   color: var(--ink-1);
 }
 
 .spark-foot {
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--ink-2);
 }
@@ -1068,12 +1558,6 @@ td.cell-weak {
 .spark-up { color: var(--success-text); }
 .spark-down { color: var(--band-non); }
 .spark-flat { color: var(--muted); }
-
-@media (prefers-reduced-motion: reduce) {
-  .spark:hover {
-    transform: none;
-  }
-}
 
 /* ---- SHEW pillar × gap-type heat-map ---- */
 
@@ -1084,12 +1568,14 @@ td.cell-weak {
      scrolling it, and the whole page scrolls sideways on a phone. */
   min-width: 0;
   max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 table.heatmap {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 2px; /* surface gap between cells */
+  border-spacing: 4px; /* surface gap between cells */
   min-width: 520px;
 }
 
@@ -1127,11 +1613,10 @@ table.heatmap th[scope="row"] {
   background: var(--heat);
   color: var(--heat-ink);
   text-align: center;
-  font-variant-numeric: tabular-nums;
   font-weight: 650;
   font-size: 13px;
-  border-radius: 5px;
-  padding: 9px 6px;
+  border-radius: var(--r-1);
+  padding: 11px 6px;
   min-width: 56px;
 }
 
@@ -1165,7 +1650,7 @@ table.heatmap th[scope="row"] {
 }
 
 .crc-row + .crc-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--mat-line);
 }
 
 .crc-head {
@@ -1173,23 +1658,24 @@ table.heatmap th[scope="row"] {
   display: grid;
   grid-template-columns: minmax(150px, 1.25fr) minmax(90px, 2fr) 58px 118px;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   background: none;
   border: 0;
-  padding: 9px 4px;
+  padding: 11px 12px;
   text-align: left;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--r-3);
   color: inherit;
   font: inherit;
+  transition: background-color 140ms var(--ease);
 }
 
 .crc-head:hover {
-  background: var(--page);
+  background: var(--mat-hover);
 }
 
 .crc-head:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2.5px solid var(--accent);
   outline-offset: 1px;
 }
 
@@ -1212,15 +1698,16 @@ table.heatmap th[scope="row"] {
   position: relative;
   display: block;
   height: 14px;
-  border-radius: 3px;
-  background: var(--grid);
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  box-shadow: inset 0 1px 2px rgba(11, 14, 20, 0.1);
   overflow: hidden;
 }
 
 .crc-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: 3px;
+  border-radius: var(--r-pill);
 }
 
 .crc-target {
@@ -1236,7 +1723,6 @@ table.heatmap th[scope="row"] {
 .crc-score {
   font-size: 13px;
   font-weight: 650;
-  font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--ink-1);
 }
@@ -1249,7 +1735,7 @@ table.heatmap th[scope="row"] {
 }
 
 .crc-detail {
-  padding: 2px 4px 12px 4px;
+  padding: 2px 12px 14px;
 }
 
 .crc-contractors {
@@ -1258,41 +1744,29 @@ table.heatmap th[scope="row"] {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 
 .crc-contractors li {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 12px;
-  padding: 3px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-1);
+  padding: 5px 11px;
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-pill);
+  background: var(--mat-2);
 }
 
 .crc-contractors i {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: var(--r-pill);
   flex: none;
 }
 
 .crc-contractors strong {
   font-variant-numeric: tabular-nums;
-}
-
-@media (max-width: 640px) {
-  .crc-head {
-    grid-template-columns: 1fr 52px;
-    grid-template-areas: "label score" "bar bar" "meta meta";
-    gap: 4px 10px;
-  }
-  .crc-label { grid-area: label; }
-  .crc-score { grid-area: score; }
-  .crc-bar { grid-area: bar; }
-  .crc-meta { grid-area: meta; text-align: left; }
 }
 
 /* CRC focus-audit entry: out-of-scope hazards recede but stay readable. */
@@ -1301,6 +1775,556 @@ table.crc-entry tr.is-out td {
 }
 
 table.crc-entry input[type="number"] {
-  width: 90px;
+  width: 96px;
   text-align: right;
+}
+
+/* ===========================================================================
+   Responsive — desktop first widens, phone gets a tab bar
+   =========================================================================== */
+
+/* Large desktop: the league table and its context sit side by side. */
+@media (min-width: 1100px) {
+  body { font-size: 15px; }
+
+  .kpi-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Tablet / small laptop: the pill nav is still the right control, but the
+   bar has to give it the room — the profile line is the first thing cut. */
+@media (max-width: 1200px) {
+  .topbar .who {
+    display: none;
+  }
+}
+
+@media (max-width: 1099px) {
+  .topbar nav a {
+    padding: 7px 10px;
+  }
+
+  /* Two even rows beat three-then-one. */
+  .kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .crc-head {
+    grid-template-columns: minmax(120px, 1fr) minmax(80px, 1.4fr) 52px 96px;
+    gap: 10px;
+  }
+}
+
+/* Phone and tablet portrait: six pills stop fitting in the bar below about
+   860px, so the nav hands over to the bottom tab bar rather than becoming a
+   half-visible scroller. */
+@media (max-width: 860px) {
+  body {
+    /* Body text stays at the reading size; only form controls go to 16px,
+       which is what stops iOS zooming on focus. */
+    padding-bottom: calc(66px + env(safe-area-inset-bottom));
+  }
+
+  .shell {
+    padding-bottom: 24px;
+  }
+
+  .topbar {
+    top: max(8px, env(safe-area-inset-top));
+    padding: 10px 14px;
+    justify-content: space-between;
+  }
+
+  .topbar nav {
+    display: none;
+  }
+
+  .topbar .who {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+    text-align: right;
+  }
+
+  .topbar form {
+    flex: none;
+  }
+
+  .topbar form button.ghost {
+    padding: 8px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .admin-shortcut {
+    display: inline-flex;
+  }
+
+  /* On the narrowest phones the icon alone carries it. */
+  @media (max-width: 480px) {
+    .admin-shortcut span {
+      display: none;
+    }
+
+    .admin-shortcut {
+      padding: 8px 10px;
+    }
+  }
+
+  /* The tab bar: a floating glass island above the home indicator. */
+  .tabbar {
+    position: fixed;
+    z-index: 35;
+    left: 12px;
+    right: 12px;
+    /* On a tablet a full-width strip of five tabs reads as a stretched
+       toolbar; centring it keeps the island shape. */
+    max-width: 560px;
+    margin: 0 auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    display: flex;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px;
+    border-radius: var(--r-5);
+    background: var(--mat-bar);
+    border: 1px solid var(--mat-line);
+    box-shadow: var(--shadow-2), inset 0 1px 0 var(--mat-edge);
+    backdrop-filter: blur(24px) saturate(var(--glass-sat));
+    -webkit-backdrop-filter: blur(24px) saturate(var(--glass-sat));
+  }
+
+  .tabbar a {
+    flex: 1 1 0;
+    letter-spacing: -0.015em;
+    /* Without this a flex item refuses to go below its label's width, and
+       six tabs widen the whole document. */
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 50px;
+    padding: 6px 2px;
+    border-radius: var(--r-3);
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 560;
+    letter-spacing: -0.01em;
+    transition: color 160ms var(--ease), background-color 160ms var(--ease);
+  }
+
+  .tabbar a svg {
+    width: 21px;
+    height: 21px;
+    flex: none;
+  }
+
+  .tabbar a span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tabbar a[aria-current="page"] {
+    color: var(--accent-strong);
+    background: var(--accent-wash);
+  }
+
+  .tabbar a:active {
+    background: var(--mat-hover);
+  }
+
+  /* 16px stops iOS zooming the page when a field takes focus. */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+
+  /* The shorthand above would reclaim the room the chevron sits in. */
+  select {
+    padding-right: 38px;
+    background-position: calc(100% - 15px) center;
+  }
+
+  /* The bar gives way before the number does. */
+  .meter {
+    width: 100%;
+  }
+
+  .meter .track {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 44px;
+  }
+
+  .kpi-row {
+    /* Two up: the numbers stay glanceable instead of becoming a long list. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* Tables shrink to the card and only scroll inside it when their own
+     content (headers, numeric cells) genuinely will not fit — the page
+     itself never slides sideways. */
+  .table-scroll table.data {
+    min-width: 0;
+  }
+
+  .entry-footer {
+    /* Clears the tab bar. */
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    border-radius: var(--r-3);
+  }
+
+  .entry-footer .spacer {
+    display: none;
+  }
+
+  .entry-footer button {
+    white-space: nowrap;
+  }
+
+  main::after {
+    content: "";
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: max(12px, env(safe-area-inset-bottom));
+    z-index: 34;
+    pointer-events: none;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+}
+
+/* Phone layout proper: one column, bigger touch targets, sheets from the
+   bottom edge. Above this the tablet keeps the roomier desktop proportions. */
+@media (max-width: 620px) {
+  /* Dense data wraps hard at body size on a 390px screen. */
+  table.data th,
+  table.data td {
+    font-size: 13.5px;
+    padding: 10px;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    max-width: none;
+  }
+
+  .filter-row {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .filter-row label.field,
+  .filter-row select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .stat-tile {
+    padding: 14px 14px 15px;
+    border-radius: var(--r-3);
+  }
+
+  .stat-tile .value {
+    font-size: 26px;
+  }
+
+  .card {
+    padding: 16px 14px;
+  }
+
+  .brief-head {
+    gap: 14px;
+  }
+
+  .brief-headline {
+    width: 100%;
+    padding: 14px 16px;
+  }
+
+  .brief-headline > div {
+    min-width: 0;
+  }
+
+  .spark-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .panel-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  /* A sheet on a phone: full width, rounded top only, rising from the edge. */
+  .panel-floating {
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    border-radius: var(--r-5) var(--r-5) 0 0;
+    border-bottom: none;
+    animation: sheet-in 340ms var(--ease);
+  }
+
+  .panel-floating-head {
+    border-radius: var(--r-5) var(--r-5) 0 0;
+    padding-top: 22px;
+  }
+
+  /* The grabber — the handle iOS puts on a dismissible sheet. */
+  .panel-floating-head::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 5px;
+    border-radius: var(--r-pill);
+    background: var(--baseline);
+    opacity: 0.7;
+  }
+
+  .panel-floating-body {
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+
+  @keyframes sheet-in {
+    from { transform: translateY(100%); }
+  }
+
+  .q-item {
+    grid-template-columns: 1fr;
+    padding: 14px 12px;
+  }
+
+  .result-toggle {
+    align-self: stretch;
+    display: flex;
+  }
+
+  .result-toggle button {
+    flex: 1;
+    padding: 10px 4px;
+    min-height: 44px;
+  }
+
+  .q-detail select {
+    min-width: 0;
+  }
+
+  .entry-footer {
+    margin-left: -14px;
+    margin-right: -14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .crc-head {
+    grid-template-columns: 1fr 56px;
+    grid-template-areas: "label score" "bar bar" "meta meta";
+    gap: 6px 10px;
+  }
+  .crc-label { grid-area: label; }
+  .crc-score { grid-area: score; }
+  .crc-bar { grid-area: bar; }
+  .crc-meta { grid-area: meta; text-align: left; }
+
+  .login-card {
+    margin-top: 4vh;
+  }
+}
+
+@media (max-width: 520px) {
+  /* Brand + Restart is all that fits; the profile line is not wayfinding. */
+  .topbar .who {
+    display: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .shell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .topbar {
+    gap: 8px;
+    padding: 8px 10px 8px 14px;
+  }
+
+  .topbar .brand {
+    font-size: 14px;
+  }
+
+  .topbar form button.ghost {
+    padding: 7px 12px;
+    font-size: 12.5px;
+    min-height: 36px;
+  }
+
+  .admin-shortcut {
+    padding: 7px 9px;
+  }
+
+  .tabbar {
+    left: 8px;
+    right: 8px;
+  }
+}
+
+@media (max-width: 430px) {
+  .tabbar a {
+    font-size: 9.5px;
+    gap: 2px;
+  }
+
+  .tabbar a svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 340px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===========================================================================
+   Fallbacks — the material degrades to a solid surface, never to unreadable
+   =========================================================================== */
+
+/* No backdrop-filter (older Firefox, some embedded browsers): opaque cards. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  body::after,
+  main::after {
+    display: none;
+  }
+
+  .card,
+  .stat-tile,
+  .topbar,
+  .tabbar,
+  .filter-row,
+  .panel-floating,
+  .panel-floating-head,
+  .entry-footer,
+  .chart-tooltip {
+    background: var(--surface-1);
+  }
+
+  .panel-backdrop {
+    background: rgba(11, 14, 20, 0.6);
+  }
+}
+
+/* The reader asked for less transparency — give them solid surfaces. */
+@media (prefers-reduced-transparency: reduce) {
+  body::after,
+  main::after {
+    display: none;
+  }
+
+  .card,
+  .stat-tile,
+  .topbar,
+  .tabbar,
+  .filter-row,
+  .panel-floating,
+  .panel-floating-head,
+  .entry-footer,
+  .chart-tooltip {
+    background: var(--surface-1);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body::before {
+    background: var(--page);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .spark:hover,
+  button.primary:active,
+  button.ghost:active,
+  .panel-close:active,
+  .spark:active {
+    transform: none;
+  }
+}
+
+/* Forced colours (Windows high contrast): drop the material entirely. */
+@media (forced-colors: active) {
+  .card,
+  .stat-tile,
+  .topbar,
+  .tabbar,
+  .filter-row,
+  .panel-floating,
+  .chart-tooltip,
+  .spark {
+    border: 1px solid CanvasText;
+  }
+
+  .topbar nav a[aria-current="page"],
+  .tabbar a[aria-current="page"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+@media print {
+  body::before,
+  .topbar,
+  .tabbar,
+  .filter-row {
+    display: none;
+  }
+
+  .card,
+  .stat-tile {
+    background: #fff;
+    box-shadow: none;
+    backdrop-filter: none;
+    break-inside: avoid;
+  }
 }

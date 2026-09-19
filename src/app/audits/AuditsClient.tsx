@@ -98,60 +98,62 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
           </label>
         </div>
 
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Contractor</th>
-              <th>Sub-region</th>
-              <th>Status</th>
-              <th className="num">Score</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {coverage.map(({ contractor, summary }) => (
-              <tr key={contractor.id}>
-                <td>
-                  <Link href={`/contractors/${contractor.id}`}>
-                    {contractorLabel(contractor)}
-                  </Link>
-                </td>
-                <td>
-                  {subRegions.find((s) => s.id === contractor.subRegionId)?.name}
-                </td>
-                <td>
-                  {summary ? (
-                    <AuditStatusBadge status={summary.status} />
-                  ) : (
-                    <span className="coverage-missing">Not started</span>
-                  )}
-                </td>
-                <td className="num">
-                  {summary && summary.status !== "draft"
-                    ? formatScore(summary.overall)
-                    : "—"}
-                </td>
-                <td className="num">
-                  {summary ? (
-                    <Link href={`/audits/${summary.id}`}>
-                      {summary.status === "draft" ? "Continue" : "Open"} →
-                    </Link>
-                  ) : canCreate ? (
-                    <button
-                      className="primary"
-                      type="button"
-                      onClick={() => start(contractor.id)}
-                    >
-                      Start review
-                    </button>
-                  ) : (
-                    <span style={{ color: "var(--muted)" }}>—</span>
-                  )}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Contractor</th>
+                <th>Sub-region</th>
+                <th>Status</th>
+                <th className="num">Score</th>
+                <th></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {coverage.map(({ contractor, summary }) => (
+                <tr key={contractor.id}>
+                  <td>
+                    <Link href={`/contractors/${contractor.id}`}>
+                      {contractorLabel(contractor)}
+                    </Link>
+                  </td>
+                  <td>
+                    {subRegions.find((s) => s.id === contractor.subRegionId)?.name}
+                  </td>
+                  <td>
+                    {summary ? (
+                      <AuditStatusBadge status={summary.status} />
+                    ) : (
+                      <span className="coverage-missing">Not started</span>
+                    )}
+                  </td>
+                  <td className="num">
+                    {summary && summary.status !== "draft"
+                      ? formatScore(summary.overall)
+                      : "—"}
+                  </td>
+                  <td className="num">
+                    {summary ? (
+                      <Link href={`/audits/${summary.id}`}>
+                        {summary.status === "draft" ? "Continue" : "Open"} →
+                      </Link>
+                    ) : canCreate ? (
+                      <button
+                        className="primary"
+                        type="button"
+                        onClick={() => start(contractor.id)}
+                      >
+                        Start review
+                      </button>
+                    ) : (
+                      <span style={{ color: "var(--muted)" }}>—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {activeContractors.length === 0 && (
           <div className="chart-empty">
             No active contractors — reactivate one on the Contractors page.
@@ -164,46 +166,48 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
         <p className="sub">
           {history.length} quarterly reviews on record, newest first
         </p>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Quarter</th>
-              <th>Contractor</th>
-              <th>Sub-region</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th className="num">Score</th>
-              <th>Rating</th>
-            </tr>
-          </thead>
-          <tbody>
-            {history.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>
-                </td>
-                <td>
-                  {contractorLabel({ name: s.contractorName, code: s.contractorCode })}
-                </td>
-                <td>{s.subRegionName}</td>
-                <td>{formatDate(s.auditDate)}</td>
-                <td>
-                  <AuditStatusBadge status={s.status} />
-                </td>
-                <td className="num">
-                  {s.status === "draft" ? "—" : formatScore(s.overall)}
-                </td>
-                <td>
-                  {s.status === "draft" ? (
-                    <span style={{ color: "var(--muted)" }}>in progress</span>
-                  ) : (
-                    <RatingBadge rating={s.rating} />
-                  )}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Quarter</th>
+                <th>Contractor</th>
+                <th>Sub-region</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th className="num">Score</th>
+                <th>Rating</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {history.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>
+                  </td>
+                  <td>
+                    {contractorLabel({ name: s.contractorName, code: s.contractorCode })}
+                  </td>
+                  <td>{s.subRegionName}</td>
+                  <td>{formatDate(s.auditDate)}</td>
+                  <td>
+                    <AuditStatusBadge status={s.status} />
+                  </td>
+                  <td className="num">
+                    {s.status === "draft" ? "—" : formatScore(s.overall)}
+                  </td>
+                  <td>
+                    {s.status === "draft" ? (
+                      <span style={{ color: "var(--muted)" }}>in progress</span>
+                    ) : (
+                      <RatingBadge rating={s.rating} />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

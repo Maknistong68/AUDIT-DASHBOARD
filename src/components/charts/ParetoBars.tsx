@@ -10,7 +10,7 @@ export interface ParetoBarDatum {
 
 /**
  * Horizontal Pareto of NC classifications: one measure, so a single
- * sequential hue. Bars <=24px thick, 4px-rounded data end, square baseline;
+ * sequential hue. Bars <=24px thick, rounded data end, square baseline;
  * value directly labeled at the tip; per-mark hover tooltip with the share.
  */
 export function ParetoBars({ data }: { data: ParetoBarDatum[] }) {
@@ -21,17 +21,17 @@ export function ParetoBars({ data }: { data: ParetoBarDatum[] }) {
   }
 
   const max = Math.max(...data.map((d) => d.count));
-  const BAR = 18;
-  const GAP = 10;
+  const BAR = 20;
+  const GAP = 12;
   const LABEL_W = 210;
   const VALUE_W = 34;
   const W = 560;
   const plotW = W - LABEL_W - VALUE_W;
   const H = data.length * (BAR + GAP) - GAP + 4;
 
-  // 4px rounded data-end (right), square at the baseline (left).
+  // Rounded data-end (right), square at the baseline (left).
   const barPath = (w: number, yTop: number) => {
-    const r = Math.min(4, w);
+    const r = Math.min(8, w);
     const x0 = LABEL_W;
     return `M${x0},${yTop} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${BAR - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - r} Z`;
   };

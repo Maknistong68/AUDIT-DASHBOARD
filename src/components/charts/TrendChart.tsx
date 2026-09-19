@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useChartWidth } from "./useChartWidth";
 
 export interface TrendChartPoint {
   label: string; // x label, e.g. "Jan 2026" or an audit date
@@ -8,19 +9,19 @@ export interface TrendChartPoint {
 }
 
 /**
- * Single-series score trend line: 2px line, 8px markers with a 2px surface
- * ring, 10%-opacity area wash, crosshair + tooltip on hover (single series,
- * so the card title is the legend).
+ * Single-series score trend line: 2.5px line, 9px markers with a 2px surface
+ * ring, a graded area wash fading to nothing at the axis, crosshair +
+ * tooltip on hover (single series, so the card title is the legend).
  */
 export function TrendChart({ points }: { points: TrendChartPoint[] }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
+  const W = useChartWidth(wrapRef, 560);
 
   if (points.length === 0) {
     return <div className="chart-empty">No finalized audits yet.</div>;
   }
 
-  const W = 560;
   const H = 200;
   const pad = { top: 12, right: 16, bottom: 26, left: 36 };
   const iw = W - pad.left - pad.right;
@@ -81,6 +82,12 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
         onPointerMove={onMove}
         onPointerLeave={() => setHover(null)}
       >
+        <defs>
+          <linearGradient id="trend-wash" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.22} />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
         {/* gridlines: hairline, recessive, clean steps */}
         {ticks.map((v, k) => (
           <g key={v}>
@@ -114,12 +121,12 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
             strokeWidth={1}
           />
         )}
-        <path d={areaPath} fill="var(--accent)" opacity={0.1} />
+        <path d={areaPath} fill="url(#trend-wash)" />
         <path
           d={linePath}
           fill="none"
           stroke="var(--accent)"
-          strokeWidth={2}
+          strokeWidth={2.5}
           strokeLinejoin="round"
           strokeLinecap="round"
         />
@@ -136,13 +143,14 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
           />
         )}
 
-        {/* markers: >=8px with a 2px surface ring */}
+        {/* markers: >=8px with a 2px surface ring (--surface-1 is the
+            opaque composite the glass resolves to, so the ring reads) */}
         {points.map((p, i) => (
           <circle
             key={i}
             cx={x(i)}
             cy={y(p.value)}
-            r={4}
+            r={4.5}
             fill="var(--accent)"
             stroke="var(--surface-1)"
             strokeWidth={2}

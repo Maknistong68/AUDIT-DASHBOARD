@@ -37,23 +37,25 @@ export default async function AdminPage() {
           from the calculation. Sub-section = points ÷ applicable weight;
           section = mean of sub-sections; total = mean of sections.
         </p>
-        <table className="data" style={{ maxWidth: 460 }}>
-          <tbody>
-            {RATING_BANDS.map((b) => (
-              <tr key={b.label}>
-                <td style={{ width: 28 }}>
-                  <span
-                    className="band-swatch"
-                    style={{ background: b.varName }}
-                    aria-hidden
-                  />
-                </td>
-                <td>{b.label}</td>
-                <td className="num">{b.range}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="data" style={{ maxWidth: 460 }}>
+            <tbody>
+              {RATING_BANDS.map((b) => (
+                <tr key={b.label}>
+                  <td style={{ width: 28 }}>
+                    <span
+                      className="band-swatch"
+                      style={{ background: b.varName }}
+                      aria-hidden
+                    />
+                  </td>
+                  <td>{b.label}</td>
+                  <td className="num">{b.range}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
@@ -62,43 +64,47 @@ export default async function AdminPage() {
           The pre-made options recorded per question instead of free text —
           OB2–OB5 are required on every Partial or No answer.
         </p>
-        <table className="data">
-          <tbody>
-            {OBSERVATION_OPTIONS.map((o) => (
-              <tr key={o.code}>
-                <td>
-                  <strong>{o.code}</strong>
-                </td>
-                <td>{o.label}</td>
-                <td style={{ color: "var(--ink-2)" }}>{o.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="data">
+            <tbody>
+              {OBSERVATION_OPTIONS.map((o) => (
+                <tr key={o.code}>
+                  <td>
+                    <strong>{o.code}</strong>
+                  </td>
+                  <td>{o.label}</td>
+                  <td style={{ color: "var(--ink-2)" }}>{o.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
         <h2>Contractor register</h2>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Contractor</th>
-              <th>Sub-region</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contractors.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  <strong>{c.code}</strong>
-                </td>
-                <td>{c.name}</td>
-                <td>{subRegions.find((s) => s.id === c.subRegionId)?.name}</td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Contractor</th>
+                <th>Sub-region</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {contractors.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <strong>{c.code}</strong>
+                  </td>
+                  <td>{c.name}</td>
+                  <td>{subRegions.find((s) => s.id === c.subRegionId)?.name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="card">
@@ -111,21 +117,23 @@ export default async function AdminPage() {
             <div className="q-category">
               {section.code}. {section.title}
             </div>
-            <table className="data">
-              <tbody>
-                {section.subSections.flatMap((ss) =>
-                  ss.questions.map((q) => (
-                    <tr key={q.code}>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <strong>{q.code}</strong>
-                      </td>
-                      <td style={{ color: "var(--ink-2)" }}>{q.text}</td>
-                      <td className="num">w{q.weight}</td>
-                    </tr>
-                  )),
-                )}
-              </tbody>
-            </table>
+            <div className="table-scroll">
+              <table className="data">
+                <tbody>
+                  {section.subSections.flatMap((ss) =>
+                    ss.questions.map((q) => (
+                      <tr key={q.code}>
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          <strong>{q.code}</strong>
+                        </td>
+                        <td style={{ color: "var(--ink-2)" }}>{q.text}</td>
+                        <td className="num">w{q.weight}</td>
+                      </tr>
+                    )),
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))}
       </section>

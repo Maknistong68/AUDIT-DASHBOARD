@@ -1,13 +1,26 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { readDemoProfile } from "@/lib/demo/profile";
 import { EhssStoreProvider } from "@/lib/ehss/store";
+import { AdminShortcut, TabBar, TopNav } from "@/components/NavBar";
 
 export const metadata: Metadata = {
   title: "Audit Dashboard",
   description:
     "Contractor EHSS quarterly audit scoring and compliance-trend analytics",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // The app paints to the edges so the tab bar can sit over the home
+  // indicator; every fixed element pads itself with env(safe-area-inset-*).
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#eaeef5" },
+    { media: "(prefers-color-scheme: dark)", color: "#080a0f" },
+  ],
 };
 
 export default async function RootLayout({
@@ -28,19 +41,11 @@ export default async function RootLayout({
               </Link>
               {profile && (
                 <>
-                  <nav>
-                    <Link href="/brief">Brief</Link>
-                    <Link href="/">Dashboard</Link>
-                    <Link href="/contractors">Contractors</Link>
-                    <Link href="/audits">Audits</Link>
-                    <Link href="/findings">Findings</Link>
-                    {profile.role === "admin" && (
-                      <Link href="/admin">Reference</Link>
-                    )}
-                  </nav>
+                  <TopNav role={profile.role} />
                   <span className="who">
                     {profile.name} · {profile.role} · demo
                   </span>
+                  {profile.role === "admin" && <AdminShortcut />}
                   <form action="/auth/signout" method="post">
                     <button className="ghost" type="submit">
                       Restart demo
@@ -51,6 +56,7 @@ export default async function RootLayout({
             </header>
             <main>{children}</main>
           </div>
+          {profile && <TabBar />}
         </EhssStoreProvider>
       </body>
     </html>

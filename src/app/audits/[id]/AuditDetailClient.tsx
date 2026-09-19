@@ -204,55 +204,57 @@ function CriticalRiskPanel({
           <RatingBadge rating={ratingFor(derived)} />
         </div>
       </div>
-      <table className="data crc-entry">
-        <thead>
-          <tr>
-            <th style={{ width: 80 }}>In scope</th>
-            <th>Hazardous work</th>
-            <th style={{ width: 90 }}>Pillar</th>
-            <th style={{ width: 110 }} className="num">
-              Score
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {CRITICAL_RISKS.map((risk) => {
-            const scoped = draft[risk.id] !== undefined;
-            return (
-              <tr key={risk.id} className={scoped ? undefined : "is-out"}>
-                <td>
-                  <input
-                    type="checkbox"
-                    checked={scoped}
-                    disabled={!canEdit}
-                    aria-label={`${risk.label} in scope`}
-                    onChange={(e) => toggle(risk.id, e.target.checked)}
-                  />
-                </td>
-                <td>{risk.label}</td>
-                <td style={{ color: "var(--muted)" }}>
-                  {DOMAIN_BY_ID[risk.domain].label}
-                </td>
-                <td className="num">
-                  {scoped ? (
+      <div className="table-scroll">
+        <table className="data crc-entry">
+          <thead>
+            <tr>
+              <th style={{ width: 80 }}>In scope</th>
+              <th>Hazardous work</th>
+              <th style={{ width: 90 }}>Pillar</th>
+              <th style={{ width: 110 }} className="num">
+                Score
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {CRITICAL_RISKS.map((risk) => {
+              const scoped = draft[risk.id] !== undefined;
+              return (
+                <tr key={risk.id} className={scoped ? undefined : "is-out"}>
+                  <td>
                     <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.1}
+                      type="checkbox"
+                      checked={scoped}
                       disabled={!canEdit}
-                      value={draft[risk.id] ?? ""}
-                      onChange={(e) => setScore(risk.id, e.target.value)}
+                      aria-label={`${risk.label} in scope`}
+                      onChange={(e) => toggle(risk.id, e.target.checked)}
                     />
-                  ) : (
-                    <span style={{ color: "var(--muted)" }}>not in scope</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                  </td>
+                  <td>{risk.label}</td>
+                  <td style={{ color: "var(--muted)" }}>
+                    {DOMAIN_BY_ID[risk.domain].label}
+                  </td>
+                  <td className="num">
+                    {scoped ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.1}
+                        disabled={!canEdit}
+                        value={draft[risk.id] ?? ""}
+                        onChange={(e) => setScore(risk.id, e.target.value)}
+                      />
+                    ) : (
+                      <span style={{ color: "var(--muted)" }}>not in scope</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {canEdit && (
         <p>
           <button

@@ -190,30 +190,32 @@ export function BriefClient() {
         <p className="sub">
           Weighted average of the five disciplines · target {TARGET_SCORE}%
         </p>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Discipline</th>
-              <th className="num">Weight</th>
-              <th>Score</th>
-              <th className="num">Gap to {TARGET_SCORE}%</th>
-            </tr>
-          </thead>
-          <tbody>
-            {disciplineAverages.map((d) => (
-              <tr key={d.id}>
-                <td>{d.name}</td>
-                <td className="num">{Math.round(d.weight * 100)}%</td>
-                <td style={{ width: 190 }}>
-                  <ScoreMeter score={d.avg} />
-                </td>
-                <td className="num">
-                  {d.gap === null ? "—" : d.gap === 0 ? "met" : `${d.gap.toFixed(1)}`}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Discipline</th>
+                <th className="num">Weight</th>
+                <th>Score</th>
+                <th className="num">Gap to {TARGET_SCORE}%</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {disciplineAverages.map((d) => (
+                <tr key={d.id}>
+                  <td>{d.name}</td>
+                  <td className="num">{Math.round(d.weight * 100)}%</td>
+                  <td style={{ width: 190 }}>
+                    <ScoreMeter score={d.avg} />
+                  </td>
+                  <td className="num">
+                    {d.gap === null ? "—" : d.gap === 0 ? "met" : `${d.gap.toFixed(1)}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <div className="grid-2">
@@ -280,26 +282,28 @@ export function BriefClient() {
         {issues.length === 0 ? (
           <div className="chart-empty">No findings in this window.</div>
         ) : (
-          <table className="data">
-            <tbody>
-              {issues.map((i) => (
-                <tr key={i.questionCode}>
-                  <td style={{ width: 70 }}>
-                    <strong>{i.questionCode}</strong>
-                  </td>
-                  <td>
-                    {i.questionText}
-                    <div className="issue-text">
-                      {i.subSectionTitle ?? `Section ${i.sectionCode}`} ·{" "}
-                      {i.occurrences} review
-                      {i.occurrences === 1 ? "" : "s"}
-                    </div>
-                  </td>
-                  <td className="num">{i.lostPoints} pts</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="data">
+              <tbody>
+                {issues.map((i) => (
+                  <tr key={i.questionCode}>
+                    <td style={{ width: 70 }}>
+                      <strong>{i.questionCode}</strong>
+                    </td>
+                    <td>
+                      {i.questionText}
+                      <div className="issue-text">
+                        {i.subSectionTitle ?? `Section ${i.sectionCode}`} ·{" "}
+                        {i.occurrences} review
+                        {i.occurrences === 1 ? "" : "s"}
+                      </div>
+                    </td>
+                    <td className="num">{i.lostPoints} pts</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         <p className="sub" style={{ marginTop: 14 }}>
           Need the detail?{" "}

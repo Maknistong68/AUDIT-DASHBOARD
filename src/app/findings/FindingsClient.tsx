@@ -120,44 +120,46 @@ export function FindingsClient() {
         {rows.length === 0 ? (
           <div className="chart-empty">No observations in scope.</div>
         ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Quarter</th>
-                <th>Contractor</th>
-                <th>Pillar</th>
-                <th>Question</th>
-                <th>Area</th>
-                <th>Answer</th>
-                <th>Classification</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((o) => (
-                <tr key={`${o.auditId}-${o.questionCode}`}>
-                  <td>
-                    <Link href={`/audits/${o.auditId}`}>
-                      {quarterLabel(o.quarter)}
-                    </Link>
-                  </td>
-                  <td>
-                    <Link href={`/contractors/${o.contractorId}`}>
-                      {o.contractorName}
-                    </Link>
-                  </td>
-                  <td>{DOMAIN_BY_ID[o.domain].label}</td>
-                  <td>
-                    <strong>{o.questionCode}</strong>
-                  </td>
-                  <td>{o.subSectionTitle ?? `Section ${o.sectionCode}`}</td>
-                  <td>{o.answer === "no" ? "No" : "Partial"}</td>
-                  <td>
-                    {o.observation} — {OBSERVATION_BY_CODE[o.observation].label}
-                  </td>
+          <div className="table-scroll">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Quarter</th>
+                  <th>Contractor</th>
+                  <th>Pillar</th>
+                  <th>Question</th>
+                  <th>Area</th>
+                  <th>Answer</th>
+                  <th>Classification</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rows.map((o) => (
+                  <tr key={`${o.auditId}-${o.questionCode}`}>
+                    <td>
+                      <Link href={`/audits/${o.auditId}`}>
+                        {quarterLabel(o.quarter)}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link href={`/contractors/${o.contractorId}`}>
+                        {o.contractorName}
+                      </Link>
+                    </td>
+                    <td>{DOMAIN_BY_ID[o.domain].label}</td>
+                    <td>
+                      <strong>{o.questionCode}</strong>
+                    </td>
+                    <td>{o.subSectionTitle ?? `Section ${o.sectionCode}`}</td>
+                    <td>{o.answer === "no" ? "No" : "Partial"}</td>
+                    <td>
+                      {o.observation} — {OBSERVATION_BY_CODE[o.observation].label}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

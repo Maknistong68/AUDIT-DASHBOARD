@@ -95,7 +95,22 @@ everything:
   the view the project director actually reads; keep it to one page.
 - Charts are hand-built SVG (`src/components/charts/`), single accent hue;
   rating badges use the status palette with labels (never color alone).
-  Design tokens live in `app/globals.css` (light + dark).
+  Charts draw at their container's measured width via `useChartWidth`, so
+  type is never scaled down — don't reintroduce a fixed `viewBox` width.
+- Design tokens live in `app/globals.css` (light + dark), in two layers that
+  must not be mixed: **semantic** tokens (`--ink-*`, `--accent`, `--band-*`,
+  `--series-*`) carry meaning and are the validated palette; **material**
+  tokens (`--mat-*`, `--shadow-*`, `--r-*`) carry depth only. `--surface-1`
+  stays an opaque colour — SVG has no `backdrop-filter`, so chart rings and
+  surface gaps need the composite the glass resolves to (light `#f8fafd`,
+  dark `#171a21`). That is also the surface the palette was validated
+  against; change the glass and you re-validate.
+- Responsive tiers: >1099px full desktop · ≤1099px tighter nav, 2×2 KPIs ·
+  ≤860px the pill nav hands over to the fixed bottom tab bar (`NavBar.tsx`,
+  which also carries the phone-only admin Reference shortcut) · ≤620px phone
+  layout, bottom sheets, full-width controls. Wide tables live in a
+  `.table-scroll` wrapper; the page itself must never scroll sideways at any
+  width from 320px up.
 
 ### Dormant Supabase layer
 

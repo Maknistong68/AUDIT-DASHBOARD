@@ -75,24 +75,26 @@ export function ContractorDrilldown({
         </div>
         <div>
           <h3 className="panel-title">Discipline scores</h3>
-          <table className="data">
-            <tbody>
-              {stats.disciplineAverages.map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    {d.name}
-                    <span style={{ color: "var(--muted)" }}>
-                      {" "}
-                      {Math.round(d.weight * 100)}%
-                    </span>
-                  </td>
-                  <td style={{ width: 170 }}>
-                    <ScoreMeter score={d.avg} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="data">
+              <tbody>
+                {stats.disciplineAverages.map((d) => (
+                  <tr key={d.id}>
+                    <td>
+                      {d.name}
+                      <span style={{ color: "var(--muted)" }}>
+                        {" "}
+                        {Math.round(d.weight * 100)}%
+                      </span>
+                    </td>
+                    <td style={{ width: 170 }}>
+                      <ScoreMeter score={d.avg} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="sub" style={{ marginTop: 10 }}>
             <Link href={`/contractors/${stats.contractorId}`}>
               Open full contractor record →
@@ -109,34 +111,36 @@ export function ContractorDrilldown({
       {priorityAreas.length === 0 ? (
         <div className="chart-empty">Every area is at target.</div>
       ) : (
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Area</th>
-              <th className="num">Score</th>
-              <th className="num">Gap to {TARGET_SCORE}%</th>
-              <th>Movement</th>
-            </tr>
-          </thead>
-          <tbody>
-            {priorityAreas.map((a) => (
-              <tr key={a.code}>
-                <td>
-                  <strong>{a.code}</strong> {a.title}
-                </td>
-                <td className="num">{formatScore(a.latest)}</td>
-                <td className="num">{a.gap!.toFixed(1)}</td>
-                <td>
-                  {a.reviews < 2
-                    ? "first review"
-                    : a.direction === "flat"
-                      ? `no improvement in ${a.reviews} reviews`
-                      : `${a.change! > 0 ? "up" : "down"} ${Math.abs(a.change!).toFixed(1)} pts`}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Area</th>
+                <th className="num">Score</th>
+                <th className="num">Gap to {TARGET_SCORE}%</th>
+                <th>Movement</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {priorityAreas.map((a) => (
+                <tr key={a.code}>
+                  <td>
+                    <strong>{a.code}</strong> {a.title}
+                  </td>
+                  <td className="num">{formatScore(a.latest)}</td>
+                  <td className="num">{a.gap!.toFixed(1)}</td>
+                  <td>
+                    {a.reviews < 2
+                      ? "first review"
+                      : a.direction === "flat"
+                        ? `no improvement in ${a.reviews} reviews`
+                        : `${a.change! > 0 ? "up" : "down"} ${Math.abs(a.change!).toFixed(1)} pts`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <h3 className="panel-title">Top 5 issues</h3>
@@ -149,41 +153,43 @@ export function ContractorDrilldown({
           No Partial or No answers in this window.
         </div>
       ) : (
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Question</th>
-              <th>Area</th>
-              <th className="num">Times</th>
-              <th className="num">Points lost</th>
-              <th>Main classification</th>
-            </tr>
-          </thead>
-          <tbody>
-            {issues.map((i) => (
-              <tr key={i.questionCode}>
-                <td>
-                  <strong>{i.questionCode}</strong>{" "}
-                  <span className="q-weight">w{i.weight}</span>
-                  <div className="issue-text">{i.questionText}</div>
-                </td>
-                <td>{i.subSectionTitle ?? `Section ${i.sectionCode}`}</td>
-                <td className="num">
-                  {i.occurrences}
-                  <span style={{ color: "var(--muted)" }}>
-                    {i.noCount > 0 ? ` (${i.noCount} No)` : ""}
-                  </span>
-                </td>
-                <td className="num">{i.lostPoints}</td>
-                <td>
-                  {i.topObservation
-                    ? `${i.topObservation} — ${OBSERVATION_BY_CODE[i.topObservation].label}`
-                    : "—"}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Area</th>
+                <th className="num">Times</th>
+                <th className="num">Points lost</th>
+                <th>Main classification</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {issues.map((i) => (
+                <tr key={i.questionCode}>
+                  <td>
+                    <strong>{i.questionCode}</strong>{" "}
+                    <span className="q-weight">w{i.weight}</span>
+                    <div className="issue-text">{i.questionText}</div>
+                  </td>
+                  <td>{i.subSectionTitle ?? `Section ${i.sectionCode}`}</td>
+                  <td className="num">
+                    {i.occurrences}
+                    <span style={{ color: "var(--muted)" }}>
+                      {i.noCount > 0 ? ` (${i.noCount} No)` : ""}
+                    </span>
+                  </td>
+                  <td className="num">{i.lostPoints}</td>
+                  <td>
+                    {i.topObservation
+                      ? `${i.topObservation} — ${OBSERVATION_BY_CODE[i.topObservation].label}`
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

@@ -347,21 +347,23 @@ export function DashboardClient() {
           {weakest.length === 0 ? (
             <div className="chart-empty">No finalized reviews in scope.</div>
           ) : (
-            <table className="data">
-              <tbody>
-                {weakest.map((w) => (
-                  <tr key={w.code}>
-                    <td style={{ width: 44 }}>
-                      <strong>{w.code}</strong>
-                    </td>
-                    <td>{w.title}</td>
-                    <td style={{ width: 150 }}>
-                      <ScoreMeter score={w.avg} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="table-scroll">
+              <table className="data">
+                <tbody>
+                  {weakest.map((w) => (
+                    <tr key={w.code}>
+                      <td style={{ width: 44 }}>
+                        <strong>{w.code}</strong>
+                      </td>
+                      <td>{w.title}</td>
+                      <td style={{ width: 150 }}>
+                        <ScoreMeter score={w.avg} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <p className="sub" style={{ marginTop: 12 }}>
             <Link href="/findings">Open the findings register →</Link>

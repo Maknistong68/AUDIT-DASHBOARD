@@ -123,24 +123,26 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
         <section className="card">
           <h2>Discipline scores</h2>
           <p className="sub">Average across the window · weighted to the total</p>
-          <table className="data">
-            <tbody>
-              {(stats?.disciplineAverages ?? []).map((d) => (
-                <tr key={d.id}>
-                  <td>
-                    {d.name}
-                    <span style={{ color: "var(--muted)" }}>
-                      {" "}
-                      {Math.round(d.weight * 100)}%
-                    </span>
-                  </td>
-                  <td style={{ width: 170 }}>
-                    <ScoreMeter score={d.avg} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-scroll">
+            <table className="data">
+              <tbody>
+                {(stats?.disciplineAverages ?? []).map((d) => (
+                  <tr key={d.id}>
+                    <td>
+                      {d.name}
+                      <span style={{ color: "var(--muted)" }}>
+                        {" "}
+                        {Math.round(d.weight * 100)}%
+                      </span>
+                    </td>
+                    <td style={{ width: 170 }}>
+                      <ScoreMeter score={d.avg} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       </div>
 
@@ -153,78 +155,82 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
         {issues.length === 0 ? (
           <div className="chart-empty">No Partial or No answers in scope.</div>
         ) : (
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Question</th>
-                <th>Area</th>
-                <th className="num">Times</th>
-                <th className="num">Points lost</th>
-                <th>Main classification</th>
-              </tr>
-            </thead>
-            <tbody>
-              {issues.map((i) => (
-                <tr key={i.questionCode}>
-                  <td>
-                    <strong>{i.questionCode}</strong>{" "}
-                    <span className="q-weight">w{i.weight}</span>
-                    <div className="issue-text">{i.questionText}</div>
-                  </td>
-                  <td>{i.subSectionTitle ?? `Section ${i.sectionCode}`}</td>
-                  <td className="num">{i.occurrences}</td>
-                  <td className="num">{i.lostPoints}</td>
-                  <td>
-                    {i.topObservation
-                      ? `${i.topObservation} — ${OBSERVATION_BY_CODE[i.topObservation].label}`
-                      : "—"}
-                  </td>
+          <div className="table-scroll">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Question</th>
+                  <th>Area</th>
+                  <th className="num">Times</th>
+                  <th className="num">Points lost</th>
+                  <th>Main classification</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {issues.map((i) => (
+                  <tr key={i.questionCode}>
+                    <td>
+                      <strong>{i.questionCode}</strong>{" "}
+                      <span className="q-weight">w{i.weight}</span>
+                      <div className="issue-text">{i.questionText}</div>
+                    </td>
+                    <td>{i.subSectionTitle ?? `Section ${i.sectionCode}`}</td>
+                    <td className="num">{i.occurrences}</td>
+                    <td className="num">{i.lostPoints}</td>
+                    <td>
+                      {i.topObservation
+                        ? `${i.topObservation} — ${OBSERVATION_BY_CODE[i.topObservation].label}`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
       <section className="card">
         <h2>Review history</h2>
         <p className="sub">Every quarterly review on record</p>
-        <table className="data">
-          <thead>
-            <tr>
-              <th>Quarter</th>
-              <th>Date</th>
-              <th>Ref</th>
-              <th>Status</th>
-              <th className="num">Score</th>
-              <th>Rating</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allReviews.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>
-                </td>
-                <td>{formatDate(s.auditDate)}</td>
-                <td>{s.inspectionNo}</td>
-                <td>
-                  <AuditStatusBadge status={s.status} />
-                </td>
-                <td className="num">
-                  {s.status === "draft" ? "—" : formatScore(s.overall)}
-                </td>
-                <td>
-                  {s.status === "draft" ? (
-                    <span style={{ color: "var(--muted)" }}>in progress</span>
-                  ) : (
-                    <RatingBadge rating={s.rating} />
-                  )}
-                </td>
+        <div className="table-scroll">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Quarter</th>
+                <th>Date</th>
+                <th>Ref</th>
+                <th>Status</th>
+                <th className="num">Score</th>
+                <th>Rating</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {allReviews.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>
+                  </td>
+                  <td>{formatDate(s.auditDate)}</td>
+                  <td>{s.inspectionNo}</td>
+                  <td>
+                    <AuditStatusBadge status={s.status} />
+                  </td>
+                  <td className="num">
+                    {s.status === "draft" ? "—" : formatScore(s.overall)}
+                  </td>
+                  <td>
+                    {s.status === "draft" ? (
+                      <span style={{ color: "var(--muted)" }}>in progress</span>
+                    ) : (
+                      <RatingBadge rating={s.rating} />
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );

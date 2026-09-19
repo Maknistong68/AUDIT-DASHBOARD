@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useChartWidth } from "./useChartWidth";
 import { OBSERVATION_BY_CODE, type ObservationCode } from "@/lib/ehss/model";
 
 export interface ObservationSeries {
@@ -30,12 +31,13 @@ export function ObservationTrendLines({
   series: ObservationSeries[];
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const W = useChartWidth(wrapRef, 560);
 
   if (quarters.length === 0) {
     return <div className="chart-empty">No observations in scope.</div>;
   }
 
-  const W = 560;
   const H = 240;
   const pad = { top: 16, right: 52, bottom: 26, left: 34 };
   const iw = W - pad.left - pad.right;
@@ -57,7 +59,7 @@ export function ObservationTrendLines({
       .join(" ");
 
   return (
-    <div className="chart-wrap">
+    <div className="chart-wrap" ref={wrapRef}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         style={{ width: "100%", height: "auto", display: "block" }}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatScore } from "@/lib/format";
+import { useChartWidth } from "./useChartWidth";
 import { BANDS, bandColor } from "@/lib/ehss/bands";
 
 export interface ContractorBarDatum {
@@ -36,32 +37,39 @@ export function ContractorBarChart({
   onSelect: (id: string | null) => void;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  // Drawn at the container's own width, so type is never scaled down.
+  const W = useChartWidth(wrapRef, 720);
 
   if (data.length === 0) {
     return <div className="chart-empty">No finalized reviews in scope.</div>;
   }
 
-  const BAR = 20;
-  const GAP = 12;
-  const LABEL_W = 150;
-  const VALUE_W = 62;
-  const W = 720;
+  const BAR = 22;
+  const GAP = 14;
+  // The name column takes a third of a narrow card but never more than it
+  // needs on a wide one, so the bars keep the rest.
+  const LABEL_W = Math.min(150, Math.max(92, Math.round(W * 0.3)));
+  const VALUE_W = W < 460 ? 48 : 62;
   const TOP = 18; // room for the threshold label
   const plotW = W - LABEL_W - VALUE_W;
   const H = TOP + data.length * (BAR + GAP);
 
   const x = (v: number) => (Math.max(0, Math.min(100, v)) / 100) * plotW;
 
-  // 4px rounded data end, square at the baseline.
+  // Rounded data end, square at the baseline — the baseline anchor is what
+  // keeps the bar readable as a magnitude, so only the tip is softened.
   const barPath = (w: number, yTop: number) => {
-    const r = Math.min(4, w);
+    const r = Math.min(8, w);
     return `M${LABEL_W},${yTop} h${w - r} a${r},${r} 0 0 1 ${r},${r} v${BAR - 2 * r} a${r},${r} 0 0 1 -${r},${r} h-${w - r} Z`;
   };
 
   const hovered = hover !== null ? data[hover] : undefined;
+  // Ellipsis at whatever the name column can actually hold.
+  const maxChars = Math.max(8, Math.floor((LABEL_W - 14) / 6.6));
 
   return (
-    <div className="chart-wrap">
+    <div className="chart-wrap" ref={wrapRef}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         style={{ width: "100%", height: "auto", display: "block" }}
@@ -149,7 +157,9 @@ export function ContractorBarChart({
                 fontWeight={selected ? 650 : 400}
                 fill={dimmed ? "var(--muted)" : "var(--ink-1)"}
               >
-                {d.label.length > 20 ? `${d.label.slice(0, 19)}…` : d.label}
+                {d.label.length > maxChars
+                  ? `${d.label.slice(0, maxChars - 1)}…`
+                  : d.label}
               </text>
               {d.value === null ? (
                 <text
