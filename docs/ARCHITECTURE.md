@@ -1,6 +1,10 @@
-# Architecture — Contractor Audit Dashboard
+# Architecture — design rationale
 
-## 1. Scope and guiding principle
+`CLAUDE.md` is the working map of the codebase: what lives where, and the
+commands. This document is the *why* — the decisions that shape the model,
+and the reasoning you need before changing them.
+
+## 1. The governing principle
 
 > This application is an **audit analytics and compliance-trend platform**.
 > It records structured, contractor-level audit results only and does not
@@ -8,222 +12,112 @@
 > salary information, identification numbers, or individual welfare case
 > information.
 
-Design consequences:
+Three consequences, each enforced in code rather than by convention:
 
-- **Contractor-level only.** The subject of every record is an organization
-  (`ABC Contracting — WMP-01 — Non-Compliant`), never a person.
-- **No free text in the scoring path.** Every scoring field is an enum or a
-  foreign key into a controlled vocabulary. This is enforced by the schema,
-  not just the UI, and is what makes the trend analytics trustworthy:
-  auditors cannot describe the same problem five different ways.
-- The only personal data in the system is the application's own user accounts
-  (Supabase Auth: email, display name, role) plus platform-level access logs —
-  standard SaaS operational data, handled under the hosting approval.
+- **The subject of every record is an organization**, never a person.
+  Contractors are identified by project number — `Al Fahd (1272)` — which
+  is a work-order reference, not an identity. There is no worker table, no
+  auditor table, and no field anywhere that names an individual.
+- **No free text in the scoring path.** Every answer is an enum
+  (Full / Partial / No / N-A) and every comment is an observation code
+  (OB1–OB5). This is what makes the trend analytics trustworthy — auditors
+  cannot describe the same problem five different ways — and it is also the
+  reason the app cannot accidentally accumulate personal data. A free-text
+  box is where a worker's name ends up. There isn't one.
+- **No uploads.** No photographs, no attachments, no document store. A site
+  photograph is the most likely carrier of personal data in an audit tool,
+  so the feature does not exist.
 
-## 2. Data model
+See `docs/COMPLIANCE-KSA.md` for how this maps onto Saudi law.
 
-```mermaid
-erDiagram
-    CONTRACTORS ||--o{ AUDITS : "is audited in"
-    AUDIT_TYPES ||--o{ AUDITS : "template for"
-    AUDIT_TYPES ||--o{ AUDIT_QUESTIONS : "defines"
-    PROFILES ||--o{ AUDITS : "performed by"
-    AUDITS ||--o{ AUDIT_RESPONSES : "contains"
-    AUDIT_QUESTIONS ||--o{ AUDIT_RESPONSES : "answered as"
-    NC_CATEGORIES ||--o{ AUDIT_RESPONSES : "classifies NC"
+## 2. Scoring is two layers, and they must not be confused
 
-    CONTRACTORS { uuid id PK
-                  text code UK
-                  text name UK }
-    AUDIT_TYPES { uuid id PK
-                  text code UK
-                  text name UK }
-    AUDIT_QUESTIONS { uuid id PK
-                      uuid audit_type_id FK
-                      text code
-                      text category
-                      text question
-                      numeric weight }
-    NC_CATEGORIES { uuid id PK
-                    text code UK
-                    text name UK }
-    PROFILES { uuid id PK
-               text full_name
-               user_role role }
-    AUDITS { uuid id PK
-             uuid contractor_id FK
-             uuid audit_type_id FK
-             date audit_date
-             audit_status status
-             uuid auditor_id FK
-             numeric score }
-    AUDIT_RESPONSES { uuid id PK
-                      uuid audit_id FK
-                      uuid question_id FK
-                      audit_result result
-                      uuid nc_category_id FK
-                      observation_type observation
-                      corrective_action_status corrective_action_status }
-```
-
-Notable integrity rules (all database-enforced):
-
-| Rule | Mechanism |
-|---|---|
-| NC classification is mandatory for Non-Compliance and forbidden otherwise | `CHECK ((result = 'non_compliance') = (nc_category_id IS NOT NULL))` |
-| Corrective actions exist only on NC responses | `CHECK (corrective_action_status IS NULL OR result = 'non_compliance')` |
-| One response per question per audit | `UNIQUE (audit_id, question_id)` |
-| A response's question must belong to the audit's type | trigger `audit_responses_question_type_check` |
-| Question weights are positive | `CHECK (weight > 0)` |
-
-## 3. Scoring algorithm
-
-Result outcomes and their scoring effect:
-
-| Outcome | Effect |
-|---|---|
-| Full Compliance | question weight counts fully |
-| Non-Compliance | question weight counts as zero + mandatory NC classification |
-| Not Applicable | excluded from numerator **and** denominator |
-| Observation (Positive Practice / Improvement Opportunity) | recorded on the response, never affects the score |
+**Layer 1 — the scorecard.** A contractor's quarterly figure is the
+weighted average of five disciplines (`disciplines.ts`):
 
 ```
-score = Σ weight(Full Compliance) / Σ weight(result ≠ Not Applicable) × 100
+Average = 0.40×H&S + 0.25×Critical Risk + 0.10×Environment
+        + 0.10×Security + 0.15×Worker Welfare
 ```
 
-- Rounded to 2 decimals.
-- An audit with zero applicable responses has **NULL** score, not 0% — an
-  all-NA audit is "unscored", which matters for averages and trends.
-- Weights default to 1.00 (straight percentage). Adopting criticality
-  weighting later is a data change, not a code change.
+`weightedOverall()` renormalizes over whichever disciplines are actually
+scored, so a partly-scored quarter is not understated. This formula is
+pinned to the source scorecard row by row in `disciplines.test.ts` — those
+numbers are a contract with the client's own spreadsheet, not test fixtures
+to be adjusted.
 
-Implementations (kept deliberately identical):
+**Layer 2 — the detailed audits underneath a discipline.** Two exist:
 
-- **Database (source of truth):** `public.calculate_audit_score()`; a trigger
-  on `audit_responses` keeps the denormalized `audits.score` current on every
-  insert/update/delete.
-- **Client (`src/lib/scoring.ts`):** live provisional score in the entry UI
-  and dashboard aggregation without round-trips. The DB smoke test and the
-  vitest suite pin the same example (3 FC + 1 NC + 1 NA → 75.00) so drift
-  between the two gets caught.
+- **Health & Safety** — the 81-question site-walk checklist
+  (`checklist.ts`, `scoring.ts`), reproducing the workbook's formula
+  exactly: points = weight × (Full 1 / Partial 0.5 / No 0); sub-section =
+  points ÷ applicable weight; section = mean of sub-sections; total = mean
+  of sections.
+- **Critical Risk Control** — a focus audit over 14 hazardous-work items
+  (`critical-risks.ts`), scored per hazard.
 
-## 4. NC classification system
+`AuditSummary.total` is the H&S checklist total. `AuditSummary.overall` is
+the weighted scorecard figure. **Dashboards and rankings use `overall`.**
+Plotting `total` on a chart labelled with the scorecard is the single
+easiest mistake to make here.
 
-Controlled taxonomy in `nc_categories` (seeded, admin-extendable):
+## 3. The exclusion rule is the same everywhere
 
-| Code | Classification | Meaning |
-|---|---|---|
-| NC-NAV | Documentation Not Available | Required document/control doesn't exist |
-| NC-NAP | Documentation Available but Not Approved | Document exists, required approval absent |
-| NC-INC | Incomplete Documentation / Missing Requirements | Document exists, required elements missing |
-| NC-NIM | Not Implemented | Document exists but isn't implemented |
-| NC-PIM | Partially Implemented | Implementation is incomplete |
-| NC-OTH | Other (Controlled) | Escape hatch — review periodically; recurring uses should be promoted to their own classification |
+A question answered **N/A**, and a critical-risk hazard **outside a
+contractor's scope**, are both excluded from the numerator *and* the
+denominator. Neither is scored zero.
 
-`NC-OTH` is a row in the controlled list, **not** a free-text field: even the
-escape hatch stays aggregatable.
+This matters more than it looks. A contractor that does no marine work,
+scored zero on Working on or Near Water, would lose points against 25% of
+its overall score for work it never does. An all-N/A scope scores `null`,
+never 0 — and unanswered questions are ignored rather than counted as No,
+so a half-finished draft does not read as a failing audit.
 
-The observation layer is intentionally separate from the result, so
-"Full Compliance + Positive Practice" is expressible without polluting the
-scoring logic, and observations never appear in NC analytics.
+## 4. Why findings carry a SHEW pillar
 
-## 5. Audit lifecycle
+`domains.ts` tags each control as Safety, Health, Environment or Welfare
+(Security is a separate discipline, outside SHEW; management-system
+controls are Cross-cutting). The pillar sits on the **question**, not the
+observation, so every finding inherits it and auditors never pick it. That
+keeps entry fast and, more importantly, keeps the grouping consistent
+between auditors — a category an auditor selects is a category two
+auditors will disagree about.
 
-```
-draft ──(auditor submits)──▶ submitted ──(admin approves)──▶ approved
-```
+## 5. State lives in the browser, deliberately
 
-- **draft** — private to the auditor (and admins); score updates live;
-  excluded from every analytics view so half-entered audits never skew
-  dashboards.
-- **submitted** — visible to everyone; locked for the auditor; feeds
-  analytics.
-- **approved** — admin-verified; fully locked (admin can still correct or
-  reopen).
+There is no database and no authentication. `store.tsx` merges the
+compiled-in baseline dataset with user edits held in `localStorage`;
+`/welcome` writes a display name and role to one `httpOnly` cookie, and
+middleware requires it.
 
-Corrective-action tracking (`open → in_progress → closed → verified`) lives on
-the NC response. While the audit is draft the auditor sets it through the
-normal edit path. After submission the response is locked, but the corrective
-action still has a life of its own: `public.update_corrective_action()`
-(a `SECURITY DEFINER` function, `0004_corrective_actions.sql`) lets the
-audit's own auditor and admins advance **only** that column on finalized
-audits — surfaced in the app as the `/actions-queue` follow-up page. The
-score-refresh trigger skips updates that don't change the result, so a
-corrective-action update can never rewrite a historical score (even after a
-question-weight change).
+The role is a **UI affordance, not a security boundary** — it decides which
+buttons appear, and nothing more. Nothing in this app is a substitute for
+authentication. That arrives with the database.
 
-## 6. Dashboard / KPI structure
+State starts as the baseline so SSR matches the first client render, which
+is why a page looking up a possibly user-created record must wait for
+`hydrated` before deciding it is missing.
 
-All analytics are SQL views (`0002_scoring.sql`), created with
-`security_invoker = true` so RLS applies to the reader, and all restricted to
-submitted/approved audits.
+## 6. When the database arrives
 
-| View | Dashboard element | Question it answers |
-|---|---|---|
-| `v_contractor_latest_scores` | KPI tiles / contractor league table | "Where does each contractor stand right now?" |
-| `v_audit_scores` | Score trend line per contractor & audit type | "Has ABC improved? (62 → 78 → 91)" |
-| `v_nc_breakdown` | NC Pareto charts, filterable by contractor / question / category | "What is the most common NC cause?" / "What is ABC's main weakness?" |
-| `v_question_performance` | Weakest-controls ranking | "Which controls fail program-wide?" |
-| `v_open_corrective_actions` | Follow-up backlog | "What is still open, and for whom?" |
-| `v_observations` | Positive-practice highlights | "Who is exceeding requirements?" (non-scoring) |
+The earlier Supabase layer implemented a *welfare-audit* schema that does
+not match this model, and carried a `profiles` table with real names. It
+was deleted rather than carried forward (see git history if you need it).
+New migrations get modelled on the EHSS structure in `src/lib/ehss/` —
+sub-regions, contractors, quarterly reviews, checklist responses, per-hazard
+critical-risk scores — and on the residency requirements in
+`docs/COMPLIANCE-KSA.md`.
 
-Suggested dashboard layout:
-
-1. **Overview:** program average score, score distribution, top/bottom
-   contractors, open corrective actions count.
-2. **Contractor drill-down:** trend line, latest audit result by question
-   category, NC breakdown for that contractor.
-3. **Program analysis:** NC-category Pareto, weakest questions, category
-   heat-map (contractor × question category).
-
-## 7. Roles and row-level security
-
-Roles live on `public.profiles` (`admin` / `auditor` / `viewer`), provisioned
-automatically at signup (default `viewer`; admins promote). Helper
-`current_user_role()` is `SECURITY DEFINER` to avoid RLS recursion on
-`profiles`.
-
-| Table | admin | auditor | viewer |
-|---|---|---|---|
-| contractors, audit_types, audit_questions, nc_categories | read/write | read | read |
-| profiles | read/write all | read own | read own |
-| audits | full, any status | create draft as self; edit/submit/delete **own drafts**; read own + all finalized | read finalized |
-| audit_responses | full | edit within own drafts; read per parent audit | read within finalized audits |
-
-Additional hardening:
-
-- `anon` has no access at all — the dataset is internal.
-- `audits.score` and `audits.auditor_id` are excluded from the column-level
-  `UPDATE` grant: the score can only be written by the trigger, and audits
-  cannot be reassigned by non-service roles.
-- Role changes are admin-only (users cannot update their own profile row).
-- Analytics views inherit the reader's RLS (`security_invoker`), so a viewer
-  can never see draft data through a view.
-
-All of this is asserted by `supabase/tests/smoke_test.sql`, which exercises
-every role against a local Postgres using the shim in
-`supabase/tests/harness.sql`.
-
-## 8. Deployment
-
-- **Supabase** — Postgres + Auth + RLS; migrations in `supabase/migrations/`
-  apply cleanly with the Supabase CLI (`supabase db push` / `supabase db reset`).
-- **Vercel** — Next.js frontend (not yet scaffolded), talking to Supabase with
-  the anon key; RLS is the security boundary, so the frontend holds no
-  privileged credentials.
-- Because the audit dataset is organizational/compliance information rather
-  than personal data, hosting is primarily an internal IT/security approval
-  matter — confirm the project's approved cloud architecture before
-  production data goes in.
-
-## 9. Validation
+## 7. Validation
 
 ```bash
-npm install && npm test          # scoring library (vitest)
-npm run typecheck                # strict TS
-PGHOST=... PGUSER=postgres ./scripts/validate-db.sh   # full DB stack
+npm test          # scoring engines against the workbook and the scorecard
+npm run typecheck # strict TS, noUncheckedIndexedAccess
+npm run build     # the real type gate — run before pushing
 ```
 
-The DB script builds a throwaway database, applies harness → migrations →
-seed → smoke tests, and drops it. It needs any local Postgres 15+
-(15 is the floor because views use `security_invoker`).
+The tests that matter most are the golden ones: `scoring.test.ts` pins the
+H&S engine to the workbook's own filled audit (A 46.94, B 74.60, C 61,
+total 60.85) and `disciplines.test.ts` pins the weighted average to the
+client's scorecard. If a scoring change breaks those, the change is wrong
+unless the source document changed too.

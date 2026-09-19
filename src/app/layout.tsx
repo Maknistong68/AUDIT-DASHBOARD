@@ -46,7 +46,7 @@ export default async function RootLayout({
                     {profile.name} · {profile.role} · demo
                   </span>
                   {profile.role === "admin" && <AdminShortcut />}
-                  <form action="/auth/signout" method="post">
+                  <form action="/restart" method="post">
                     <button className="ghost" type="submit">
                       Restart demo
                     </button>

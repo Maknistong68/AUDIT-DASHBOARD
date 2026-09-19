@@ -12,9 +12,10 @@ npm test             # vitest run (EHSS scoring engine vs. workbook fixture)
 npx vitest run src/lib/ehss/scoring.test.ts -t "reproduces section A"   # single test
 ```
 
-Dependency notes: vitest is pinned to v3 (npm's resolver chokes on vitest
-4's peer graph here); the `postcss` override in package.json clears a
-transitive advisory — don't remove either without re-running `npm audit`.
+Dependency notes: three runtime dependencies (next, react, react-dom) and
+no others — keep it that way unless there is a real reason. The `postcss`
+override in package.json is load-bearing: without it Next pins a vulnerable
+8.4.31. Re-run `npm audit` after touching either.
 
 ## What this app is
 
@@ -24,7 +25,11 @@ workbook and the master contractor scorecard. Two invariants shape
 everything:
 
 1. **No personal data.** Contractor-level results only; no worker records,
-   photos, or auditor phone numbers. Demo data uses generic names.
+   photos, or auditor phone numbers. The only personal data in the whole app
+   is the optional display name in the `demo_profile` cookie. This is a
+   Saudi PDPL compliance position, not a preference —
+   `docs/COMPLIANCE-KSA.md` is the assessment, and §2 of it is the Record of
+   Processing Activities. Adding a field that names a person invalidates it.
 2. **No free text in the audit.** Answers are Full/Partial/No/N-A; comments
    are the standardized observation codes OB1–OB5 (`src/lib/ehss/model.ts`).
    Every Partial/No answer requires an OB2–OB5 classification. Don't add
@@ -112,26 +117,18 @@ everything:
   `.table-scroll` wrapper; the page itself must never scroll sideways at any
   width from 320px up.
 
-### Dormant Supabase layer
+### No database, and what that means
 
-`supabase/` (migrations, seed, RLS, tests) and `src/lib/supabase/` +
-`src/app/login/` implement the EARLIER welfare-audit schema — kept for
-reference but not reachable from the UI, and the schema does NOT match the
-EHSS model. Re-enabling a database means remodeling those migrations to
-the EHSS structure first, not just setting env vars. Middleware still
-carries the Supabase auth branch (active only when
-`NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY` are set and `NEXT_PUBLIC_DEMO_MODE`
-isn't "1").
+There is no Supabase layer, no migrations and no auth — the earlier
+welfare-audit schema was deleted (see git history). It did not match the
+EHSS model and carried a `profiles` table of real names, so re-enabling it
+was never the path forward. When a database is added, model it on
+`src/lib/ehss/` and read `docs/COMPLIANCE-KSA.md` §4 and §5.7 first: the
+hosting region and the no-personal-data schema rules are decided before the
+first migration, not after.
 
-Local DB validation for that legacy schema (needs Postgres 15+; in this
-remote container Postgres must run as the `nobody` user — root cannot run
-initdb):
-
-```bash
-mkdir -p /tmp/pgv && chown nobody /tmp/pgv
-su -s /bin/bash nobody -c "cd /; /usr/lib/postgresql/16/bin/initdb -D /tmp/pgv/data -U postgres --no-sync -A trust >/dev/null; /usr/lib/postgresql/16/bin/pg_ctl -D /tmp/pgv/data -o '-k /tmp/pgv -c listen_addresses=' -l /tmp/pgv/pg.log start"
-PGHOST=/tmp/pgv PGUSER=postgres ./scripts/validate-db.sh
-```
+`middleware.ts` gates on the `demo_profile` cookie and nothing else. The
+role is a UI affordance, not a security boundary.
 
 ### Verification gotcha
 
