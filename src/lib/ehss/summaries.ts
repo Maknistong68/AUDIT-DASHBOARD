@@ -225,6 +225,7 @@ export interface ContractorStats {
   disciplineAverages: Array<{
     id: DisciplineId;
     name: string;
+    shortName: string;
     weight: number;
     avg: number | null;
     gap: number | null;
@@ -280,6 +281,7 @@ export function contractorStats(
       return {
         id: d.id,
         name: d.name,
+        shortName: d.shortName,
         weight: d.weight,
         avg,
         gap: gapToTarget(avg),
@@ -832,4 +834,303 @@ export function weakestCriticalRisks(
     .filter((r) => r.avg !== null)
     .sort((a, b) => a.avg! - b.avg!)
     .slice(0, limit);
+}
+
+/* ------------------------------------------------------------------ *
+ * Problems — the drill-down model
+ *
+ * The dashboard is one chart; everything else is reached by drilling into
+ * it. A "problem" is one concrete thing a contractor is failing at, stated
+ * in a few words and ranked so the worst is first. Disciplines are NOT
+ * problems — they are the structure a problem sits in, shown alongside.
+ * ------------------------------------------------------------------ */
+
+export type ProblemKind = "area" | "hazard" | "question";
+
+export interface ProblemRow {
+  /** Stable key, unique across kinds. */
+  id: string;
+  kind: ProblemKind;
+  /** Code as the auditor knows it: "B6", "height", "A1". */
+  code: string;
+  label: string;
+  /** Latest score, 0-100 (null for a question — it has answers, not a score). */
+  score: number | null;
+  /** Points below the 90% target. */
+  gap: number;
+  direction: AreaDirection | null;
+  /** Reviews the judgement rests on. */
+  reviews: number;
+  /** One short line. Never a sentence — this is read at a glance. */
+  note: string;
+  /** Ranking weight: the gap, amplified when it is not getting better. */
+  severity: number;
+}
+
+const TREND_WEIGHT: Record<AreaDirection, number> = {
+  declining: 1.6,
+  flat: 1.25,
+  improving: 1,
+};
+
+/** "no change in 4 reviews" / "down 6.2 pts" / "first review". */
+function trendNote(
+  direction: AreaDirection | null,
+  change: number | null,
+  reviews: number,
+): string {
+  if (reviews < 2 || direction === null) return "first review";
+  if (direction === "flat") return `no change in ${reviews} reviews`;
+  const verb = direction === "declining" ? "down" : "up";
+  return `${verb} ${Math.abs(change ?? 0).toFixed(1)} pts`;
+}
+
+/**
+ * Everything this contractor is failing at, worst first.
+ *
+ * Three sources, one ranking: checklist sub-sections below target, critical
+ * risk hazards below target, and questions answered No often enough to
+ * matter on their own. Ranked by gap to target, amplified when the trend is
+ * flat or declining — a 15-point gap that is closing is a smaller problem
+ * than a 12-point gap that has not moved in a year, and that is the whole
+ * point of tracking quarters.
+ */
+export function contractorProblems(
+  summaries: AuditSummary[],
+  audits: EhssAudit[],
+  limit = 6,
+): ProblemRow[] {
+  const scored = finalized(summaries);
+  const rows: ProblemRow[] = [];
+
+  // 1. Checklist sub-sections below target.
+  for (const area of areaTrends(scored)) {
+    if (area.gap === null || area.gap <= 0) continue;
+    rows.push({
+      id: `area:${area.code}`,
+      kind: "area",
+      code: area.code,
+      label: area.title,
+      score: area.latest,
+      gap: area.gap,
+      direction: area.reviews < 2 ? null : area.direction,
+      reviews: area.reviews,
+      note: trendNote(
+        area.reviews < 2 ? null : area.direction,
+        area.change,
+        area.reviews,
+      ),
+      severity:
+        area.gap *
+        (area.reviews < 2 ? 1 : TREND_WEIGHT[area.direction]),
+    });
+  }
+
+  // 2. Critical-risk hazards below target, from this contractor's own scope.
+  for (const risk of CRITICAL_RISKS) {
+    const series = scored
+      .map((s) => s.criticalRisks[risk.id])
+      .filter((v): v is number => v !== undefined);
+    if (series.length === 0) continue;
+    const latest = series[series.length - 1]!;
+    const gap = gapToTarget(latest);
+    if (gap === null || gap <= 0) continue;
+    const change = series.length < 2 ? null : round(latest - series[0]!);
+    const direction: AreaDirection | null =
+      change === null
+        ? null
+        : change > 1
+          ? "improving"
+          : change < -1
+            ? "declining"
+            : "flat";
+    rows.push({
+      id: `hazard:${risk.id}`,
+      kind: "hazard",
+      code: risk.id,
+      label: risk.label,
+      score: latest,
+      gap,
+      direction,
+      reviews: series.length,
+      note: trendNote(direction, change, series.length),
+      severity: gap * (direction === null ? 1 : TREND_WEIGHT[direction]),
+    });
+  }
+
+  // 3. Individual questions costing real points — only those answered No,
+  //    and only when they outweigh the weakest area already listed.
+  for (const issue of topIssues(audits, 8)) {
+    if (issue.noCount === 0) continue;
+    rows.push({
+      id: `question:${issue.questionCode}`,
+      kind: "question",
+      code: issue.questionCode,
+      label: issue.questionText,
+      score: null,
+      gap: issue.lostPoints,
+      direction: null,
+      reviews: issue.occurrences,
+      note:
+        issue.occurrences === 1
+          ? "1 review"
+          : `${issue.noCount} of ${issue.occurrences} reviews: No`,
+      severity: issue.lostPoints * 1.1,
+    });
+  }
+
+  return rows.sort((a, b) => b.severity - a.severity).slice(0, limit);
+}
+
+/** One row of evidence behind a problem: what was answered, and when. */
+export interface EvidenceRow {
+  quarter: string;
+  /** Question code, or the hazard/area label for a score series. */
+  code: string;
+  text: string;
+  /** Percentage for a score series, null for an answer row. */
+  score: number | null;
+  answer: "partial" | "no" | null;
+  observation: ObservationCode | null;
+  weight: number | null;
+}
+
+/**
+ * The evidence behind one problem — what the auditor actually recorded.
+ *
+ * For an area: every Partial or No answer inside that sub-section, newest
+ * first. For a hazard: its score each quarter. For a question: how it was
+ * answered each quarter. This is the bottom of the drill-down: below this
+ * there is only the audit itself.
+ */
+export function problemEvidence(
+  problem: ProblemRow,
+  summaries: AuditSummary[],
+  audits: EhssAudit[],
+  limit = 8,
+): EvidenceRow[] {
+  const scored = finalized(summaries);
+  const byId = new Map(audits.map((a) => [a.id, a]));
+  const flat = flattenChecklist(CHECKLIST);
+
+  if (problem.kind === "hazard") {
+    return scored
+      .map((s) => ({
+        quarter: s.quarter,
+        code: problem.code,
+        text: problem.label,
+        score: s.criticalRisks[problem.code as CriticalRiskId] ?? null,
+        answer: null,
+        observation: null,
+        weight: null,
+      }))
+      .filter((r) => r.score !== null)
+      .reverse()
+      .slice(0, limit);
+  }
+
+  // Both remaining kinds read the checklist answers.
+  const inScope = (code: string) =>
+    problem.kind === "question"
+      ? code === problem.code
+      : flat.some(
+          (f) => f.question.code === code && f.subSection === problem.code,
+        );
+
+  const rows: EvidenceRow[] = [];
+  for (const summary of [...scored].reverse()) {
+    const audit = byId.get(summary.id);
+    if (!audit) continue;
+    for (const { question } of flat) {
+      if (!inScope(question.code)) continue;
+      const response = audit.responses[question.code];
+      if (!response) continue;
+      if (response.answer !== "partial" && response.answer !== "no") continue;
+      rows.push({
+        quarter: summary.quarter,
+        code: question.code,
+        text: question.text,
+        score: null,
+        answer: response.answer,
+        observation: response.observation,
+        weight: question.weight,
+      });
+      if (rows.length >= limit) return rows;
+    }
+  }
+  return rows;
+}
+
+/** How a contractor's problem compares with the rest of the programme. */
+export interface ProblemPeer {
+  label: string;
+  /** The programme figure: a mean score, or a count of contractors. */
+  value: number;
+  suffix: string;
+  /** This contractor minus the programme, for scores. Null for counts. */
+  delta: number | null;
+}
+
+/**
+ * The benchmark for one problem across every contractor in scope.
+ *
+ * "We score 71% on Working at Height" means something different when the
+ * programme averages 88% than when it averages 72% — the first is a
+ * contractor problem, the second is a programme problem, and they get
+ * fixed by different people.
+ */
+export function problemPeer(
+  problem: ProblemRow,
+  allSummaries: AuditSummary[],
+  allAudits: EhssAudit[],
+): ProblemPeer | null {
+  const scored = finalized(allSummaries);
+  if (scored.length === 0) return null;
+
+  if (problem.kind === "hazard") {
+    const values = scored
+      .map((s) => s.criticalRisks[problem.code as CriticalRiskId])
+      .filter((v): v is number => v !== undefined);
+    if (values.length === 0) return null;
+    const mean = round(values.reduce((sum, v) => sum + v, 0) / values.length);
+    return {
+      label: "Programme average",
+      value: mean,
+      suffix: "%",
+      delta: problem.score === null ? null : round(problem.score - mean),
+    };
+  }
+
+  if (problem.kind === "area") {
+    const values = scored
+      .flatMap((s) => s.subSections)
+      .filter((ss) => ss.code === problem.code && ss.score !== null)
+      .map((ss) => ss.score!);
+    if (values.length === 0) return null;
+    const mean = round(values.reduce((sum, v) => sum + v, 0) / values.length);
+    return {
+      label: "Programme average",
+      value: mean,
+      suffix: "%",
+      delta: problem.score === null ? null : round(problem.score - mean),
+    };
+  }
+
+  // A question: how widely shared the failure is.
+  const contractorsFailing = new Set(
+    allAudits
+      .filter((a) => {
+        const r = a.responses[problem.code];
+        return r && (r.answer === "partial" || r.answer === "no");
+      })
+      .map((a) => a.contractorId),
+  ).size;
+  const total = new Set(scored.map((s) => s.contractorId)).size;
+  if (total === 0) return null;
+  return {
+    label: "Contractors with the same gap",
+    value: contractorsFailing,
+    suffix: ` of ${total}`,
+    delta: null,
+  };
 }

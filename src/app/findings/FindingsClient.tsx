@@ -9,8 +9,18 @@ import {
 } from "@/lib/ehss/model";
 import { useEhss } from "@/lib/ehss/store";
 import { contractorLabel } from "@/lib/ehss/mock";
-import { collectObservations } from "@/lib/ehss/summaries";
+import {
+  collectObservations,
+  criticalRiskStats,
+  domainGapMatrix,
+  observationTrendByQuarter,
+  summarizeAll,
+} from "@/lib/ehss/summaries";
 import { DOMAINS, DOMAIN_BY_ID } from "@/lib/ehss/domains";
+import { CRITICAL_RISKS } from "@/lib/ehss/critical-risks";
+import { DomainGapHeatmap } from "@/components/charts/DomainGapHeatmap";
+import { CriticalRiskBars } from "@/components/charts/CriticalRiskBars";
+import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
 
 const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
 
@@ -25,6 +35,27 @@ export function FindingsClient() {
   const [contractorId, setContractorId] = useState("all");
   const [observation, setObservation] = useState("all");
   const [domain, setDomain] = useState("all");
+
+  /** Programme-wide analysis, scoped by the same filters as the register
+   * below — the dashboard is one chart, so these live where the findings
+   * they summarize are. */
+  const scopedAudits = useMemo(
+    () =>
+      audits.filter((a) => {
+        const c = contractors.find((x) => x.id === a.contractorId);
+        if (!c) return false;
+        return (
+          (subRegionId === "all" || c.subRegionId === subRegionId) &&
+          (contractorId === "all" || c.id === contractorId)
+        );
+      }),
+    [audits, contractors, subRegionId, contractorId],
+  );
+
+  const scopedSummaries = useMemo(
+    () => summarizeAll(scopedAudits, contractors, subRegions),
+    [scopedAudits, contractors, subRegions],
+  );
 
   const contractorOptions =
     subRegionId === "all"
@@ -48,6 +79,22 @@ export function FindingsClient() {
             a.questionCode.localeCompare(b.questionCode),
         ),
     [observations, subRegionId, contractorId, observation, domain],
+  );
+
+  const gapMatrix = useMemo(() => domainGapMatrix(rows), [rows]);
+  const observationTrend = useMemo(
+    () => observationTrendByQuarter(rows),
+    [rows],
+  );
+  const crcStats = useMemo(
+    () =>
+      criticalRiskStats(scopedSummaries)
+        .filter((r) => r.avg !== null)
+        .sort((a, b) => a.avg! - b.avg!),
+    [scopedSummaries],
+  );
+  const crcOutOfScope = CRITICAL_RISKS.filter(
+    (r) => !crcStats.some((c) => c.id === r.id),
   );
 
   return (
@@ -110,6 +157,48 @@ export function FindingsClient() {
           </select>
         </label>
       </div>
+
+      <div className="grid-2">
+        <section className="card">
+          <h2>Where the gaps are — SHEW pillar against gap type</h2>
+          <p className="sub">
+            {gapMatrix.total} findings in scope. Environment and Welfare have
+            scores but no checklist yet, so they carry no findings.
+          </p>
+          <DomainGapHeatmap matrix={gapMatrix} />
+        </section>
+
+        <section className="card">
+          <h2>Observation trends</h2>
+          <p className="sub">
+            What is driving the gaps, quarter by quarter ({rows.length} in
+            scope)
+          </p>
+          <ObservationTrendLines
+            quarters={observationTrend.quarters}
+            series={observationTrend.series}
+          />
+        </section>
+      </div>
+
+      <section className="card">
+        <h2>Critical Risk Control — by hazardous work</h2>
+        <p className="sub">
+          The CRC focus audit, ranked worst first. Each contractor is scored
+          only on the hazards its scope of work involves, so a hazard outside
+          scope is excluded rather than counted as zero. Bars start at 60% and
+          the tick marks the 90% target. Select a hazard for the contractors
+          behind it.
+          {crcOutOfScope.length > 0 && (
+            <>
+              {" "}
+              Not in any contractor&apos;s scope here:{" "}
+              {crcOutOfScope.map((r) => r.label).join(", ")}.
+            </>
+          )}
+        </p>
+        <CriticalRiskBars stats={crcStats} />
+      </section>
 
       <section className="card">
         <h2>Gap observations</h2>

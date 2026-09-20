@@ -34,3 +34,35 @@ export function useChartWidth(
 
   return width;
 }
+
+/**
+ * The rendered width AND height of a chart's wrapper.
+ *
+ * For the dashboard chart, which fills the viewport rather than growing with
+ * its data: the row height falls out of however much space is left, so the
+ * chart is the page instead of the page being a scroll of charts.
+ */
+export function useChartBox(
+  ref: RefObject<HTMLElement | null>,
+  fallback: { width: number; height: number },
+  min = { width: 300, height: 220 },
+): { width: number; height: number } {
+  const [box, setBox] = useState(fallback);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect || rect.width <= 0) return;
+      setBox({
+        width: Math.max(min.width, Math.round(rect.width)),
+        height: Math.max(min.height, Math.round(rect.height)),
+      });
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, min.width, min.height]);
+
+  return box;
+}

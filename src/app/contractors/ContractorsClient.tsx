@@ -13,7 +13,12 @@ import {
   ordinal,
   rankScores,
 } from "@/lib/ehss/disciplines";
-import { contractorStats, summarizeAll } from "@/lib/ehss/summaries";
+import {
+  contractorSeriesByQuarter,
+  contractorStats,
+  summarizeAll,
+} from "@/lib/ehss/summaries";
+import { ContractorSparkGrid } from "@/components/charts/ContractorSparkGrid";
 
 /** Colour a score cell by distance from target, the way the source
  * scorecard highlights weak and strong columns. */
@@ -52,6 +57,13 @@ export function ContractorsClient({ canManage }: { canManage: boolean }) {
 
   const quarter = latest[0]?.latestQuarter ?? null;
 
+  /** Every contractor's trajectory on one shared scale — the programme-wide
+   * view that the single-chart dashboard leaves to this page. */
+  const trajectories = useMemo(
+    () => contractorSeriesByQuarter(summaries),
+    [summaries],
+  );
+
   return (
     <div className="stack">
       <div className="filter-row">
@@ -64,6 +76,22 @@ export function ContractorsClient({ canManage }: { canManage: boolean }) {
           Show inactive contractors
         </label>
       </div>
+
+      <section className="card">
+        <h2>Score trajectories</h2>
+        <p className="sub">
+          One panel per contractor on a shared scale — where each is heading
+          across every quarter on record. Select a panel for its record.
+        </p>
+        <ContractorSparkGrid
+          quarters={trajectories.quarters}
+          series={trajectories.series}
+          selectedId={null}
+          onSelect={(id) => {
+            if (id) window.location.assign(`/contractors/${id}`);
+          }}
+        />
+      </section>
 
       {subRegions.map((sr) => {
         const rows = contractors.filter(

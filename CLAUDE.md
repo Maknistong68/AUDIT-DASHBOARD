@@ -95,6 +95,27 @@ everything:
   State starts as the baseline so SSR matches the first client render —
   a page looking up a possibly user-created record must wait for `hydrated`
   before deciding it is missing.
+- **The dashboard is ONE chart.** `/` is a league-table bar chart that fills
+  the viewport, and everything else is reached by drilling into it: select a
+  bar for that contractor's ranked problems (`ContractorPanel`), select a
+  problem for the evidence behind it (`ProblemPanel`). Programme-wide
+  analysis lives on the page it belongs to — findings analysis (SHEW
+  heat-map, CRC hazards, observation trends) on `/findings`, trajectories on
+  `/contractors`. Do not add a second card to `/`; if something deserves
+  dashboard space, it replaces the chart or it goes on another page.
+- **Nothing on `/` scrolls above 860px, structurally.** `.shell:has(.board)`
+  is exactly `100dvh` with `overflow: hidden`, the chart row is
+  `minmax(0, 1fr)`, and `ContractorBarChart` draws at its container's
+  measured height (`useChartBox`) rather than at a height derived from its
+  data. The drill-down panels are a fixed box whose list rows share the
+  space (`flex: 1 1 0` with a max), and the lists are capped in
+  `summaries.ts` — six problems, eight pieces of evidence — so they fit by
+  construction rather than by overflow. Below 860px the page scrolls
+  normally; sideways it must never scroll at any width from 320px up.
+- `contractorProblems()` / `problemEvidence()` / `problemPeer()` in
+  `summaries.ts` are the drill-down model: a "problem" is a checklist area,
+  a critical-risk hazard or a question, ranked by gap to target amplified
+  when the trend is flat or declining.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - `/brief` is the executive one-pager (what to focus on / what is working) —
   the view the project director actually reads; keep it to one page.

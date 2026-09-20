@@ -10,18 +10,24 @@ export function FloatingPanel({
   title,
   subtitle,
   onClose,
+  onBack,
   children,
 }: {
   title: string;
   subtitle?: string;
   onClose: () => void;
+  /** Present on a deeper drill-down level; Escape goes back before it
+   * closes, so the panel behaves like the levels it shows. */
+  onBack?: () => void;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (onBack) onBack();
+      else onClose();
     };
     document.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
@@ -31,7 +37,7 @@ export function FloatingPanel({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previousOverflow;
     };
-  }, [onClose]);
+  }, [onClose, onBack]);
 
   return (
     <div
@@ -49,7 +55,17 @@ export function FloatingPanel({
         ref={panelRef}
       >
         <header className="panel-floating-head">
-          <div>
+          {onBack && (
+            <button
+              className="panel-back"
+              type="button"
+              onClick={onBack}
+              aria-label="Back"
+            >
+              ‹
+            </button>
+          )}
+          <div className="panel-floating-title">
             <h2>{title}</h2>
             {subtitle && <p className="sub">{subtitle}</p>}
           </div>
