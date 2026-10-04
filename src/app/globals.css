@@ -2601,6 +2601,45 @@ table.crc-entry input[type="number"] {
   color: var(--ink-1);
 }
 
+/* Movement strip: what moved since the last review, good news first. The
+   positive half is the half an audit report usually drops. */
+.dd-move {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: none;
+}
+
+.dd-move li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--r-2);
+  background: var(--mat-2);
+  font-size: 10.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dd-move strong {
+  font-size: 14px;
+  font-weight: 680;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.dd-move .is-good strong {
+  color: var(--status-good);
+}
+
+.dd-move .is-bad strong {
+  color: var(--status-critical);
+}
+
 /* ---- The problem list ---- */
 
 .dd-main {
@@ -2648,7 +2687,7 @@ table.crc-entry input[type="number"] {
 .dd-problems li {
   flex: 1 1 0;
   min-height: 0;
-  max-height: 74px;
+  max-height: 78px;
 }
 
 .dd-problems button {
@@ -2658,7 +2697,7 @@ table.crc-entry input[type="number"] {
   grid-template-columns: 4px minmax(0, 1fr) auto 14px;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px 8px 0;
+  padding: 6px 12px 6px 0;
   background: var(--mat-2);
   border: 1px solid transparent;
   border-radius: var(--r-2);
@@ -2691,12 +2730,16 @@ table.crc-entry input[type="number"] {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  overflow: hidden;
 }
 
 .dd-p-label {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
+  /* Two lines of question text plus the meta line have to clear the row's
+     share of the panel; a looser leading here clips the meta. */
+  line-height: 1.26;
   color: var(--ink-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2704,6 +2747,28 @@ table.crc-entry input[type="number"] {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
+}
+
+/* Recurrence flag, inline before the label so it reads as part of it. */
+.dd-p-flag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 650;
+  padding: 1px 6px;
+  border-radius: var(--r-1);
+  margin-right: 6px;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.dd-p-flag.is-stuck {
+  background: color-mix(in srgb, var(--status-warning) 26%, transparent);
+  color: var(--ink-1);
+}
+
+.dd-p-flag.is-back {
+  background: color-mix(in srgb, var(--status-critical) 18%, transparent);
+  color: var(--status-critical);
 }
 
 .dd-p-meta {
@@ -3132,4 +3197,120 @@ table.crc-entry input[type="number"] {
   .dd-problems button {
     min-height: 62px;
   }
+}
+
+/* ---- Findings across quarters: the toggle and its flags ---- */
+
+.track-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.track-head h2 {
+  margin: 0;
+}
+
+.track-head .sub {
+  margin: 4px 0 0;
+  max-width: 62ch;
+}
+
+.track-toggle {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  flex: none;
+}
+
+.track-toggle button {
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.track-toggle button:hover {
+  color: var(--ink-1);
+}
+
+.track-toggle button[aria-pressed="true"] {
+  background: var(--mat-3);
+  color: var(--ink-1);
+  font-weight: 620;
+  box-shadow: var(--shadow-1);
+}
+
+.track-flag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 650;
+  padding: 2px 9px;
+  border-radius: var(--r-1);
+  white-space: nowrap;
+}
+
+.track-flag.is-stuck {
+  background: color-mix(in srgb, var(--status-warning) 26%, transparent);
+  color: var(--ink-1);
+}
+
+.track-flag.is-back {
+  background: color-mix(in srgb, var(--status-critical) 18%, transparent);
+  color: var(--status-critical);
+}
+
+.track-flag.is-fixed {
+  background: color-mix(in srgb, var(--status-good) 18%, transparent);
+  color: var(--success-text);
+}
+
+/* ---- Brief: the movement tiles ---- */
+
+.brief-move {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 4px 0 18px;
+}
+
+.brief-move-tile {
+  padding: 12px 14px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+}
+
+.brief-move-tile .n {
+  font-size: 26px;
+  font-weight: 680;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: var(--ink-2);
+}
+
+.brief-move-tile .l {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.brief-move-tile.is-good .n {
+  color: var(--status-good);
+}
+
+.brief-move-tile.is-bad .n {
+  color: var(--status-critical);
 }

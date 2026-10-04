@@ -116,6 +116,21 @@ everything:
   `summaries.ts` are the drill-down model: a "problem" is a checklist area,
   a critical-risk hazard or a question, ranked by gap to target amplified
   when the trend is flat or declining.
+- **Recurrence** (`findingHistories()` and friends): the same question
+  tracked answer-by-answer across a contractor's quarters. Two rules decide
+  everything and are pinned in `recurrence.test.ts` — a finding is
+  `recurring` at `RECURRING_THRESHOLD` (3) consecutive open reviews, and
+  **N/A never closes a finding** ("not applicable this quarter" usually
+  means the work was not running, which is not evidence anything was
+  fixed; it breaks the streak without earning a closure). `reopened`
+  outranks `recurring`: a fix that did not hold is worse than one never
+  attempted. Surfaced as the movement strip and row flags in the
+  drill-down, the "Findings across quarters" card on `/findings`, and the
+  movement tiles on `/brief`.
+- `mock.ts` answers are **sticky** across quarters (most of each draw comes
+  from the contractor-and-question pair, little from the quarter). Drawing
+  each quarter independently made nearly every finding look reopened the
+  next quarter and the recurrence view read as noise. Keep it sticky.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - `/brief` is the executive one-pager (what to focus on / what is working) —
   the view the project director actually reads; keep it to one page.

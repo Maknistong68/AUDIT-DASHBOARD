@@ -10,8 +10,11 @@ import {
 import { useEhss } from "@/lib/ehss/store";
 import { contractorLabel } from "@/lib/ehss/mock";
 import {
+  closedFindings,
   collectObservations,
   criticalRiskStats,
+  findingHistories,
+  recurringFindings,
   domainGapMatrix,
   observationTrendByQuarter,
   summarizeAll,
@@ -35,6 +38,7 @@ export function FindingsClient() {
   const [contractorId, setContractorId] = useState("all");
   const [observation, setObservation] = useState("all");
   const [domain, setDomain] = useState("all");
+  const [track, setTrack] = useState<"stuck" | "closed">("stuck");
 
   /** Programme-wide analysis, scoped by the same filters as the register
    * below — the dashboard is one chart, so these live where the findings
@@ -96,6 +100,16 @@ export function FindingsClient() {
   const crcOutOfScope = CRITICAL_RISKS.filter(
     (r) => !crcStats.some((c) => c.id === r.id),
   );
+
+  /** The same finding across quarters: what will not shift, and what the
+   * follow-up actually closed. */
+  const histories = useMemo(
+    () => findingHistories(scopedSummaries, scopedAudits),
+    [scopedSummaries, scopedAudits],
+  );
+  const stuck = useMemo(() => recurringFindings(histories, 12), [histories]);
+  const closed = useMemo(() => closedFindings(histories, 12), [histories]);
+  const tracked = track === "stuck" ? stuck : closed;
 
   return (
     <div className="stack">
@@ -180,6 +194,90 @@ export function FindingsClient() {
           />
         </section>
       </div>
+
+      <section className="card">
+        <div className="track-head">
+          <div>
+            <h2>Findings across quarters</h2>
+            <p className="sub">
+              {track === "stuck"
+                ? `${stuck.length} finding${stuck.length === 1 ? "" : "s"} open three reviews running or closed and back — these need an owner, not another observation.`
+                : `${closed.length} finding${closed.length === 1 ? "" : "s"} answered Full in the latest review after being open — the follow-up worked.`}
+            </p>
+          </div>
+          <div className="track-toggle" role="group" aria-label="Which findings">
+            <button
+              type="button"
+              aria-pressed={track === "stuck"}
+              onClick={() => setTrack("stuck")}
+            >
+              Keeps coming back
+            </button>
+            <button
+              type="button"
+              aria-pressed={track === "closed"}
+              onClick={() => setTrack("closed")}
+            >
+              Fixed since last review
+            </button>
+          </div>
+        </div>
+
+        {tracked.length === 0 ? (
+          <div className="chart-empty">
+            {track === "stuck"
+              ? "Nothing has been open three reviews running in this scope."
+              : "Nothing closed in the latest review in this scope."}
+          </div>
+        ) : (
+          <div className="table-scroll">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>Contractor</th>
+                  <th>Question</th>
+                  <th>Area</th>
+                  <th>Pillar</th>
+                  <th>{track === "stuck" ? "Open for" : "Closed in"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tracked.map((f) => (
+                  <tr key={f.id}>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {contractorLabel({
+                        name: f.contractorName,
+                        code: f.contractorCode,
+                      })}
+                    </td>
+                    <td>
+                      <strong>{f.questionCode}</strong>
+                      <div className="issue-text">{f.questionText}</div>
+                    </td>
+                    <td>{f.subSectionTitle ?? `Section ${f.sectionCode}`}</td>
+                    <td>{DOMAIN_BY_ID[f.domain].label}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      {track === "stuck" ? (
+                        f.status === "reopened" ? (
+                          <span className="track-flag is-back">came back</span>
+                        ) : (
+                          <span className="track-flag is-stuck">
+                            {f.openStreak} reviews
+                          </span>
+                        )
+                      ) : (
+                        <span className="track-flag is-fixed">
+                          {quarterLabel(f.closedIn!)}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="card">
         <h2>Critical Risk Control — by hazardous work</h2>

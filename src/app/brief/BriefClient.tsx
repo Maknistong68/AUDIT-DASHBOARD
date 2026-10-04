@@ -22,6 +22,9 @@ import {
   finalized,
   focusAreas,
   strengthAreas,
+  findingHistories,
+  findingMovement,
+  recurringFindings,
   summarizeAll,
   timeframeById,
   topIssues,
@@ -100,6 +103,13 @@ export function BriefClient() {
             ) / 10
           );
         })();
+
+  /** Findings tracked across quarters: what closed, and what will not
+   * shift. The director asked for both halves, not just the bad news. */
+  const windowAudits = audits.filter((a) => windowIds.has(a.id));
+  const histories = findingHistories(windowSummaries, windowAudits);
+  const moved = findingMovement(histories);
+  const stuck = recurringFindings(histories, 5);
 
   const trends = areaTrends(windowSummaries);
   const focus = focusAreas(trends, 5);
@@ -183,6 +193,69 @@ export function BriefClient() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Movement since the last review</h2>
+        <p className="sub">
+          What closed, and what has not moved. A finding open three reviews
+          running is a management failure, not a finding.
+        </p>
+        <div className="brief-move">
+          <div className="brief-move-tile is-good">
+            <div className="n">{moved.closedLatest}</div>
+            <div className="l">closed since last review</div>
+          </div>
+          <div className="brief-move-tile is-good">
+            <div className="n">{moved.improving}</div>
+            <div className="l">improving but still open</div>
+          </div>
+          <div
+            className={`brief-move-tile${moved.recurring > 0 ? " is-bad" : ""}`}
+          >
+            <div className="n">{moved.recurring}</div>
+            <div className="l">open 3+ reviews running</div>
+          </div>
+          <div
+            className={`brief-move-tile${moved.reopened > 0 ? " is-bad" : ""}`}
+          >
+            <div className="n">{moved.reopened}</div>
+            <div className="l">closed, then came back</div>
+          </div>
+        </div>
+
+        {stuck.length > 0 && (
+          <>
+            <h3 className="panel-title">Not moving</h3>
+            <div className="table-scroll">
+              <table className="data">
+                <tbody>
+                  {stuck.map((f) => (
+                    <tr key={f.id}>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <strong>{f.questionCode}</strong>
+                      </td>
+                      {!selected && (
+                        <td style={{ whiteSpace: "nowrap" }}>
+                          {contractorLabel({
+                            name: f.contractorName,
+                            code: f.contractorCode,
+                          })}
+                        </td>
+                      )}
+                      <td>{f.questionText}</td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        {f.status === "reopened"
+                          ? "closed, then came back"
+                          : `open ${f.openStreak} reviews running`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </section>
 
       <section className="card">

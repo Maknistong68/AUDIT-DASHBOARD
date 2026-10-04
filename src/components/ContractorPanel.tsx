@@ -6,7 +6,11 @@ import { bandColor, bandFor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { quarterLabel } from "@/lib/ehss/model";
 import { formatScore } from "@/lib/format";
-import type { ContractorStats, ProblemRow } from "@/lib/ehss/summaries";
+import type {
+  ContractorStats,
+  FindingMovement,
+  ProblemRow,
+} from "@/lib/ehss/summaries";
 
 const KIND_LABEL: Record<ProblemRow["kind"], string> = {
   area: "Checklist area",
@@ -42,10 +46,12 @@ function Direction({ direction }: { direction: ProblemRow["direction"] }) {
 export function ContractorPanel({
   stats,
   problems,
+  movement,
   onOpenProblem,
 }: {
   stats: ContractorStats;
   problems: ProblemRow[];
+  movement: FindingMovement;
   onOpenProblem: (problem: ProblemRow) => void;
 }) {
   const trend = stats.audits
@@ -192,6 +198,25 @@ export function ContractorPanel({
       </aside>
 
       <section className="dd-main">
+        <ul className="dd-move" aria-label="Movement since the last review">
+          <li className="is-good">
+            <strong>{movement.closedLatest}</strong>
+            <span>closed since last review</span>
+          </li>
+          <li className="is-good">
+            <strong>{movement.improving}</strong>
+            <span>improving</span>
+          </li>
+          <li className={movement.recurring > 0 ? "is-bad" : undefined}>
+            <strong>{movement.recurring}</strong>
+            <span>open 3+ reviews</span>
+          </li>
+          <li className={movement.reopened > 0 ? "is-bad" : undefined}>
+            <strong>{movement.reopened}</strong>
+            <span>came back</span>
+          </li>
+        </ul>
+
         <h3 className="dd-h">
           Problems
           <span className="dd-h-note">
@@ -219,7 +244,16 @@ export function ContractorPanel({
                     }}
                   />
                   <span className="dd-p-body">
-                    <span className="dd-p-label">{p.label}</span>
+                    <span className="dd-p-label">
+                      {(p.reopened || p.streak >= 3) && (
+                        <span
+                          className={`dd-p-flag ${p.reopened ? "is-back" : "is-stuck"}`}
+                        >
+                          {p.reopened ? "↻ came back" : `↻ ${p.streak} reviews`}
+                        </span>
+                      )}
+                      {p.label}
+                    </span>
                     <span className="dd-p-meta">
                       {KIND_LABEL[p.kind]}
                       {p.kind !== "hazard" && ` ${p.code}`} · {p.note}{" "}

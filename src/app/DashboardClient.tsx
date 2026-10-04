@@ -15,6 +15,8 @@ import {
   TIMEFRAMES,
   contractorProblems,
   contractorStats,
+  findingHistories,
+  findingMovement,
   problemEvidence,
   problemPeer,
   summarizeAll,
@@ -84,6 +86,18 @@ export function DashboardClient() {
       selected
         ? contractorProblems(selectedWindow.summaries, selectedWindow.audits, 6)
         : [],
+    [selected, selectedWindow],
+  );
+
+  /** What is stuck and what moved for this contractor — the positive half
+   * of the story, which an audit report usually drops. */
+  const movement = useMemo(
+    () =>
+      findingMovement(
+        selected
+          ? findingHistories(selectedWindow.summaries, selectedWindow.audits)
+          : [],
+      ),
     [selected, selectedWindow],
   );
 
@@ -271,6 +285,7 @@ export function DashboardClient() {
             <ContractorPanel
               stats={selected}
               problems={problems}
+              movement={movement}
               onOpenProblem={setProblem}
             />
           )}

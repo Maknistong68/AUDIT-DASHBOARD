@@ -23,6 +23,7 @@ import {
 import {
   ANSWER_VALUE,
   ratingFor,
+  type EhssAnswer,
   type EhssAudit,
   type EhssContractor,
   type ObservationCode,
@@ -863,6 +864,12 @@ export interface ProblemRow {
   reviews: number;
   /** One short line. Never a sentence — this is read at a glance. */
   note: string;
+  /** Consecutive reviews open. Only tracked for questions, where the
+   * answer is recorded review by review; 0 for areas and hazards, whose
+   * `note` already carries their movement. */
+  streak: number;
+  /** Closed at some point and open again — the fix did not hold. */
+  reopened: boolean;
   /** Ranking weight: the gap, amplified when it is not getting better. */
   severity: number;
 }
@@ -920,6 +927,8 @@ export function contractorProblems(
         area.change,
         area.reviews,
       ),
+      streak: 0,
+      reopened: false,
       severity:
         area.gap *
         (area.reviews < 2 ? 1 : TREND_WEIGHT[area.direction]),
@@ -954,14 +963,25 @@ export function contractorProblems(
       direction,
       reviews: series.length,
       note: trendNote(direction, change, series.length),
+      streak: 0,
+      reopened: false,
       severity: gap * (direction === null ? 1 : TREND_WEIGHT[direction]),
     });
   }
 
   // 3. Individual questions costing real points — only those answered No,
-  //    and only when they outweigh the weakest area already listed.
+  //    weighted up when the same answer keeps coming back. A question open
+  //    four reviews running outranks a worse one seen only once: the first
+  //    is a management failure, the second is a finding.
+  const byQuestion = new Map(
+    findingHistories(summaries, audits).map((h) => [h.questionCode, h]),
+  );
   for (const issue of topIssues(audits, 8)) {
     if (issue.noCount === 0) continue;
+    const history = byQuestion.get(issue.questionCode);
+    const streak = history?.openStreak ?? 0;
+    const reopened = history?.status === "reopened";
+    const recurring = history?.status === "recurring";
     rows.push({
       id: `question:${issue.questionCode}`,
       kind: "question",
@@ -971,11 +991,17 @@ export function contractorProblems(
       gap: issue.lostPoints,
       direction: null,
       reviews: issue.occurrences,
-      note:
-        issue.occurrences === 1
-          ? "1 review"
-          : `${issue.noCount} of ${issue.occurrences} reviews: No`,
-      severity: issue.lostPoints * 1.1,
+      note: reopened
+        ? "closed, then came back"
+        : recurring
+          ? `open ${streak} reviews running`
+          : issue.occurrences === 1
+            ? "1 review"
+            : `${issue.noCount} of ${issue.occurrences} reviews: No`,
+      streak,
+      reopened,
+      severity:
+        issue.lostPoints * (reopened ? 1.8 : recurring ? 1.5 : 1.1),
     });
   }
 
@@ -1132,5 +1158,255 @@ export function problemPeer(
     value: contractorsFailing,
     suffix: ` of ${total}`,
     delta: null,
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Finding histories — what keeps coming back, and what got fixed
+ *
+ * A quarterly audit is only worth running if you can see across the
+ * quarters. One Partial is a finding; the same Partial three reviews
+ * running is a management failure, and the two should not look alike on
+ * screen. The positive side matters just as much: a finding that closed
+ * is the evidence that the follow-up worked.
+ * ------------------------------------------------------------------ */
+
+/** Consecutive open reviews before a finding counts as recurring. */
+export const RECURRING_THRESHOLD = 3;
+
+export type FindingStatus =
+  /** Open in the latest review, and in RECURRING_THRESHOLD or more in a row. */
+  | "recurring"
+  /** Was closed at some point, and is open again now. */
+  | "reopened"
+  /** Open in the latest review, but not yet long enough to be recurring. */
+  | "open"
+  /** Was open, answered Full in the latest review. */
+  | "closed";
+
+export interface FindingTimelineEntry {
+  quarter: string;
+  answer: EhssAnswer;
+  observation: ObservationCode | null;
+}
+
+export interface FindingHistory {
+  /** contractorId + question code. */
+  id: string;
+  contractorId: string;
+  contractorName: string;
+  contractorCode: string;
+  subRegionId: string;
+  questionCode: string;
+  questionText: string;
+  subSectionCode: string | null;
+  subSectionTitle: string | null;
+  sectionCode: string;
+  domain: DomainId;
+  weight: number;
+  /** Oldest first, one entry per finalized review that answered the question. */
+  timeline: FindingTimelineEntry[];
+  status: FindingStatus;
+  /** Consecutive reviews open, counting back from the latest. */
+  openStreak: number;
+  /** True when a Full answer sits between two open ones. */
+  reopened: boolean;
+  /** Quarter it closed in, for a closed finding. */
+  closedIn: string | null;
+  /** Where an open finding is heading: No->Partial is real progress. */
+  trajectory: "improving" | "worsening" | "same" | null;
+  /** Ranking weight: streak and question weight, reopened counts double. */
+  severity: number;
+}
+
+const isOpen = (a: EhssAnswer) => a === "partial" || a === "no";
+
+/**
+ * Per-contractor history of every question that was ever a finding.
+ *
+ * N/A is deliberately NOT treated as a closure. "Not applicable this
+ * quarter" is not evidence that anything was fixed — it usually means the
+ * work was not running — so an N/A breaks the streak without earning the
+ * contractor a closed finding. Only a Full answer closes one.
+ *
+ * Questions that were never open are omitted entirely: this is a view of
+ * findings, not of the checklist.
+ */
+export function findingHistories(
+  summaries: AuditSummary[],
+  audits: EhssAudit[],
+): FindingHistory[] {
+  const byId = new Map(audits.map((a) => [a.id, a]));
+  const flat = flattenChecklist(CHECKLIST);
+  const out: FindingHistory[] = [];
+
+  // Group reviews by contractor, oldest first — each contractor has its own
+  // timeline, so a mixed-scope list cannot be read as one sequence.
+  const byContractor = new Map<string, AuditSummary[]>();
+  for (const s of finalized(summaries)) {
+    const list = byContractor.get(s.contractorId) ?? [];
+    list.push(s);
+    byContractor.set(s.contractorId, list);
+  }
+
+  for (const [contractorId, reviews] of byContractor) {
+    reviews.sort((a, b) => a.quarter.localeCompare(b.quarter));
+    const head = reviews[0]!;
+
+    for (const { question, section, subSection, subSectionTitle } of flat) {
+      const timeline: FindingTimelineEntry[] = [];
+      for (const review of reviews) {
+        const audit = byId.get(review.id);
+        const response = audit?.responses[question.code];
+        if (!response) continue;
+        timeline.push({
+          quarter: review.quarter,
+          answer: response.answer,
+          observation: response.observation,
+        });
+      }
+      if (timeline.length === 0) continue;
+      if (!timeline.some((t) => isOpen(t.answer))) continue; // never a finding
+
+      const latest = timeline[timeline.length - 1]!;
+
+      // A Full answer that comes after an open one closed it at least once.
+      const firstOpen = timeline.findIndex((t) => isOpen(t.answer));
+      const closedAfterOpen = timeline
+        .slice(firstOpen + 1)
+        .some((t) => t.answer === "full");
+
+      let openStreak = 0;
+      for (let i = timeline.length - 1; i >= 0; i--) {
+        if (!isOpen(timeline[i]!.answer)) break;
+        openStreak++;
+      }
+
+      let status: FindingStatus;
+      let closedIn: string | null = null;
+      if (latest.answer === "full") {
+        status = "closed";
+        closedIn = latest.quarter;
+      } else if (!isOpen(latest.answer)) {
+        // Latest is N/A: not assessed, so neither closed nor open. The
+        // finding keeps whatever it last was, which is "open".
+        status = "open";
+      } else if (closedAfterOpen) {
+        status = "reopened";
+      } else if (openStreak >= RECURRING_THRESHOLD) {
+        status = "recurring";
+      } else {
+        status = "open";
+      }
+
+      // Direction for an open finding, across the open run only.
+      let trajectory: FindingHistory["trajectory"] = null;
+      if (status !== "closed" && openStreak >= 2) {
+        const run = timeline.slice(timeline.length - openStreak);
+        const first = run[0]!.answer;
+        const last = run[run.length - 1]!.answer;
+        trajectory =
+          first === last
+            ? "same"
+            : first === "no" && last === "partial"
+              ? "improving"
+              : "worsening";
+      }
+
+      const severity =
+        status === "closed"
+          ? 0
+          : question.weight * openStreak * (status === "reopened" ? 2 : 1);
+
+      out.push({
+        id: `${contractorId}:${question.code}`,
+        contractorId,
+        contractorName: head.contractorName,
+        contractorCode: head.contractorCode,
+        subRegionId: head.subRegionId,
+        questionCode: question.code,
+        questionText: question.text,
+        subSectionCode: subSection,
+        subSectionTitle,
+        sectionCode: section,
+        domain: question.domain,
+        weight: question.weight,
+        timeline,
+        status,
+        openStreak,
+        reopened: closedAfterOpen && isOpen(latest.answer),
+        closedIn,
+        trajectory,
+        severity,
+      });
+    }
+  }
+
+  return out;
+}
+
+/** Findings that will not go away: recurring or reopened, worst first. */
+export function recurringFindings(
+  histories: FindingHistory[],
+  limit?: number,
+): FindingHistory[] {
+  const rows = histories
+    .filter((h) => h.status === "recurring" || h.status === "reopened")
+    .sort(
+      (a, b) =>
+        b.severity - a.severity ||
+        a.contractorName.localeCompare(b.contractorName),
+    );
+  return limit === undefined ? rows : rows.slice(0, limit);
+}
+
+/**
+ * Findings closed in the most recent review — the evidence that follow-up
+ * worked, which is the half of the story an audit report usually drops.
+ */
+export function closedFindings(
+  histories: FindingHistory[],
+  limit?: number,
+): FindingHistory[] {
+  const latestByContractor = new Map<string, string>();
+  for (const h of histories) {
+    const last = h.timeline[h.timeline.length - 1]!.quarter;
+    const seen = latestByContractor.get(h.contractorId);
+    if (!seen || last.localeCompare(seen) > 0) {
+      latestByContractor.set(h.contractorId, last);
+    }
+  }
+  const rows = histories
+    .filter(
+      (h) =>
+        h.status === "closed" &&
+        h.closedIn === latestByContractor.get(h.contractorId),
+    )
+    .sort(
+      (a, b) =>
+        b.weight - a.weight ||
+        a.contractorName.localeCompare(b.contractorName),
+    );
+  return limit === undefined ? rows : rows.slice(0, limit);
+}
+
+/** Headline counts for a scope: what is stuck, and what moved. */
+export interface FindingMovement {
+  recurring: number;
+  reopened: number;
+  closedLatest: number;
+  improving: number;
+}
+
+export function findingMovement(
+  histories: FindingHistory[],
+): FindingMovement {
+  return {
+    recurring: histories.filter((h) => h.status === "recurring").length,
+    reopened: histories.filter((h) => h.status === "reopened").length,
+    closedLatest: closedFindings(histories).length,
+    improving: histories.filter(
+      (h) => h.status !== "closed" && h.trajectory === "improving",
+    ).length,
   };
 }

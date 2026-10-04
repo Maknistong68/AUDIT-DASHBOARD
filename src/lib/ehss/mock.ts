@@ -66,17 +66,30 @@ function gapObservation(seed: number, i: number): ObservationCode {
 /**
  * Generate a full answer set. `quality` (0..1) steers the Full/Partial/No
  * mix, so the resulting total lands near quality×100 without being exact.
+ *
+ * Answers are STICKY across quarters: most of each draw comes from the
+ * contractor-and-question pair and only a little from the quarter, so a
+ * documentation gap stays a gap until the contractor's quality rises past
+ * it. Drawing each quarter independently made every finding look reopened
+ * the next quarter, which is not how audits behave and made the recurrence
+ * view read as noise.
  */
-function genResponses(seed: number, quality: number): Record<string, EhssResponse> {
+function genResponses(
+  base: number,
+  qi: number,
+  quality: number,
+): Record<string, EhssResponse> {
   const pFull = Math.max(0, Math.min(1, quality * 1.35 - 0.35));
   const pPartial = Math.max(0.1, Math.min(1 - pFull, (1 - pFull) * 0.75));
   const responses: Record<string, EhssResponse> = {};
   FLAT.forEach(({ question }, i) => {
-    if (det(seed + 3, i) < 0.06) {
+    // Whether a question applies is a property of the contractor's scope,
+    // so it does not change from quarter to quarter.
+    if (det(base + 3, i) < 0.06) {
       responses[question.code] = { answer: "na", observation: null };
       return;
     }
-    const r = det(seed, i);
+    const r = 0.8 * det(base, i) + 0.2 * det(base + qi * 97, i);
     let answer: EhssAnswer;
     if (r < pFull) answer = "full";
     else if (r < pFull + pPartial) answer = "partial";
@@ -85,10 +98,10 @@ function genResponses(seed: number, quality: number): Record<string, EhssRespons
       answer,
       observation:
         answer === "full"
-          ? det(seed + 11, i) < 0.12
+          ? det(base + 11, i) < 0.12
             ? "OB1"
             : null
-          : gapObservation(seed, i),
+          : gapObservation(base, i),
     };
   });
   return responses;
@@ -109,8 +122,12 @@ function workbookResponses(): Record<string, EhssResponse> {
 }
 
 /** Partially answered draft (about half the checklist). */
-function draftResponses(seed: number, quality: number): Record<string, EhssResponse> {
-  const full = genResponses(seed, quality);
+function draftResponses(
+  base: number,
+  qi: number,
+  quality: number,
+): Record<string, EhssResponse> {
+  const full = genResponses(base, qi, quality);
   const responses: Record<string, EhssResponse> = {};
   FLAT.forEach(({ question }, i) => {
     if (i < FLAT.length / 2) responses[question.code] = full[question.code]!;
@@ -233,7 +250,9 @@ function buildAudits(): EhssAudit[] {
   for (const contractor of contractors) {
     QUARTERS.forEach(([quarter, date], qi) => {
       const quartersBack = QUARTERS.length - 1 - qi;
-      const seed = (SEEDS[contractor.id] ?? 7) + qi;
+      // Stable per contractor: the quarter is mixed in inside genResponses,
+      // so a finding carries over instead of being redrawn.
+      const base = SEEDS[contractor.id] ?? 7;
       const scores = scoresFor(contractor.id, quartersBack);
 
       // TDP's current-quarter review is still being filled in.
@@ -249,7 +268,7 @@ function buildAudits(): EhssAudit[] {
           auditDate: "2026-09-16",
           inspectionNo: `EHSS-${quarter}-${contractor.code}`,
           status: "draft",
-          responses: draftResponses(seed, scores.hs! / 100),
+          responses: draftResponses(base, qi, scores.hs! / 100),
           disciplineScores: {},
           criticalRisks: {},
         });
@@ -267,7 +286,7 @@ function buildAudits(): EhssAudit[] {
         status: quarter === "2026-Q3" ? "submitted" : "approved",
         responses: isWorkbook
           ? workbookResponses()
-          : genResponses(seed, scores.hs! / 100),
+          : genResponses(base, qi, scores.hs! / 100),
         // The workbook review's H&S score comes from its checklist answers.
         disciplineScores: isWorkbook
           ? { crc: scores.crc, env: scores.env, sec: scores.sec, ww: scores.ww }
