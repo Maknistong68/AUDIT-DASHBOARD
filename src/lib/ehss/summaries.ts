@@ -1410,3 +1410,281 @@ export function findingMovement(
     ).length,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * Checklist analysis — the H&S checklist read across contractors
+ *
+ * The 81 questions are the only part of the scorecard with real depth, and
+ * the question a programme manager asks of them is not "how is this
+ * contractor doing" but "is this OUR problem or THEIRS". A control nine of
+ * eleven contractors fail is a programme failure — one briefing fixes it
+ * everywhere. A control one contractor fails is that contractor's.
+ * ------------------------------------------------------------------ */
+
+/** A scoreable area of the checklist: section A as a whole, then each
+ * sub-section. Section A's questions sit directly in it (no sub-section),
+ * so it is its own area rather than being dropped. */
+export interface ChecklistArea {
+  code: string; // "A", "B6", "C1"
+  title: string;
+  section: string;
+  questionCount: number;
+}
+
+export function checklistAreas(): ChecklistArea[] {
+  const out: ChecklistArea[] = [];
+  for (const section of CHECKLIST) {
+    const bare = section.subSections.filter((ss) => ss.code === null);
+    if (bare.length > 0) {
+      out.push({
+        code: section.code,
+        title: section.title,
+        section: section.code,
+        questionCount: bare.reduce((n, ss) => n + ss.questions.length, 0),
+      });
+    }
+    for (const ss of section.subSections) {
+      if (ss.code === null) continue;
+      out.push({
+        code: ss.code,
+        title: ss.title ?? ss.code,
+        section: section.code,
+        questionCount: ss.questions.length,
+      });
+    }
+  }
+  return out;
+}
+
+export interface AreaCell {
+  contractorId: string;
+  /** "Al Fahd (1272)" — for tooltips and prose. */
+  label: string;
+  /** Kept apart as well, because three contractors are called Al Fahd and a
+   * narrow matrix column can only show one of the two. */
+  name: string;
+  code: string;
+  score: number | null;
+}
+
+export interface ChecklistAreaStat extends ChecklistArea {
+  /** Programme mean across the contractors that scored the area. */
+  avg: number | null;
+  /** Contractors scored on it, and how many sit below target. */
+  contractors: number;
+  belowTarget: number;
+  /** One cell per contractor, in the order given. */
+  cells: AreaCell[];
+}
+
+/**
+ * Contractor × checklist-area grid. Each cell is that contractor's mean
+ * score for the area across the reviews in scope — the view that separates
+ * "everyone is weak here" from "one contractor is weak here" at a glance.
+ */
+export function checklistMatrix(
+  summaries: AuditSummary[],
+): { areas: ChecklistAreaStat[]; contractors: AreaCell[] } {
+  const scored = finalized(summaries);
+
+  const byContractor = new Map<string, AuditSummary[]>();
+  for (const s of scored) {
+    const list = byContractor.get(s.contractorId) ?? [];
+    list.push(s);
+    byContractor.set(s.contractorId, list);
+  }
+
+  const roster: AreaCell[] = [...byContractor.entries()]
+    .map(([contractorId, reviews]) => ({
+      contractorId,
+      label: `${reviews[0]!.contractorName} (${reviews[0]!.contractorCode})`,
+      name: reviews[0]!.contractorName,
+      code: reviews[0]!.contractorCode,
+      score: null as number | null,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const areas = checklistAreas().map((area) => {
+    const cells: AreaCell[] = roster.map(({ contractorId, label, name, code }) => {
+      const reviews = byContractor.get(contractorId) ?? [];
+      const values = reviews
+        .map((r) =>
+          area.code === area.section
+            ? (r.sections.find((s) => s.code === area.code)?.score ?? null)
+            : (r.subSections.find((ss) => ss.code === area.code)?.score ??
+              null),
+        )
+        .filter((v): v is number => v !== null);
+      return {
+        contractorId,
+        label,
+        name,
+        code,
+        score:
+          values.length === 0
+            ? null
+            : round(values.reduce((sum, v) => sum + v, 0) / values.length),
+      };
+    });
+
+    const values = cells
+      .map((c) => c.score)
+      .filter((v): v is number => v !== null);
+
+    return {
+      ...area,
+      avg:
+        values.length === 0
+          ? null
+          : round(values.reduce((sum, v) => sum + v, 0) / values.length),
+      contractors: values.length,
+      belowTarget: values.filter((v) => v < TARGET_SCORE).length,
+      cells,
+    };
+  });
+
+  return { areas, contractors: roster };
+}
+
+/** One checklist question, measured across every contractor in scope. */
+export interface ChecklistQuestionStat {
+  code: string;
+  text: string;
+  weight: number;
+  domain: DomainId;
+  section: string;
+  areaCode: string;
+  areaTitle: string;
+  /** Contractors whose reviews answered it at all (N/A excluded). */
+  contractors: number;
+  /** Contractors that answered Partial or No at least once. */
+  failing: number;
+  /** Share of answering contractors that failed it, 0-1. The systemic
+   * signal: high means the programme has the problem, not one company. */
+  failRate: number;
+  noCount: number;
+  partialCount: number;
+  /** Weighted points lost across every review in scope. */
+  lostPoints: number;
+  topObservation: ObservationCode | null;
+}
+
+/**
+ * Per-question programme statistics, worst first.
+ *
+ * `failRate` counts CONTRACTORS, not answers: one contractor failing the
+ * same question four quarters running is one contractor with a problem,
+ * not four. Ranking on answers would make a single stubborn contractor
+ * look like a programme-wide failure.
+ */
+export function checklistQuestionStats(
+  summaries: AuditSummary[],
+  audits: EhssAudit[],
+  areaCode?: string,
+): ChecklistQuestionStat[] {
+  const ids = new Set(finalized(summaries).map((s) => s.id));
+  const inScope = audits.filter((a) => ids.has(a.id));
+  const flat = flattenChecklist(CHECKLIST);
+
+  return flat
+    .filter(({ section, subSection }) =>
+      areaCode === undefined
+        ? true
+        : subSection === null
+          ? section === areaCode
+          : subSection === areaCode,
+    )
+    .map(({ question, section, subSection, subSectionTitle }) => {
+      const answering = new Set<string>();
+      const failingSet = new Set<string>();
+      let noCount = 0;
+      let partialCount = 0;
+      let lost = 0;
+      const observations = new Map<ObservationCode, number>();
+
+      for (const audit of inScope) {
+        const response = audit.responses[question.code];
+        if (!response || response.answer === "na") continue;
+        answering.add(audit.contractorId);
+        if (response.answer === "full") continue;
+        failingSet.add(audit.contractorId);
+        if (response.answer === "no") noCount++;
+        else partialCount++;
+        lost += question.weight * (1 - ANSWER_VALUE[response.answer]);
+        if (response.observation) {
+          observations.set(
+            response.observation,
+            (observations.get(response.observation) ?? 0) + 1,
+          );
+        }
+      }
+
+      const top = [...observations.entries()].sort((a, b) => b[1] - a[1])[0];
+
+      return {
+        code: question.code,
+        text: question.text,
+        weight: question.weight,
+        domain: question.domain,
+        section,
+        areaCode: subSection ?? section,
+        areaTitle: subSectionTitle ?? CHECKLIST.find((s) => s.code === section)!.title,
+        contractors: answering.size,
+        failing: failingSet.size,
+        failRate:
+          answering.size === 0 ? 0 : failingSet.size / answering.size,
+        noCount,
+        partialCount,
+        lostPoints: round(lost),
+        topObservation: top ? top[0] : null,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.failRate - a.failRate ||
+        b.lostPoints - a.lostPoints ||
+        a.code.localeCompare(b.code),
+    );
+}
+
+/** How a question is answered by each contractor, newest review first. */
+export interface QuestionByContractor {
+  contractorId: string;
+  label: string;
+  quarter: string;
+  answer: EhssAnswer;
+  observation: ObservationCode | null;
+}
+
+export function questionByContractor(
+  questionCode: string,
+  summaries: AuditSummary[],
+  audits: EhssAudit[],
+): QuestionByContractor[] {
+  const byId = new Map(audits.map((a) => [a.id, a]));
+  const latest = new Map<string, AuditSummary>();
+  for (const s of finalized(summaries)) {
+    const seen = latest.get(s.contractorId);
+    if (!seen || s.quarter.localeCompare(seen.quarter) > 0) {
+      latest.set(s.contractorId, s);
+    }
+  }
+
+  const rows: QuestionByContractor[] = [];
+  for (const [contractorId, summary] of latest) {
+    const response = byId.get(summary.id)?.responses[questionCode];
+    if (!response) continue;
+    rows.push({
+      contractorId,
+      label: `${summary.contractorName} (${summary.contractorCode})`,
+      quarter: summary.quarter,
+      answer: response.answer,
+      observation: response.observation,
+    });
+  }
+
+  const rank: Record<EhssAnswer, number> = { no: 0, partial: 1, full: 2, na: 3 };
+  return rows.sort(
+    (a, b) => rank[a.answer] - rank[b.answer] || a.label.localeCompare(b.label),
+  );
+}

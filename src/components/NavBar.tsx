@@ -110,6 +110,11 @@ const REFERENCE: NavItem = {
 /** A route is current when it is the path, or the parent of a detail page. */
 function isCurrent(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
+  // Findings and the H&S checklist analysis are two tabs of one
+  // destination, so the nav marks Findings current on both. The tab bar is
+  // full at five labels — see the comment on `.tabbar a` — which is why
+  // this is a tab and not a sixth entry.
+  if (href === "/findings") return pathname.startsWith("/findings") || pathname.startsWith("/checklist");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

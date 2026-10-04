@@ -8,6 +8,7 @@ import {
   quarterLabel,
 } from "@/lib/ehss/model";
 import { useEhss } from "@/lib/ehss/store";
+import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { contractorLabel } from "@/lib/ehss/mock";
 import {
   closedFindings,
@@ -113,6 +114,7 @@ export function FindingsClient() {
 
   return (
     <div className="stack">
+      <AnalysisTabs />
       <div className="filter-row">
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Sub-region</span>

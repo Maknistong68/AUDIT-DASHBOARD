@@ -132,6 +132,20 @@ everything:
   each quarter independently made nearly every finding look reopened the
   next quarter and the recurrence view read as noise. Keep it sticky.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
+- **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
+  `/findings` is observation-centric (the gap register, SHEW heat-map,
+  observation trends, findings across quarters, CRC hazards) and
+  `/checklist` is question-centric (the contractor × checklist-area matrix
+  and the most widely failed questions). They share the Findings nav entry
+  because **the phone tab bar is full at five labels** — "Contractors" sets
+  the floor and only just fits at 360px. Do not add a sixth primary nav
+  item; add a tab.
+- The checklist analysis answers "is this ours or theirs": `failRate` in
+  `checklistQuestionStats()` counts CONTRACTORS, not answers, so one
+  contractor failing the same question four quarters running does not read
+  as a programme-wide failure. `checklistAreas()` treats section A as one
+  area (its questions have no sub-section) plus B1–B12, C1, C2 — 15 areas,
+  81 questions, pinned in `checklist-analysis.test.ts`.
 - `/brief` is the executive one-pager (what to focus on / what is working) —
   the view the project director actually reads; keep it to one page.
 - Charts are hand-built SVG (`src/components/charts/`), single accent hue;
