@@ -1150,6 +1150,325 @@ table.data td.num {
   white-space: nowrap;
 }
 
+/* The hero figure on a drill-down or audit panel. Proportional figures at
+   display size (tabular digits read loose), set in the body sans. */
+.panel-score {
+  font-size: clamp(38px, 5vw, 48px);
+  font-weight: 660;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+/* ---- Master scorecard ---- */
+
+table.scorecard {
+  min-width: 760px;
+}
+
+/* Ten columns: at the shared cell padding the scorecard overruns the card on
+   a full-width desktop by a few dozen pixels, which parks the row's action
+   off-screen. Tighter gutters bring it inside; it still scrolls on a phone. */
+table.scorecard th,
+table.scorecard td {
+  padding-left: 9px;
+  padding-right: 9px;
+}
+
+table.scorecard .th-weight {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+table.data td.strong {
+  font-weight: 650;
+}
+
+td.cell-good {
+  background: color-mix(in srgb, var(--band-compliant) 16%, transparent);
+}
+
+td.cell-weak {
+  background: color-mix(in srgb, var(--band-non) 14%, transparent);
+}
+
+.inactive-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+}
+
+/* ---- Discipline score entry ---- */
+
+.discipline-panel {
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  border-radius: var(--r-3);
+  padding: 16px 18px;
+  margin: 16px 0 6px;
+}
+
+.discipline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.discipline-grid input {
+  max-width: none;
+}
+
+/* ---- Chart legend & tooltip rows ---- */
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key-line {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--muted);
+}
+
+.key-accent { background: var(--accent); }
+.key-muted { background: var(--muted); opacity: 0.55; }
+.key-good { background: var(--status-good); }
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+}
+
+.tooltip-row .val {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: right;
+}
+
+/* ---- Floating drill-down: a sheet ---- */
+
+.panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--scrim);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px 24px;
+  overflow-y: auto;
+  animation: scrim-in 200ms var(--ease);
+}
+
+.panel-floating {
+  position: relative;
+  width: min(940px, 100%);
+  background: var(--mat-sheet);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-5);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(30px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
+  outline: none;
+  animation: panel-in 320ms var(--spring);
+}
+
+@keyframes scrim-in {
+  from { opacity: 0; }
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+
+.panel-floating-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px 14px;
+  background: var(--mat-sheet);
+  border-bottom: 1px solid var(--mat-line);
+  border-radius: var(--r-5) var(--r-5) 0 0;
+  backdrop-filter: blur(30px) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
+}
+
+.panel-floating-head h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.panel-floating-head .sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Round close affordance, like a sheet's dismiss button. */
+.panel-close {
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  color: var(--ink-2);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+  cursor: pointer;
+  flex: none;
+  display: grid;
+  place-items: center;
+  transition: background-color 160ms var(--ease), transform 140ms var(--ease);
+}
+
+.panel-close:hover {
+  background: var(--mat-hover);
+  color: var(--ink-1);
+}
+
+.panel-close:active {
+  transform: scale(0.9);
+}
+
+.panel-floating-body {
+  padding: 18px 22px 24px;
+}
+
+/* Rating key under the league table */
+.rating-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+.rating-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rating-key i {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  display: inline-block;
+}
+
+.band-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+/* ---- Small-multiple trajectories ---- */
+
+.spark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.spark {
+  text-align: left;
+  font: inherit;
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-3);
+  padding: 11px 12px 9px;
+  cursor: pointer;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease),
+    transform 160ms var(--ease), box-shadow 160ms var(--ease);
+}
+
+.spark:hover {
+  background: var(--mat-1);
+  border-color: var(--baseline);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-1);
+}
+
+.spark:active {
+  transform: scale(0.98);
+}
+
+.spark.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.spark-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.spark-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spark-score {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-1);
+}
+
+.spark-foot {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+
+.spark-up { color: var(--success-text); }
+.spark-down { color: var(--band-non); }
+.spark-flat { color: var(--muted); }
+
 /* ---- SHEW pillar × gap-type heat-map ---- */
 
 .heatmap-wrap {

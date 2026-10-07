@@ -181,6 +181,15 @@ Two invariants shape everything:
   rating badges use the status palette with labels (never color alone).
   Charts draw at their container's measured width via `useChartWidth`, so
   type is never scaled down — don't reintroduce a fixed `viewBox` width.
+- `globals.css` is one long file whose section comments are NOT reliable
+  boundaries: unrelated rules sit between them. **Never delete a range
+  between two section markers.** Removing the brief that way silently took
+  the floating panel, rating key, scorecard, discipline panels, chart legend
+  and spark grid with it, and the build, the type gate and 126 tests all
+  passed — CSS has no type checker. Delete rule by rule, then diff the
+  selector list against the previous version
+  (`grep -oE "^\.[a-zA-Z][-a-zA-Z0-9_]*" ... | sort -u | comm`) and open
+  every page that used them.
 - Design tokens live in `app/globals.css` (light + dark), in two layers that
   must not be mixed: **semantic** tokens (`--ink-*`, `--accent`, `--band-*`,
   `--series-*`) carry meaning and are the validated palette; **material**
