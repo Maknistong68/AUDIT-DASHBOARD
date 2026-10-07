@@ -162,6 +162,18 @@ Two invariants shape everything:
   from the contractor-and-question pair, little from the quarter). Drawing
   each quarter independently made nearly every finding look reopened the
   next quarter and the recurrence view read as noise. Keep it sticky.
+- **The entry form is the auditor's screen, and it is long by nature**: 81
+  questions with a twelve-toggle cause picker on every gap runs to about
+  thirteen screens. `EhssAuditForm` carries a sticky toolbar that answers
+  the three questions that make it workable without scrolling — how far
+  through (progress + live score), what blocks submission (the "N need a
+  cause" chip, which is itself the shortcut to that filter), and where is
+  area B6 (the jump strip, one chip per area with a dot for its state).
+  The filter (All / To do / Gaps / No cause) is the main tool: it cuts the
+  page from ~11,500px to ~5,100px when you only want what is left. Keep
+  filter labels SHORT — a segmented control cannot shrink below its labels,
+  and the long ones pushed a 320px phone sideways; it now scrolls rather
+  than widens, but short labels are the real fix.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
   `/findings` is observation-centric (the gap register, SHEW heat-map,

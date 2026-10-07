@@ -19,6 +19,28 @@ import { formatScore } from "@/lib/format";
 
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
 
+type FormFilter = "all" | "todo" | "gaps" | "needs";
+
+/** Terse by design: four nowrap labels in a segmented control set the
+ * form's minimum width, and the long versions pushed a 320px phone
+ * sideways. The title carries the full meaning. */
+const FILTERS: Array<{ id: FormFilter; label: string; title: string }> = [
+  { id: "all", label: "All", title: "Every question" },
+  { id: "todo", label: "To do", title: "Not yet answered" },
+  { id: "gaps", label: "Gaps", title: "Answered Partial or No" },
+  { id: "needs", label: "No cause", title: "A gap with no issue category yet" },
+];
+
+/** Does a question survive the current filter? */
+function matches(filter: FormFilter, r: EhssResponse | undefined): boolean {
+  if (filter === "all") return true;
+  if (filter === "todo") return r === undefined;
+  if (r === undefined) return false;
+  const gap = r.answer === "partial" || r.answer === "no";
+  if (filter === "gaps") return gap;
+  return gap && r.issues.length === 0;
+}
+
 const confirmDiscard = () =>
   window.confirm("Discard this draft review? This cannot be undone.");
 
@@ -44,6 +66,9 @@ export function EhssAuditForm({
   const [responses, setResponses] =
     useState<Record<string, EhssResponse>>(initialResponses);
   const [dirty, setDirty] = useState(false);
+  /** What to show. An 81-question form is only workable if you can ask it
+   * what is left. */
+  const [filter, setFilter] = useState<FormFilter>("all");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,6 +128,59 @@ export function EhssAuditForm({
     () => answeredCount(CHECKLIST, responses),
     [responses],
   );
+  /**
+   * The checklist's scoreable areas, flattened: section A as one (its
+   * questions sit in no sub-section) then B1-B12, C1, C2. Each carries its
+   * own progress so the jump strip can show what is left without the
+   * auditor scrolling to find out.
+   */
+  const areas = useMemo(() => {
+    const out: Array<{
+      key: string;
+      section: string;
+      label: string;
+      codes: string[];
+    }> = [];
+    for (const section of CHECKLIST) {
+      const bare = section.subSections.filter((ss) => ss.code === null);
+      if (bare.length > 0) {
+        out.push({
+          key: section.code,
+          section: section.code,
+          label: section.code,
+          codes: bare.flatMap((ss) => ss.questions.map((q) => q.code)),
+        });
+      }
+      for (const ss of section.subSections) {
+        if (ss.code === null) continue;
+        out.push({
+          key: ss.code,
+          section: section.code,
+          label: ss.code,
+          codes: ss.questions.map((q) => q.code),
+        });
+      }
+    }
+    return out;
+  }, []);
+
+  const areaProgress = useMemo(() => {
+    const map = new Map<string, { answered: number; total: number; needs: number }>();
+    for (const area of areas) {
+      let answered = 0;
+      let needs = 0;
+      for (const code of area.codes) {
+        const r = responses[code];
+        if (!r) continue;
+        answered++;
+        if ((r.answer === "partial" || r.answer === "no") && r.issues.length === 0)
+          needs++;
+      }
+      map.set(area.key, { answered, total: area.codes.length, needs });
+    }
+    return map;
+  }, [areas, responses]);
+
   const missingObservations = useMemo(() => {
     let n = 0;
     for (const r of Object.values(responses)) {
@@ -115,9 +193,88 @@ export function EhssAuditForm({
     return n;
   }, [responses]);
 
+  const jump = (key: string) => {
+    document
+      .getElementById(`area-${key}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const pct = progress.total === 0 ? 0 : (progress.answered / progress.total) * 100;
+
   return (
     <div>
-      {CHECKLIST.map((section) => (
+      <div className="entry-bar">
+        <div className="entry-bar-top">
+          <span className="entry-progress" aria-live="polite">
+            <strong>
+              {progress.answered}/{progress.total}
+            </strong>{" "}
+            answered
+          </span>
+          <span className="entry-track" aria-hidden>
+            <i style={{ width: `${pct}%` }} />
+          </span>
+          <span className="entry-live">
+            {formatScore(score.total)}
+            <em>{ratingFor(score.total) ?? "unrated"}</em>
+          </span>
+          {missingObservations > 0 && (
+            <button
+              type="button"
+              className="entry-warn"
+              onClick={() => setFilter("needs")}
+            >
+              {missingObservations} need a cause
+            </button>
+          )}
+          <span className="entry-filters" role="group" aria-label="Show">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                aria-pressed={filter === f.id}
+                title={f.title}
+                onClick={() => setFilter(f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </span>
+        </div>
+        <div className="entry-jump" role="group" aria-label="Jump to area">
+          {areas.map((a) => {
+            const prog = areaProgress.get(a.key)!;
+            const done = prog.answered === prog.total;
+            return (
+              <button
+                key={a.key}
+                type="button"
+                className={
+                  prog.needs > 0
+                    ? "is-needs"
+                    : done
+                      ? "is-done"
+                      : prog.answered > 0
+                        ? "is-part"
+                        : undefined
+                }
+                onClick={() => jump(a.key)}
+                title={`${a.label} — ${prog.answered} of ${prog.total} answered${prog.needs > 0 ? `, ${prog.needs} need a cause` : ""}`}
+              >
+                {a.label}
+                <i aria-hidden />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {CHECKLIST.map((section) => {
+        const visibleInSection = section.subSections.some((ss) =>
+          ss.questions.some((q) => matches(filter, responses[q.code])),
+        );
+        if (!visibleInSection) return null;
+        return (
         <div key={section.code}>
           <div className="section-head">
             <span>
@@ -130,8 +287,17 @@ export function EhssAuditForm({
               )}
             </span>
           </div>
-          {section.subSections.map((ss) => (
-            <div key={ss.code ?? section.code}>
+          {section.subSections.map((ss) => {
+            const shown = ss.questions.filter((q) =>
+              matches(filter, responses[q.code]),
+            );
+            if (shown.length === 0) return null;
+            return (
+            <div
+              key={ss.code ?? section.code}
+              id={`area-${ss.code ?? section.code}`}
+              className="q-area"
+            >
               {ss.code && (
                 <div className="q-category">
                   {ss.code} — {ss.title}
@@ -145,7 +311,7 @@ export function EhssAuditForm({
                   </span>
                 </div>
               )}
-              {ss.questions.map((q) => {
+              {shown.map((q) => {
                 const r = responses[q.code];
                 const needsObservation =
                   r && (r.answer === "partial" || r.answer === "no");
@@ -225,9 +391,28 @@ export function EhssAuditForm({
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
-      ))}
+        );
+      })}
+
+      {progress.answered === progress.total && filter === "todo" && (
+        <div className="entry-empty">
+          Every question is answered.{" "}
+          <button type="button" onClick={() => setFilter("all")}>
+            Show all
+          </button>
+        </div>
+      )}
+      {missingObservations === 0 && filter === "needs" && (
+        <div className="entry-empty">
+          Every gap has a cause recorded.{" "}
+          <button type="button" onClick={() => setFilter("all")}>
+            Show all
+          </button>
+        </div>
+      )}
 
       <div className="entry-footer">
         <span className="live-score" aria-live="polite">
