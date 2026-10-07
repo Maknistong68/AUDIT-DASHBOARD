@@ -1,0 +1,1455 @@
+{
+ "audits": [
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "4800001134-ABYATONA",
+   "projectNo": "4800001134",
+   "name": "ABYATONA",
+   "auditDate": "2025-10-22",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 27.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 6.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 3.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 0.5,
+     "possible": 1.0
+    },
+    "B10": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 5.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 4.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 15.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 67.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "4800001112-ABYATONA",
+   "projectNo": "4800001112",
+   "name": "ABYATONA",
+   "auditDate": "2025-10-15",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 25.5,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 6.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 11.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 7.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 17.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 62.09
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "480000901-AL-BIRIKI",
+   "projectNo": "480000901",
+   "name": "AL BIRIKI",
+   "auditDate": "2025-10-20",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 36.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 3.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 4.0,
+     "possible": 6.0
+    },
+    "B3": {
+     "scored": 4.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 2.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 0.5,
+     "possible": 1.0
+    },
+    "B10": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 21.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 68.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "4800001322-PPCO",
+   "projectNo": "4800001322",
+   "name": "PPCO",
+   "auditDate": "2025-10-13",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 21.0,
+     "possible": 42.0
+    },
+    "B1": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B2": {
+     "scored": 5.5,
+     "possible": 6.0
+    },
+    "B3": {
+     "scored": 4.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 0.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 20.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 62.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "SIBS - 4800000838",
+   "projectNo": "4800000838",
+   "name": "SIBS",
+   "auditDate": "2025-11-19",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 30.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 5.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 12.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 65.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr1",
+   "project": "SIBS 838",
+   "projectNo": null,
+   "name": "SIBS 838",
+   "auditDate": "2025-11-12",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 21.0,
+     "possible": 42.0
+    },
+    "B1": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B2": {
+     "scored": 5.5,
+     "possible": 6.0
+    },
+    "B3": {
+     "scored": 4.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 0.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 20.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 62.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr2",
+   "project": "AL FAHD-4800001272",
+   "projectNo": "4800001272",
+   "name": "AL FAHD",
+   "auditDate": "2025-10-29",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 30.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 6.5,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 3.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 9.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 19.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 71.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr2",
+   "project": "Design and Build for OXAGON Terminal 2 (T2) Dredging and Quay Walls-D&B",
+   "projectNo": null,
+   "name": "Design and Build for OXAGON Terminal 2 (T2) Dredging and Quay Walls D&B",
+   "auditDate": "2025-12-01",
+   "inspectionNo": "HS-01",
+   "areas": {
+    "A": {
+     "scored": 27.0,
+     "possible": 42.0
+    },
+    "B1": {
+     "scored": 3.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 4.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 4.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 1.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.5,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 9.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 18.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 64.0
+  },
+  {
+   "quarter": "2025-Q4",
+   "subRegionId": "sr2",
+   "project": "JV-ECH-T1-4800001131",
+   "projectNo": "4800001131",
+   "name": "JV ECH T1",
+   "auditDate": "2025-11-03",
+   "inspectionNo": "HSW-01",
+   "areas": {
+    "A": {
+     "scored": 33.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 9.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 5.5,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 2.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 1.5,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 11.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 16.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 74.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800001134-ABYATONA",
+   "projectNo": "4800001134",
+   "name": "ABYATONA",
+   "auditDate": "2026-03-10",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 21.0,
+     "possible": 36.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 6.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 3.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 4.5,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 3.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 13.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 64.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800001112-ABYATONA",
+   "projectNo": "4800001112",
+   "name": "ABYATONA",
+   "auditDate": "2026-03-08",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 19.5,
+     "possible": 36.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 5.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 6.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 1.5,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 5.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 2.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 14.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 60.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800000882-AL FAHD",
+   "projectNo": "4800000882",
+   "name": "AL FAHD",
+   "auditDate": "2026-01-25",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 27.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 6.5,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 4.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 20.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 68.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4200000026 - NBC",
+   "projectNo": "4200000026",
+   "name": "NBC",
+   "auditDate": "2026-02-08",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 13.5,
+     "possible": 42.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 4.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 6.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 2.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 1.5,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 6.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 12.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 60.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800001322-PPCO",
+   "projectNo": "4800001322",
+   "name": "PPCO",
+   "auditDate": "2026-01-18",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 30.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 6.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 0.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 3.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 17.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 76.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800001440-RPCO",
+   "projectNo": "4800001440",
+   "name": "RPCO",
+   "auditDate": "2026-03-02",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 7.5,
+     "possible": 39.0
+    },
+    "B1": {
+     "scored": 3.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 1.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 3.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 14.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 60.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "800000838-SIBS",
+   "projectNo": "800000838",
+   "name": "SIBS",
+   "auditDate": "2026-02-01",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 30.0,
+     "possible": 45.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 7.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 3.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 9.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 15.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 72.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr1",
+   "project": "4800000892-TDP",
+   "projectNo": "4800000892",
+   "name": "TDP",
+   "auditDate": "2026-03-15",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 18.0,
+     "possible": 36.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B6": {
+     "scored": 1.0,
+     "possible": 11.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 1.0,
+     "possible": 1.0
+    },
+    "B10": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 8.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 15.5,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 62.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr2",
+   "project": "AL FAHD-4800001272",
+   "projectNo": "4800001272",
+   "name": "AL FAHD",
+   "auditDate": "2026-02-23",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 20.0,
+     "possible": 40.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 9.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 3.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 1.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 5.0,
+     "possible": 19.0
+    },
+    "C2": {
+     "scored": 18.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 65.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr2",
+   "project": "JV-ECH-T1-4800001131",
+   "projectNo": "4800001131",
+   "name": "JV ECH T1",
+   "auditDate": "2026-03-01",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 25.5,
+     "possible": 36.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 5.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 9.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 9.5,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 5.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 1.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 6.5,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 21.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 85.0
+  },
+  {
+   "quarter": "2026-Q1",
+   "subRegionId": "sr2",
+   "project": "Sarco Disa - 4800000876",
+   "projectNo": "4800000876",
+   "name": "Sarco Disa",
+   "auditDate": "2026-02-15",
+   "inspectionNo": "HSSEW-002",
+   "areas": {
+    "A": {
+     "scored": 21.0,
+     "possible": 42.0
+    },
+    "B1": {
+     "scored": 4.5,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 5.0,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 9.0,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 3.5,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 3.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 2.0,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B9": {
+     "scored": 3.0,
+     "possible": 3.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 7.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 1.5,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 3.0,
+     "possible": 13.0
+    },
+    "C2": {
+     "scored": 19.0,
+     "possible": 21.0
+    }
+   },
+   "reportedTotal": 66.0
+  }
+ ],
+ "problems": [
+  "2025-Q4 4800001134-ABYATONA: C2 is 15/21 = 71%, but the sheet's percentage cell says 62%",
+  "2025-Q4 480000901-AL-BIRIKI: C2 is 21/21 = 100%, but the sheet's percentage cell says 84%",
+  "2025-Q4 SIBS 838: C2 is 20.5/21 = 98%, but the sheet's percentage cell says 85%",
+  "2025-Q4 4800001322-PPCO: C2 is 20.5/21 = 98%, but the sheet's percentage cell says 85%",
+  "2025-Q4 SIBS - 4800000838: C2 is 12.5/21 = 60%, but the sheet's percentage cell says 50%",
+  "2025-Q4 4800001112-ABYATONA: C2 is 17.5/21 = 83%, but the sheet's percentage cell says 70%",
+  "2025-Q4 AL FAHD-4800001272: C2 is 19/21 = 90%, but the sheet's percentage cell says 76%",
+  "2025-Q4 JV-ECH-T1-4800001131: C2 is 16.5/21 = 79%, but the sheet's percentage cell says 66%",
+  "2025-Q4 Design and Build for OXAGON Terminal 2 (T2) Dredging and Quay Walls-D&B: B6 is 1/11 = 9%, but the sheet's percentage cell says 17%",
+  "2025-Q4 Design and Build for OXAGON Terminal 2 (T2) Dredging and Quay Walls-D&B: C2 is 18/21 = 86%, but the sheet's percentage cell says 78%",
+  "2026-Q1 4800001134-ABYATONA: C1 is 3.5/13 = 27%, but the sheet's percentage cell says 70%",
+  "2026-Q1 4800001134-ABYATONA: C2 is 13/21 = 62%, but the sheet's percentage cell says 54%",
+  "2026-Q1 4800001112-ABYATONA: C1 is 2.5/13 = 19%, but the sheet's percentage cell says 50%",
+  "2026-Q1 4800001112-ABYATONA: C2 is 14/21 = 67%, but the sheet's percentage cell says 58%",
+  "2026-Q1 4800000882-AL FAHD: C2 is 20/21 = 95%, but the sheet's percentage cell says 80%",
+  "2026-Q1 4200000026 - NBC: B6 is 2/11 = 18%, but the sheet's percentage cell says 50%",
+  "2026-Q1 4200000026 - NBC: C1 is 6/13 = 46%, but the sheet's percentage cell says 55%",
+  "2026-Q1 4200000026 - NBC: C2 is 12.5/21 = 60%, but the sheet's percentage cell says 54%",
+  "2026-Q1 4800001322-PPCO: C2 is 17/21 = 81%, but the sheet's percentage cell says 74%",
+  "2026-Q1 4800001440-RPCO: B6 is 1/11 = 9%, but the sheet's percentage cell says 25%",
+  "2026-Q1 4800001440-RPCO: C1 is 3/13 = 23%, but the sheet's percentage cell says 27%",
+  "2026-Q1 4800001440-RPCO: C2 is 14.5/21 = 69%, but the sheet's percentage cell says 66%",
+  "2026-Q1 800000838-SIBS: C2 is 15.5/21 = 74%, but the sheet's percentage cell says 62%",
+  "2026-Q1 4800000892-TDP: B6 is 1/11 = 9%, but the sheet's percentage cell says 25%",
+  "2026-Q1 4800000892-TDP: C1 is 8.5/13 = 65%, but the sheet's percentage cell says 71%",
+  "2026-Q1 4800000892-TDP: C2 is 15.5/21 = 74%, but the sheet's percentage cell says 67%",
+  "2026-Q1 AL FAHD-4800001272: C1 is 5/19 = 26%, but the sheet's percentage cell says 56%",
+  "2026-Q1 AL FAHD-4800001272: C2 is 18/21 = 86%, but the sheet's percentage cell says 72%",
+  "2026-Q1 JV-ECH-T1-4800001131: C1 is 6.5/13 = 50%, but the sheet's percentage cell says 81%",
+  "2026-Q1 JV-ECH-T1-4800001131: C2 scored 21.5 of 21 possible",
+  "2026-Q1 JV-ECH-T1-4800001131: C2 is 21/21 = 100%, but the sheet's percentage cell says 86%",
+  "2026-Q1 Sarco Disa - 4800000876: C1 is 3/13 = 23%, but the sheet's percentage cell says 75%",
+  "2026-Q1 Sarco Disa - 4800000876: C2 is 19/21 = 90%, but the sheet's percentage cell says 79%"
+ ]
+}
