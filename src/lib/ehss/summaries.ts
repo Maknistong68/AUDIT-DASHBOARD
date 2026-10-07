@@ -105,9 +105,17 @@ const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
  * The Health & Safety checklist score for an audit, however it was recorded:
  * from its answers, or from the area points of an audit imported from a
  * sheet. One definition, so a page cannot read an imported audit as unscored.
+ *
+ * **Answers win.** Area points are a coarse stand-in for an audit nobody
+ * recorded question by question; the moment someone answers the checklist,
+ * that is the audit and the imported totals are history. Without this an
+ * auditor could fill in all 81 questions on an imported review and watch the
+ * score refuse to move, which is the worst kind of bug in a scoring tool —
+ * silent, and wrong in the direction of the old number.
  */
 export function scoreChecklist(audit: EhssAudit): AuditScore {
-  return audit.areaScores
+  const answered = Object.keys(audit.responses).length > 0;
+  return audit.areaScores && !answered
     ? scoreRecordedAreas(CHECKLIST, audit.areaScores)
     : scoreAudit(CHECKLIST, audit.responses);
 }
@@ -119,7 +127,9 @@ export function summarizeAudit(
 ): AuditSummary {
   // An audit imported from a sheet holds area points and no answers; it
   // scores through the same aggregation, one level coarser.
-  const fromAreaScores = audit.areaScores !== undefined;
+  const fromAreaScores =
+    audit.areaScores !== undefined &&
+    Object.keys(audit.responses).length === 0;
   const score = scoreChecklist(audit);
   // The recorded score wins when present (transcribed scorecard value);
   // otherwise the detailed audit stands in — the checklist total for H&S,

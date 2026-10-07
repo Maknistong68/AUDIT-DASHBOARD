@@ -69,6 +69,14 @@ Two invariants shape everything:
    A recorded `disciplineScores.hs` wins over the checklist total (historical
    transcription); submitting a review writes the checklist total into it.
 
+   **The H&S precedence chain, in order:** a recorded `disciplineScores.hs`
+   → the 81 checklist **answers**, if the review has any → the imported
+   **area points**. Answers beat area points because the points are a coarse
+   stand-in for an audit nobody recorded question by question: once someone
+   answers the checklist, that is the audit, and a score that refused to move
+   would be silently wrong toward the old number. `scoreChecklist()` is where
+   this lives and the only place it should.
+
 ### The EHSS domain (`src/lib/ehss/`) is the core
 
 - **`checklist.ts`** — GENERATED from the workbook (81 questions, sections
@@ -111,10 +119,24 @@ Two invariants shape everything:
     put in them. `possible` varies per audit because N/A questions drop out
     of it, which is the workbook's own rule, so it is stored per audit rather
     than taken from the checklist's nominal weights.
-  - **`reportedTotal`** is the figure the sheet stated. It is kept because it
-    disagrees with that sheet's own points in 18 of the 19 audits — nine
-    overstating by up to 14.2 points. The app scores the points and shows the
-    stated figure beside it; never pick one silently.
+  - **The score is calculated from the points, always.** `reportedTotal` is
+    the percentage the source sheet stated, and it is **not a record**
+    (owner's instruction, 2026-10-07): its formula disagrees with its own
+    points columns in 18 of the 19 audits, nine of them overstating by up to
+    14.2 points. So it is never a fallback, never an alternative figure and
+    never flagged as an error — it survives as one muted line of provenance
+    on the audit page, for whoever is holding last quarter's report and
+    wonders why the number moved. Do not reintroduce it as a comparison.
+  - **The calculation is cross-checked, not trusted.** `calculation.test.ts`
+    re-derives every audit's areas, sections and total straight from the
+    import record in `data/`, with the arithmetic written out longhand in the
+    test — no checklist, no engine, no shared helper — and requires the two
+    to agree exactly. It also pins that no score escapes 0–100, that no area
+    is scored above its applicable weight (the sheet had one at 21.5/21; the
+    importer caps it), that rounding at each level costs under 0.01 points,
+    and that a blank area drops out of the mean rather than scoring zero.
+    Keep the two implementations independent — the moment the test imports
+    the thing it is checking, it stops checking anything.
 - **`fixture.ts`** — the former `mock.ts`: synthetic, 11 contractors over four
   quarters, **tests only**. Nothing in `src/app` may import it. It exists
   because the question-level machinery (findings, issue categories,

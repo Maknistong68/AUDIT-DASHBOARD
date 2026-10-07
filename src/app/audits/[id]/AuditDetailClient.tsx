@@ -315,11 +315,12 @@ function CriticalRiskPanel({
  * scores, which is what the app scores it from. Rendering the blank
  * 81-question form instead would read as "nobody audited this".
  *
- * The stated total is shown beside the computed one wherever the two differ.
- * The sheet's percentage formula disagrees with its own points columns (see
- * docs/IMPORT-2025Q4-2026Q1.md), and the difference reaches 13.7 points, so
- * quietly showing one figure would either hide an error or contradict a
- * report that has already gone out.
+ * The score is CALCULATED FROM THE POINTS, always. The percentage the sheet
+ * stated is not a record (owner's instruction, 2026-10-07) — its formula
+ * disagrees with its own points columns in 18 of the 19 imported audits — so
+ * it is not offered as an alternative figure or flagged as an error. It is
+ * kept as one muted line of provenance, because someone holding last
+ * quarter's report needs to know why the number in front of them differs.
  */
 function RecordedAreasPanel({
   areas,
@@ -333,10 +334,10 @@ function RecordedAreasPanel({
   reportedTotal: number | undefined;
 }) {
   const rows = checklistAreas();
-  const stated =
-    reportedTotal === undefined || total === null
-      ? null
-      : Math.round((reportedTotal - total) * 100) / 100;
+  const differs =
+    reportedTotal !== undefined &&
+    total !== null &&
+    Math.abs(reportedTotal - total) >= 0.5;
 
   return (
     <div className="discipline-panel">
@@ -360,12 +361,10 @@ function RecordedAreasPanel({
         </div>
       </div>
 
-      {stated !== null && stated !== 0 && (
+      {differs && (
         <p className="sub" style={{ marginTop: 0 }}>
-          The sheet stated <strong>{reportedTotal}%</strong> —{" "}
-          {Math.abs(stated).toFixed(1)} points{" "}
-          {stated > 0 ? "above" : "below"} what its own points come to.
-          The score above is the points.
+          The source sheet stated {reportedTotal}%. This score is calculated
+          from the sheet&apos;s own points.
         </p>
       )}
 
