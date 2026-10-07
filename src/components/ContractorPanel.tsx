@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { useChartBox } from "@/components/charts/useChartWidth";
-import { bandColor, bandFor } from "@/lib/ehss/bands";
+import { bandColor } from "@/lib/ehss/bands";
+import { Spark, TargetBar } from "@/components/charts/Marks";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { quarterLabel } from "@/lib/ehss/model";
 import { formatScore } from "@/lib/format";
@@ -249,38 +250,21 @@ export function ContractorPanel({
                         <span
                           className={`dd-p-flag ${p.reopened ? "is-back" : "is-stuck"}`}
                         >
-                          {p.reopened ? "↻ came back" : `↻ ${p.streak} reviews`}
+                          {p.reopened ? "↻ back" : `↻ ${p.streak}`}
                         </span>
                       )}
                       {p.label}
                     </span>
-                    <span className="dd-p-meta">
-                      {KIND_LABEL[p.kind]}
-                      {p.kind !== "hazard" && ` ${p.code}`} · {p.note}{" "}
-                      <Direction direction={p.direction} />
-                    </span>
+                    <TargetBar score={p.score} label={p.label} />
                   </span>
                   <span className="dd-p-num">
-                    {p.score === null ? (
-                      <>
-                        <strong>{p.gap.toFixed(1)}</strong>
-                        <em>pts lost</em>
-                      </>
-                    ) : (
-                      <>
-                        <strong
-                          style={{
-                            color: bandFor(p.score)
-                              ? bandColor(p.score)
-                              : undefined,
-                          }}
-                        >
-                          {formatScore(p.score)}
-                        </strong>
-                        <em>−{p.gap.toFixed(1)} vs target</em>
-                      </>
-                    )}
+                    <strong style={{ color: bandColor(p.score) }}>
+                      {p.score === null
+                        ? `−${p.gap.toFixed(0)}`
+                        : `${p.score.toFixed(0)}%`}
+                    </strong>
                   </span>
+                  <Spark values={p.series} />
                   <span className="dd-p-go" aria-hidden>›</span>
                 </button>
               </li>

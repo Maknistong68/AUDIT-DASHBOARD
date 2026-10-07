@@ -851,7 +851,12 @@ export interface ProblemRow {
   /** Code as the auditor knows it: "B6", "height", "A1". */
   code: string;
   label: string;
-  /** Latest score, 0-100 (null for a question — it has answers, not a score). */
+  /**
+   * Latest score, 0-100. A question has an answer rather than a figure, but
+   * the engine already scores it (Full 100, Partial 50, No 0), so that is
+   * what it carries — every problem row then reads the same way: how
+   * compliant, against the same target. Null only when nothing is scored.
+   */
   score: number | null;
   /** Points below the 90% target. */
   gap: number;
@@ -868,6 +873,16 @@ export interface ProblemRow {
   reopened: boolean;
   /** Ranking weight: the gap, amplified when it is not getting better. */
   severity: number;
+  /**
+   * Score across the quarters in the window, oldest first — what the row's
+   * sparkline draws. A question has answers rather than a score, so its
+   * answers are mapped onto the same 0-100 scale the checklist uses
+   * (Full 100, Partial 50, No 0) and N/A is skipped: it is the trajectory
+   * that matters here, not a score anyone would quote.
+   */
+  series: number[];
+  /** Quarter labels matching `series`. */
+  quarters: string[];
 }
 
 const TREND_WEIGHT: Record<AreaDirection, number> = {
@@ -905,6 +920,9 @@ export function contractorProblems(
 ): ProblemRow[] {
   const scored = finalized(summaries);
   const rows: ProblemRow[] = [];
+  // areaTrends gives scores per quarter but not their labels; they are the
+  // window's quarters in order, which is what the sparklines label with.
+  const areaQuarters = [...new Set(scored.map((s) => s.quarter))].sort();
 
   // 1. Checklist sub-sections below target.
   for (const area of areaTrends(scored)) {
@@ -928,6 +946,8 @@ export function contractorProblems(
       severity:
         area.gap *
         (area.reviews < 2 ? 1 : TREND_WEIGHT[area.direction]),
+      series: area.scores,
+      quarters: areaQuarters,
     });
   }
 
@@ -962,6 +982,10 @@ export function contractorProblems(
       streak: 0,
       reopened: false,
       severity: gap * (direction === null ? 1 : TREND_WEIGHT[direction]),
+      series,
+      quarters: scored
+        .filter((s) => s.criticalRisks[risk.id] !== undefined)
+        .map((s) => s.quarter),
     });
   }
 
@@ -978,12 +1002,17 @@ export function contractorProblems(
     const streak = history?.openStreak ?? 0;
     const reopened = history?.status === "reopened";
     const recurring = history?.status === "recurring";
+    const answered = (history?.timeline ?? []).filter((t) => t.answer !== "na");
+    const last = answered[answered.length - 1];
     rows.push({
       id: `question:${issue.questionCode}`,
       kind: "question",
       code: issue.questionCode,
       label: issue.questionText,
-      score: null,
+      score:
+        last === undefined
+          ? null
+          : ANSWER_VALUE[last.answer as "full" | "partial" | "no"] * 100,
       gap: issue.lostPoints,
       direction: null,
       reviews: issue.occurrences,
@@ -998,6 +1027,12 @@ export function contractorProblems(
       reopened,
       severity:
         issue.lostPoints * (reopened ? 1.8 : recurring ? 1.5 : 1.1),
+      series: (history?.timeline ?? [])
+        .filter((t) => t.answer !== "na")
+        .map((t) => ANSWER_VALUE[t.answer as "full" | "partial" | "no"] * 100),
+      quarters: (history?.timeline ?? [])
+        .filter((t) => t.answer !== "na")
+        .map((t) => t.quarter),
     });
   }
 

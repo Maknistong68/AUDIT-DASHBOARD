@@ -132,7 +132,21 @@ Two invariants shape everything:
 - `contractorProblems()` / `problemEvidence()` / `problemPeer()` in
   `summaries.ts` are the drill-down model: a "problem" is a checklist area,
   a critical-risk hazard or a question, ranked by gap to target amplified
-  when the trend is flat or declining.
+  when the trend is flat or declining. Every problem carries a 0–100
+  `score`, questions included (the engine already scores an answer Full 100
+  / Partial 50 / No 0), so every row in the drill-down reads the same way:
+  how compliant, against the same target.
+- **Three drill-down levels, and the first two are VISUAL.** Directors read
+  shapes before sentences, so level 1 (`ContractorPanel`) and level 2
+  (`ProblemOverview`) carry magnitude and direction and almost no prose —
+  bullet bars against the 90% target, quarter columns, sparklines, cause
+  bars (`charts/Marks.tsx` holds the shared marks). Level 3
+  (`ProblemPanel`) is where words belong, because "what the auditor
+  recorded" has no shape. Keep new drill-down work on that split; a
+  sentence added to level 1 or 2 is a regression.
+- Level 2 shows the quarter bars in the rail only when the main column has
+  controls to list. A hazard or a single question has none, so the bars move
+  across and become the main visual rather than being drawn twice.
 - **Recurrence** (`findingHistories()` and friends): the same question
   tracked answer-by-answer across a contractor's quarters. Two rules decide
   everything and are pinned in `recurrence.test.ts` — a finding is

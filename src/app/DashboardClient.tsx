@@ -7,12 +7,14 @@ import {
   RATING_KEY,
 } from "@/components/charts/ContractorBarChart";
 import { ContractorPanel } from "@/components/ContractorPanel";
+import { ProblemOverview, causeMix } from "@/components/ProblemOverview";
 import { ProblemPanel } from "@/components/ProblemPanel";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { quarterLabel, quarterOf } from "@/lib/ehss/model";
 import { contractorLabel } from "@/lib/ehss/mock";
 import {
   TIMEFRAMES,
+  checklistQuestionStats,
   contractorProblems,
   contractorStats,
   findingHistories,
@@ -42,6 +44,8 @@ export function DashboardClient() {
   const [includeInactive, setIncludeInactive] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [problem, setProblem] = useState<ProblemRow | null>(null);
+  /** Level 3 — the recorded evidence, opened from the level-2 overview. */
+  const [showEvidence, setShowEvidence] = useState(false);
 
   const inScope = useMemo(
     () =>
@@ -116,6 +120,21 @@ export function DashboardClient() {
 
   /** The same problem measured across every contractor in scope — a gap
    * everyone shares is a programme problem, not a contractor one. */
+  /** The controls inside a checklist area, for the level-2 overview. A
+   * hazard or a single question has none, and gets its trend instead. */
+  const areaQuestions = useMemo(
+    () =>
+      problem && problem.kind === "area"
+        ? checklistQuestionStats(summaries, scopedAudits, problem.code).slice(
+            0,
+            6,
+          )
+        : [],
+    [problem, summaries, scopedAudits],
+  );
+
+  const causes = useMemo(() => causeMix(evidence), [evidence]);
+
   const peer = useMemo(
     () => (problem ? problemPeer(problem, summaries, scopedAudits) : null),
     [problem, summaries, scopedAudits],
@@ -160,6 +179,7 @@ export function DashboardClient() {
   const closePanel = () => {
     setSelectedId(null);
     setProblem(null);
+    setShowEvidence(false);
   };
 
   return (
@@ -244,6 +264,7 @@ export function DashboardClient() {
           onSelect={(id) => {
             setSelectedId(id);
             setProblem(null);
+            setShowEvidence(false);
           }}
         />
       </div>
@@ -270,23 +291,42 @@ export function DashboardClient() {
           }
           subtitle={
             problem
-              ? contractorLabel({
+              ? `${contractorLabel({
                   name: selected.contractorName,
                   code: selected.contractorCode,
-                })
+                })}${showEvidence ? " · what the auditors recorded" : ""}`
               : `${selected.subRegionName} · ${timeframeById(timeframe).label} · ${selected.audits.length} review${selected.audits.length === 1 ? "" : "s"}`
           }
-          onBack={problem ? () => setProblem(null) : undefined}
+          onBack={
+            showEvidence
+              ? () => setShowEvidence(false)
+              : problem
+                ? () => setProblem(null)
+                : undefined
+          }
           onClose={closePanel}
         >
           {problem ? (
-            <ProblemPanel problem={problem} evidence={evidence} peer={peer} />
+            showEvidence ? (
+              <ProblemPanel problem={problem} evidence={evidence} peer={peer} />
+            ) : (
+              <ProblemOverview
+                problem={problem}
+                peer={peer}
+                causes={causes}
+                questions={areaQuestions}
+                onOpenEvidence={() => setShowEvidence(true)}
+              />
+            )
           ) : (
             <ContractorPanel
               stats={selected}
               problems={problems}
               movement={movement}
-              onOpenProblem={setProblem}
+              onOpenProblem={(p) => {
+                setProblem(p);
+                setShowEvidence(false);
+              }}
             />
           )}
         </FloatingPanel>
