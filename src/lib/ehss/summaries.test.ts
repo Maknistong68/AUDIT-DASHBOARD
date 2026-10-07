@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { audits, contractorLabel, contractors, subRegions } from "./mock";
+import { audits, contractors, subRegions } from "./fixture";
+import { contractorLabel } from "./model";
 import { weightedOverall } from "./disciplines";
 import { CHECKLIST } from "./checklist";
 import { DOMAIN_BY_ID } from "./domains";

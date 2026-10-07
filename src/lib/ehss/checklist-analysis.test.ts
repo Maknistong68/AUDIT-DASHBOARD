@@ -8,7 +8,7 @@ import {
 } from "./summaries";
 import { CHECKLIST } from "./checklist";
 import { flattenChecklist } from "./scoring";
-import { audits, contractors, subRegions } from "./mock";
+import { audits, contractors, subRegions } from "./fixture";
 import { TARGET_SCORE } from "./disciplines";
 
 const summaries = summarizeAll(audits, contractors, subRegions);

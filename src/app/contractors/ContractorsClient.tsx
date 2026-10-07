@@ -3,10 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
-import { contractorLabel } from "@/lib/ehss/mock";
 import { RatingBadge } from "@/components/Badges";
 import { formatScore } from "@/lib/format";
-import { quarterLabel } from "@/lib/ehss/model";
+import { contractorLabel, quarterLabel } from "@/lib/ehss/model";
 import {
   DISCIPLINES,
   TARGET_SCORE,

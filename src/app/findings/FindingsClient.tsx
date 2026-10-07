@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { quarterLabel } from "@/lib/ehss/model";
+import { contractorLabel, quarterLabel } from "@/lib/ehss/model";
 import {
   GAP_CATEGORIES,
   ISSUE_BY_CODE,
 } from "@/lib/ehss/issues";
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
-import { contractorLabel } from "@/lib/ehss/mock";
+import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import {
   closedFindings,
   collectObservations,
@@ -108,6 +108,12 @@ export function FindingsClient() {
     () => findingHistories(scopedSummaries, scopedAudits),
     [scopedSummaries, scopedAudits],
   );
+  /** True when nothing in scope has per-question answers, so every
+   * question-level card below is empty for a reason worth stating. */
+  const areaScoresOnly =
+    scopedSummaries.length > 0 &&
+    scopedSummaries.every((s) => s.fromAreaScores);
+
   const stuck = useMemo(() => recurringFindings(histories, 12), [histories]);
   const closed = useMemo(() => closedFindings(histories, 12), [histories]);
   const tracked = track === "stuck" ? stuck : closed;
@@ -115,6 +121,9 @@ export function FindingsClient() {
   return (
     <div className="stack">
       <AnalysisTabs />
+      {areaScoresOnly && (
+        <RecordedOnlyNote what="The gap register, the pillar heat-map, the cause trends and the recurrence tracking below fill in from the first review entered through the app." />
+      )}
       <div className="filter-row">
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Sub-region</span>
@@ -287,7 +296,9 @@ export function FindingsClient() {
           scope is excluded rather than counted as zero. Bars start at 60% and
           the tick marks the 90% target. Select a hazard for the contractors
           behind it.
-          {crcOutOfScope.length > 0 && (
+          {/* With no hazard scored anywhere, "not in scope" would read as a
+              scoping decision somebody made. No CRC audit has been run. */}
+          {crcStats.length > 0 && crcOutOfScope.length > 0 && (
             <>
               {" "}
               Not in any contractor&apos;s scope here:{" "}
@@ -295,7 +306,17 @@ export function FindingsClient() {
             </>
           )}
         </p>
-        <CriticalRiskBars stats={crcStats} />
+        {crcStats.length === 0 ? (
+          <div className="recorded-note">
+            <strong>No Critical Risk Control audit on record.</strong> The
+            imported reviews cover Health &amp; Safety only. CRC is a separate
+            focus audit over the {CRITICAL_RISKS.length} hazardous-work items,
+            scored per contractor against the hazards its scope involves — it
+            fills in once those audits are entered.
+          </div>
+        ) : (
+          <CriticalRiskBars stats={crcStats} />
+        )}
       </section>
 
       <section className="card">

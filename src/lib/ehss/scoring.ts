@@ -20,6 +20,7 @@ import type {
   ChecklistSection,
   EhssAnswer,
   EhssResponse,
+  RecordedAreaScores,
 } from "./model";
 import { ANSWER_VALUE } from "./model";
 
@@ -60,34 +61,77 @@ export interface AuditScore {
   total: number | null;
 }
 
+/** Mean of the scored entries, or null when none is scored. */
+const meanOf = (scores: Array<{ score: number | null }>): number | null => {
+  const scored = scores.filter((s) => s.score !== null);
+  return scored.length === 0
+    ? null
+    : round2(scored.reduce((sum, s) => sum + s.score!, 0) / scored.length);
+};
+
+/**
+ * Roll sub-section scores up into sections and a total. Shared by both
+ * scoring paths so a historical audit and one entered through the app
+ * aggregate identically — only where the sub-section score came from
+ * differs.
+ */
+function aggregate(
+  sections: Array<Omit<SectionScore, "score">>,
+): AuditScore {
+  const scored = sections.map((s) => ({ ...s, score: meanOf(s.subSections) }));
+  return { sections: scored, total: meanOf(scored) };
+}
+
 export function scoreAudit(
   checklist: readonly ChecklistSection[],
   responses: Record<string, EhssResponse>,
 ): AuditScore {
-  const sections = checklist.map((section) => {
-    const subSections = section.subSections.map((ss) => ({
-      code: ss.code,
-      title: ss.title,
-      score: scoreQuestions(ss.questions, responses),
-    }));
-    const scored = subSections.filter((s) => s.score !== null);
-    const score =
-      scored.length === 0
-        ? null
-        : round2(scored.reduce((sum, s) => sum + s.score!, 0) / scored.length);
-    return { code: section.code, title: section.title, score, subSections };
-  });
+  return aggregate(
+    checklist.map((section) => ({
+      code: section.code,
+      title: section.title,
+      subSections: section.subSections.map((ss) => ({
+        code: ss.code,
+        title: ss.title,
+        score: scoreQuestions(ss.questions, responses),
+      })),
+    })),
+  );
+}
 
-  const scoredSections = sections.filter((s) => s.score !== null);
-  const total =
-    scoredSections.length === 0
-      ? null
-      : round2(
-          scoredSections.reduce((sum, s) => sum + s.score!, 0) /
-            scoredSections.length,
-        );
-
-  return { sections, total };
+/**
+ * Score an audit recorded as AREA points rather than per-question answers —
+ * a historical audit imported from a sheet.
+ *
+ * The area score is the workbook's sub-section rule applied to the points
+ * the sheet already holds (points ÷ applicable weight), and from there the
+ * aggregation is identical: section = mean of its areas, total = mean of the
+ * sections. An area the sheet left out is null and drops out of the mean,
+ * exactly as an all-N/A sub-section does.
+ *
+ * Section A's questions sit directly in the section, so its area is keyed by
+ * the section code ("A"); every other area is keyed by its sub-section code.
+ */
+export function scoreRecordedAreas(
+  checklist: readonly ChecklistSection[],
+  areas: RecordedAreaScores,
+): AuditScore {
+  const scoreOf = (key: string): number | null => {
+    const area = areas[key];
+    if (!area || area.possible <= 0) return null;
+    return round2((area.scored / area.possible) * 100);
+  };
+  return aggregate(
+    checklist.map((section) => ({
+      code: section.code,
+      title: section.title,
+      subSections: section.subSections.map((ss) => ({
+        code: ss.code,
+        title: ss.title,
+        score: scoreOf(ss.code ?? section.code),
+      })),
+    })),
+  );
 }
 
 /** How many questions have an answer, out of the checklist's total. */

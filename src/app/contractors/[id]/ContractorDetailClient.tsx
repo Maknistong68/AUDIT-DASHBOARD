@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
-import { contractorLabel } from "@/lib/ehss/mock";
 import { StatTile } from "@/components/StatTile";
+import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import { ScoreMeter } from "@/components/ScoreMeter";
 import { RatingBadge, AuditStatusBadge } from "@/components/Badges";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { formatDate, formatScore } from "@/lib/format";
-import { quarterLabel } from "@/lib/ehss/model";
+import { contractorLabel, quarterLabel } from "@/lib/ehss/model";
 import { ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import {
   TIMEFRAMES,
@@ -39,6 +39,12 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
   );
 
   const stats = contractorStats(summaries, timeframe)[0] ?? null;
+
+  /** Every review in the window was imported as area scores, so nothing
+   * question-level exists for this contractor yet. */
+  const recordedOnly =
+    (stats?.audits.length ?? 0) > 0 &&
+    (stats?.audits ?? []).every((s) => s.fromAreaScores);
 
   const windowIds = useMemo(
     () => new Set(stats?.audits.map((a) => a.id) ?? []),
@@ -103,10 +109,13 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
           }
           hint="across the window"
         />
+        {/* A zero here would read as "no problems found" on a contractor
+            scoring in the sixties. An imported review has no per-question
+            answers at all, so the honest tile is a dash. */}
         <StatTile
           label="Gap observations"
-          value={String(observations.length)}
-          hint="in the window"
+          value={recordedOnly ? "—" : String(observations.length)}
+          hint={recordedOnly ? "not recorded per question" : "in the window"}
         />
       </div>
 
@@ -153,7 +162,9 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
           Questions costing the most score in the window, by weighted points
           lost
         </p>
-        {issues.length === 0 ? (
+        {recordedOnly ? (
+          <RecordedOnlyNote what="This contractor's weakest questions fill in from the first review entered through the app; its weakest checklist AREAS are on the dashboard now." />
+        ) : issues.length === 0 ? (
           <div className="chart-empty">No Partial or No answers in scope.</div>
         ) : (
           <div className="table-scroll">

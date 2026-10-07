@@ -5,6 +5,7 @@ import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { quarterLabel } from "@/lib/ehss/model";
 import { GAP_CATEGORIES, ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import { formatScore } from "@/lib/format";
+import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import type {
   EvidenceRow,
   ProblemPeer,
@@ -22,10 +23,14 @@ export function ProblemPanel({
   problem,
   evidence,
   peer,
+  recordedOnly = false,
 }: {
   problem: ProblemRow;
   evidence: EvidenceRow[];
   peer: ProblemPeer | null;
+  /** Every review in scope was imported as area scores, so there is nothing
+   * question-level to show and saying why beats saying "nothing recorded". */
+  recordedOnly?: boolean;
 }) {
   const isScoreSeries = problem.kind === "hazard";
 
@@ -127,9 +132,13 @@ export function ProblemPanel({
         </h3>
 
         {evidence.length === 0 ? (
-          <div className="chart-empty">
-            Nothing recorded against this in the selected timeframe.
-          </div>
+          recordedOnly ? (
+            <RecordedOnlyNote what="What was answered inside this area, and why, is recorded from the first review entered through the app." />
+          ) : (
+            <div className="chart-empty">
+              Nothing recorded against this in the selected timeframe.
+            </div>
+          )
         ) : isScoreSeries ? (
           <ul className="dd-series">
             {evidence.map((e) => (

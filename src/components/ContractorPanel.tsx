@@ -44,6 +44,51 @@ function Direction({ direction }: { direction: ProblemRow["direction"] }) {
  * somewhere. The list is capped at what fits, because a problem list you
  * have to scroll is a list nobody finishes.
  */
+/**
+ * The movement strip, or the reason there isn't one.
+ *
+ * Recurrence is tracked answer by answer, so a contractor whose reviews were
+ * all imported as area scores has no movement to show. Four zeros would read
+ * as "nothing recurring and nothing came back" — good news — on a contractor
+ * nobody has yet tracked question by question.
+ */
+function MovementStrip({
+  movement,
+  recordedOnly,
+}: {
+  movement: FindingMovement;
+  recordedOnly: boolean;
+}) {
+  if (recordedOnly) {
+    return (
+      <p className="dd-move-none">
+        Findings are tracked answer by answer, and these reviews were imported
+        as area scores — so there is no movement to show yet.
+      </p>
+    );
+  }
+  return (
+    <ul className="dd-move" aria-label="Movement since the last review">
+      <li className="is-good">
+        <strong>{movement.closedLatest}</strong>
+        <span>closed since last review</span>
+      </li>
+      <li className="is-good">
+        <strong>{movement.improving}</strong>
+        <span>improving</span>
+      </li>
+      <li className={movement.recurring > 0 ? "is-bad" : undefined}>
+        <strong>{movement.recurring}</strong>
+        <span>open 3+ reviews</span>
+      </li>
+      <li className={movement.reopened > 0 ? "is-bad" : undefined}>
+        <strong>{movement.reopened}</strong>
+        <span>came back</span>
+      </li>
+    </ul>
+  );
+}
+
 export function ContractorPanel({
   stats,
   problems,
@@ -199,24 +244,10 @@ export function ContractorPanel({
       </aside>
 
       <section className="dd-main">
-        <ul className="dd-move" aria-label="Movement since the last review">
-          <li className="is-good">
-            <strong>{movement.closedLatest}</strong>
-            <span>closed since last review</span>
-          </li>
-          <li className="is-good">
-            <strong>{movement.improving}</strong>
-            <span>improving</span>
-          </li>
-          <li className={movement.recurring > 0 ? "is-bad" : undefined}>
-            <strong>{movement.recurring}</strong>
-            <span>open 3+ reviews</span>
-          </li>
-          <li className={movement.reopened > 0 ? "is-bad" : undefined}>
-            <strong>{movement.reopened}</strong>
-            <span>came back</span>
-          </li>
-        </ul>
+        <MovementStrip
+          movement={movement}
+          recordedOnly={stats.audits.every((a) => a.fromAreaScores)}
+        />
 
         <h3 className="dd-h">
           Problems

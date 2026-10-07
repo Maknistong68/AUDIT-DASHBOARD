@@ -5,7 +5,7 @@ import {
   crcScore,
   scopedRisks,
 } from "./critical-risks";
-import { audits, contractors, subRegions } from "./mock";
+import { audits, contractors, subRegions } from "./fixture";
 import { summarizeAll, criticalRiskStats, weakestCriticalRisks } from "./summaries";
 import { DOMAIN_BY_ID } from "./domains";
 

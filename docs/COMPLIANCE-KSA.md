@@ -107,6 +107,14 @@ facts hold:
   individual performance.
 - **No free text and no uploads.** A comments box or a site photograph is
   how an audit tool acquires personal data by accident, and neither exists.
+- **Contractors are identified only by initials and the last three digits of
+  the work order** — `SIBS (838)`, `AF (272)`. Applied when the real Q4 2025
+  and Q1 2026 audits were imported (owner's instruction, 2026-10-07): full
+  work orders and names as typed stay in `data/`, outside `src/`, so they are
+  not bundled into the client. The imported audits also carry **no auditor
+  names or mobile numbers** — row 3 of every sheet block was deliberately not
+  read (`scripts/import-hs-audit.py`), because importing it would have put
+  personal data in the app and broken both §2 and this section in one step.
 
 **Design consequences, applied:**
 

@@ -9,7 +9,7 @@ import {
 } from "./summaries";
 import { CHECKLIST } from "./checklist";
 import { flattenChecklist } from "./scoring";
-import { audits, contractors, subRegions } from "./mock";
+import { audits, contractors, subRegions } from "./fixture";
 import type { EhssAnswer, EhssAudit, EhssContractor, SubRegion } from "./model";
 
 const FLAT = flattenChecklist(CHECKLIST);

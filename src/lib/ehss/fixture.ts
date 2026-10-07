@@ -1,11 +1,16 @@
 /**
- * Demo dataset: Oxagon's two sub-regions, their contractors, and quarterly
- * EHSS reviews from 2025-Q3 to 2026-Q3. Answers are generated
- * deterministically from a per-audit quality profile; one audit (Contractor
- * Four, 2026-Q3) is the source workbook's real answer set, so its scores
- * match the Excel exactly.
+ * SYNTHETIC FIXTURE — used by the tests, never by the app.
  *
- * This is the baseline the browser store layers user edits on top of.
+ * The app runs on the real audits in recorded.ts, which hold area points and
+ * no per-question answers. The question-level machinery — findings, issue
+ * categories, per-question recurrence — still has to be tested, and that
+ * needs a dataset with answers in it, which is this one: eleven contractors
+ * over four quarters, generated deterministically from a per-audit quality
+ * profile. One audit (Al Fahd 1272, 2026-Q3) is the source workbook's real
+ * answer set, so its scores match the Excel exactly.
+ *
+ * Nothing in src/app may import this. It carries invented numbers, and a
+ * number on a director's screen that nobody audited is worse than a blank.
  */
 
 import { CHECKLIST, WORKBOOK_FIXTURE_ANSWERS } from "./checklist";
@@ -45,10 +50,6 @@ export const contractors: EhssContractor[] = [
   { id: "afh823", code: "823",  name: "Al Fahd",      subRegionId: "sr2", active: true },
   { id: "ech",   code: "1131", name: "ECH",           subRegionId: "sr2", active: true },
 ];
-
-/** Display name as it appears on the scorecard: "Al Fahd (1272)". */
-export const contractorLabel = (c: { name: string; code: string }) =>
-  `${c.name} (${c.code})`;
 
 const FLAT = flattenChecklist(CHECKLIST);
 const GAP_CODES: IssueCode[] = GAP_CATEGORIES.map((c) => c.code);

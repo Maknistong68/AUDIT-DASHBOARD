@@ -4,7 +4,12 @@
  */
 
 import { CHECKLIST } from "./checklist";
-import { flattenChecklist, scoreAudit } from "./scoring";
+import {
+  flattenChecklist,
+  scoreAudit,
+  scoreRecordedAreas,
+  type AuditScore,
+} from "./scoring";
 import { DOMAINS, type DomainId } from "./domains";
 import {
   CRITICAL_RISKS,
@@ -61,6 +66,12 @@ export interface AuditSummary {
   disciplineScores: DisciplineScores;
   /** Weighted average across the five disciplines: the scorecard figure. */
   overall: number | null;
+  /** The total the source sheet stated, for an imported audit that had one.
+   * Shown beside the computed total, never instead of it. */
+  reportedTotal: number | null;
+  /** True when this audit was recorded as area points rather than answers,
+   * so nothing question-level (findings, causes, recurrence) exists for it. */
+  fromAreaScores: boolean;
   /** CRC focus-audit scores per hazardous-work item in the contractor's scope. */
   criticalRisks: CriticalRiskScores;
   rating: string | null;
@@ -90,12 +101,26 @@ const FLAT = flattenChecklist(CHECKLIST);
  * so a single-review window reports exactly that review's total. */
 const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
+/**
+ * The Health & Safety checklist score for an audit, however it was recorded:
+ * from its answers, or from the area points of an audit imported from a
+ * sheet. One definition, so a page cannot read an imported audit as unscored.
+ */
+export function scoreChecklist(audit: EhssAudit): AuditScore {
+  return audit.areaScores
+    ? scoreRecordedAreas(CHECKLIST, audit.areaScores)
+    : scoreAudit(CHECKLIST, audit.responses);
+}
+
 export function summarizeAudit(
   audit: EhssAudit,
   contractor: EhssContractor,
   subRegion: SubRegion,
 ): AuditSummary {
-  const score = scoreAudit(CHECKLIST, audit.responses);
+  // An audit imported from a sheet holds area points and no answers; it
+  // scores through the same aggregation, one level coarser.
+  const fromAreaScores = audit.areaScores !== undefined;
+  const score = scoreChecklist(audit);
   // The recorded score wins when present (transcribed scorecard value);
   // otherwise the detailed audit stands in — the checklist total for H&S,
   // the mean of the hazards in scope for Critical Risk Control.
@@ -121,21 +146,26 @@ export function summarizeAudit(
     disciplineScores,
     criticalRisks: audit.criticalRisks,
     overall,
+    reportedTotal: audit.reportedTotal ?? null,
+    fromAreaScores,
     rating: ratingFor(overall),
     sections: score.sections.map((s) => ({
       code: s.code,
       title: s.title,
       score: s.score,
     })),
+    // Section A's questions sit directly in the section, so its sub-section
+    // is unnamed. It is still a checklist AREA — the largest one — so it
+    // takes the section's own code and title here, which keeps `subSections`
+    // aligned with `checklistAreas()` and stops area A dropping out of the
+    // trends and the drill-down.
     subSections: score.sections.flatMap((s) =>
-      s.subSections
-        .filter((ss) => ss.code !== null)
-        .map((ss) => ({
-          section: s.code,
-          code: ss.code,
-          title: ss.title,
-          score: ss.score,
-        })),
+      s.subSections.map((ss) => ({
+        section: s.code,
+        code: ss.code ?? s.code,
+        title: ss.title ?? s.title,
+        score: ss.score,
+      })),
     ),
   };
 }
@@ -200,7 +230,13 @@ export function windowByContractor(
     byContractor.set(s.contractorId, list);
   }
   for (const [id, list] of byContractor) {
-    const sorted = list.sort((a, b) => a.quarter.localeCompare(b.quarter));
+    const sorted = list.sort(
+      (a, b) =>
+        a.quarter.localeCompare(b.quarter) ||
+        // A contractor can be audited twice in one quarter, so the quarter
+        // alone does not order the window.
+        a.auditDate.localeCompare(b.auditDate),
+    );
     byContractor.set(id, count === null ? sorted : sorted.slice(-count));
   }
   return byContractor;

@@ -82,22 +82,55 @@ Two invariants shape everything:
   total = mean of sections. Unanswered questions are ignored (not counted
   as No); an all-N/A scope scores `null`, never 0. The workbook's manual
   `+0.012` total fudge is intentionally NOT reproduced.
+  **Two entry points, one aggregation**: `scoreAudit` from answers,
+  `scoreRecordedAreas` from an imported audit's area points, both through the
+  shared `aggregate` — the same formula at two grains. `scoreChecklist(audit)`
+  in `summaries.ts` picks between them, and is the only thing that should:
+  a page that reaches for `scoreAudit` directly will read every imported
+  audit as unscored.
 - **`scoring.test.ts`** — pins the engine to the workbook's real numbers
   (A 46.94, B 74.60, C 61, total 60.85). If scoring changes, these
   fixtures are the contract — update only with a matching workbook change.
-- **`mock.ts`** — the dataset: 2 sub-regions, the 11 real contractors from
-  the scorecard (identified by project number via `contractorLabel`), and
-  four quarters of reviews. 2026-Q3 discipline scores are transcribed from
-  the scorecard; earlier quarters are derived by a per-contractor trend.
-  `afh1272`'s 2026-Q3 is the workbook audit verbatim (its H&S comes from the
-  checklist, so it reads 60.85 rather than the sheet's manually adjusted
-  62.0); `tdp`'s 2026-Q3 is an open draft.
+- **`recorded.ts`** — GENERATED, and **the app's only dataset**: the real
+  Health & Safety audits for Q4 2025 and Q1 2026 (13 contractors, 19 audits,
+  2 sub-regions). There is no demo data in the app. Regenerate with
+  `python3 scripts/build-recorded-dataset.py data/hs-audits-2025Q4-2026Q1.json
+  > src/lib/ehss/recorded.ts`; `docs/IMPORT-2025Q4-2026Q1.md` is the import
+  record and `data/` holds the source JSON, deliberately outside `src/` so the
+  full work orders are not bundled into the client.
+  - **Contractors are initials + the last three digits of the work order** —
+    `SIBS (838)`, `AF (272)` — and nothing else reaches the app. That is a
+    compliance position as much as a display choice: §4 of
+    `COMPLIANCE-KSA.md` lets this data live outside the Kingdom *because it
+    identifies nobody and nothing*, and it also settles the source sheet's
+    three spellings of SIBS by construction. Do not widen `name` or `code`
+    back out to full names or full work orders.
+  - Each audit carries **`areaScores`** (the 15 checklist areas as raw
+    points) and **no `responses`**: the source sheets kept a narrative per
+    question with no machine-readable answer, so there is nothing honest to
+    put in them. `possible` varies per audit because N/A questions drop out
+    of it, which is the workbook's own rule, so it is stored per audit rather
+    than taken from the checklist's nominal weights.
+  - **`reportedTotal`** is the figure the sheet stated. It is kept because it
+    disagrees with that sheet's own points in 18 of the 19 audits — nine
+    overstating by up to 14.2 points. The app scores the points and shows the
+    stated figure beside it; never pick one silently.
+- **`fixture.ts`** — the former `mock.ts`: synthetic, 11 contractors over four
+  quarters, **tests only**. Nothing in `src/app` may import it. It exists
+  because the question-level machinery (findings, issue categories,
+  recurrence) still needs a dataset with answers to be tested against, and
+  the real data has none. A number on a director's screen that nobody audited
+  is worse than a blank.
 - **`summaries.ts`** — derived, client-safe views: timeframe windows
   (`windowByContractor`, latest / last3 / last4 / all), `contractorStats`
-  (the league table), `topIssues` (weighted points lost per question), and
-  `areaTrends`/`focusAreas`/`strengthAreas`, which power the executive
-  brief's "no improvement across N reviews" lines. Area trends average per
-  quarter, so they work programme-wide as well as per contractor.
+  (the league table), `topIssues` (weighted points lost per question) and
+  `areaTrends`, which carries the "no improvement across N reviews"
+  judgement. Area trends average per quarter, so they work programme-wide as
+  well as per contractor, and they cover all 15 checklist areas — section A
+  included, which means `AuditSummary.subSections` promotes A's unnamed
+  sub-section to the section's own code so it lines up with
+  `checklistAreas()`. A was silently absent from the trends before, and it is
+  the largest area in the checklist.
 
 ### App shell (Next.js 15 App Router, demo mode)
 
@@ -105,7 +138,7 @@ Two invariants shape everything:
   set by `/welcome` (name + role); role only affects UI affordances.
   Analytics always exclude draft audits.
 - **`store.tsx` is the data layer.** `EhssStoreProvider` (mounted in the root
-  layout) merges the `mock.ts` baseline with user overrides persisted in
+  layout) merges the `recorded.ts` baseline with user overrides persisted in
   `localStorage`: new reviews, edited answers, discipline scores, contractor
   activation. Pages read it through `useEhss()`, so most pages are client
   components; server pages only read the cookie and pass `role`/params down.
@@ -156,12 +189,12 @@ Two invariants shape everything:
   fixed; it breaks the streak without earning a closure). `reopened`
   outranks `recurring`: a fix that did not hold is worse than one never
   attempted. Surfaced as the movement strip and row flags in the
-  drill-down, the "Findings across quarters" card on `/findings`, and the
-  movement tiles on `/brief`.
-- `mock.ts` answers are **sticky** across quarters (most of each draw comes
-  from the contractor-and-question pair, little from the quarter). Drawing
-  each quarter independently made nearly every finding look reopened the
-  next quarter and the recurrence view read as noise. Keep it sticky.
+  drill-down and the "Findings across quarters" card on `/findings`.
+- `fixture.ts` answers are **sticky** across quarters (most of each draw
+  comes from the contractor-and-question pair, little from the quarter).
+  Drawing each quarter independently made nearly every finding look reopened
+  the next quarter and the recurrence view read as noise. Keep it sticky —
+  the recurrence tests read as meaningless otherwise.
 - **The entry form is the auditor's screen, and it is long by nature**: 81
   questions with a twelve-toggle cause picker on every gap runs to about
   thirteen screens. `EhssAuditForm` carries a sticky toolbar that answers
@@ -174,6 +207,17 @@ Two invariants shape everything:
   filter labels SHORT — a segmented control cannot shrink below its labels,
   and the long ones pushed a 320px phone sideways; it now scrolls rather
   than widens, but short labels are the real fix.
+- **An empty question-level view must say WHY, not "nothing in scope".**
+  Every audit on record was imported as area points, so the gap register, the
+  SHEW heat-map, the issue categories, per-question recurrence and the
+  question rankings are all empty, and will be until audits are entered
+  through the app. A bare zero there is not neutral — "0 gap observations"
+  and "0 came back" read as a clean audit on contractors averaging 64.9%.
+  `RecordedOnlyNote` is the shared explanation; a count that cannot be
+  computed shows "—", not 0. `AuditSummary.fromAreaScores` is how a view
+  knows. The same rule killed the "0/0" control rows at drill-down level 2:
+  where no contractor is measured on a question, the list is empty and the
+  quarter bars take the main column, per the level-2 rule above.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
   `/findings` is observation-centric (the gap register, SHEW heat-map,

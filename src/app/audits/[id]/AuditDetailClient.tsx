@@ -4,12 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
-import { contractorLabel } from "@/lib/ehss/mock";
 import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatDate, formatScore } from "@/lib/format";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import { scoreAudit } from "@/lib/ehss/scoring";
+import { scoreChecklist } from "@/lib/ehss/summaries";
+import { checklistAreas } from "@/lib/ehss/summaries";
+import { TargetBar } from "@/components/charts/Marks";
 import {
+  contractorLabel,
   quarterLabel,
   ratingFor,
   type EhssResponse,
@@ -35,12 +38,18 @@ import type { UserRole } from "@/lib/types";
 function DisciplinePanel({
   scores,
   checklistScore,
+  hsSource,
   crcAuditScore,
   canEdit,
   onSave,
 }: {
   scores: DisciplineScores;
   checklistScore: number | null;
+  /** Where the Health & Safety figure came from — the 81-question checklist,
+   * or the area points of a review imported from a sheet. Naming it matters:
+   * the two are the same formula at different grains, and a reader asked to
+   * act on the number is entitled to know which one they are looking at. */
+  hsSource: "checklist" | "areas";
   crcAuditScore: number | null;
   canEdit: boolean;
   onSave: (scores: DisciplineScores) => void;
@@ -72,9 +81,12 @@ function DisciplinePanel({
             Discipline scores
           </h3>
           <p className="sub" style={{ margin: "2px 0 0" }}>
-            Health &amp; Safety comes from the checklist below and Critical
-            Risk Control from the hazard scores; the other three are recorded
-            from their own audits.
+            Health &amp; Safety comes from{" "}
+            {hsSource === "areas"
+              ? "the recorded area scores below"
+              : "the checklist below"}{" "}
+            and Critical Risk Control from the hazard scores; the other three
+            are recorded from their own audits.
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -100,7 +112,9 @@ function DisciplinePanel({
                 value={
                   effective.hs === undefined
                     ? "not scored yet"
-                    : `${effective.hs.toFixed(1)}% (checklist)`
+                    : `${effective.hs.toFixed(1)}% (${
+                        hsSource === "areas" ? "recorded areas" : "checklist"
+                      })`
                 }
               />
             ) : d.id === "crc" && crcAuditScore !== null && draft.crc === undefined ? (
@@ -163,6 +177,10 @@ function CriticalRiskPanel({
 
   const inScope = CRITICAL_RISKS.filter((r) => draft[r.id] !== undefined);
   const derived = crcScore(draft);
+  // Nothing scored and nothing editable: the entry grid would be fourteen
+  // rows of "not in scope", which reads as a scoping decision rather than
+  // an audit that was never run.
+  const unscored = inScope.length === 0 && !canEdit;
 
   const setScore = (id: CriticalRiskId, raw: string) => {
     const value = raw === "" ? 0 : Number(raw);
@@ -182,6 +200,21 @@ function CriticalRiskPanel({
       return next;
     });
   };
+
+  if (unscored) {
+    return (
+      <div className="discipline-panel">
+        <h3 className="panel-title" style={{ margin: 0 }}>
+          Critical Risk Control — focus audit
+        </h3>
+        <p className="sub" style={{ margin: "4px 0 0" }}>
+          Not run for this review. CRC is a separate focus audit over the{" "}
+          {CRITICAL_RISKS.length} hazardous-work items, each scored only where
+          the contractor&apos;s scope involves it.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="discipline-panel">
@@ -273,6 +306,120 @@ function CriticalRiskPanel({
   );
 }
 
+/**
+ * An audit imported from a sheet, shown at the grain it was actually
+ * recorded at.
+ *
+ * The source sheets kept a narrative per question and no machine-readable
+ * answer, so there are no Full/Partial/No answers to show — only the 15 area
+ * scores, which is what the app scores it from. Rendering the blank
+ * 81-question form instead would read as "nobody audited this".
+ *
+ * The stated total is shown beside the computed one wherever the two differ.
+ * The sheet's percentage formula disagrees with its own points columns (see
+ * docs/IMPORT-2025Q4-2026Q1.md), and the difference reaches 13.7 points, so
+ * quietly showing one figure would either hide an error or contradict a
+ * report that has already gone out.
+ */
+function RecordedAreasPanel({
+  areas,
+  sections,
+  total,
+  reportedTotal,
+}: {
+  areas: NonNullable<import("@/lib/ehss/model").EhssAudit["areaScores"]>;
+  sections: Array<{ code: string; title: string; score: number | null }>;
+  total: number | null;
+  reportedTotal: number | undefined;
+}) {
+  const rows = checklistAreas();
+  const stated =
+    reportedTotal === undefined || total === null
+      ? null
+      : Math.round((reportedTotal - total) * 100) / 100;
+
+  return (
+    <div className="discipline-panel">
+      <div className="drilldown-head">
+        <div>
+          <h3 className="panel-title" style={{ margin: 0 }}>
+            Recorded area scores
+          </h3>
+          <p className="sub" style={{ margin: "2px 0 0" }}>
+            Imported from the quarter&apos;s audit sheet, which recorded points
+            per area and a narrative per question — so there are no per-question
+            answers, and nothing question-level (findings, causes, recurrence)
+            exists for this review.
+          </p>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div className="panel-score" style={{ fontSize: 28 }}>
+            {formatScore(total)}
+          </div>
+          <RatingBadge rating={ratingFor(total)} />
+        </div>
+      </div>
+
+      {stated !== null && stated !== 0 && (
+        <p className="sub" style={{ marginTop: 0 }}>
+          The sheet stated <strong>{reportedTotal}%</strong> —{" "}
+          {Math.abs(stated).toFixed(1)} points{" "}
+          {stated > 0 ? "above" : "below"} what its own points come to.
+          The score above is the points.
+        </p>
+      )}
+
+      <div className="table-scroll">
+        <table className="data">
+          <thead>
+            <tr>
+              <th style={{ width: 56 }}>Area</th>
+              <th>Title</th>
+              <th style={{ width: 110 }} className="num">
+                Points
+              </th>
+              <th style={{ width: 160 }}>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((area) => {
+              const recorded = areas[area.code];
+              const score =
+                recorded && recorded.possible > 0
+                  ? Math.round((recorded.scored / recorded.possible) * 10000) /
+                    100
+                  : null;
+              return (
+                <tr key={area.code} className={recorded ? undefined : "is-out"}>
+                  <td>{area.code}</td>
+                  <td>{area.title}</td>
+                  <td className="num">
+                    {recorded
+                      ? `${recorded.scored} / ${recorded.possible}`
+                      : "not recorded"}
+                  </td>
+                  <td>
+                    <span className="area-score">
+                      <TargetBar score={score} label={area.title} />
+                      <em>{formatScore(score)}</em>
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="sub">
+        {sections
+          .map((x) => `${x.code} ${formatScore(x.score)}`)
+          .join("  ·  ")}
+      </p>
+    </div>
+  );
+}
+
 export function AuditDetailClient({
   auditId,
   role,
@@ -311,7 +458,8 @@ export function AuditDetailClient({
   const subRegion = subRegions.find((s) => s.id === contractor?.subRegionId);
   const isAdmin = role === "admin";
   const canEdit = audit.status === "draft" && (isAdmin || role === "auditor");
-  const checklistScore = scoreAudit(CHECKLIST, audit.responses).total;
+  const checklist = scoreChecklist(audit);
+  const checklistScore = checklist.total;
   const crcAuditScore = crcScore(audit.criticalRisks);
 
   return (
@@ -332,6 +480,7 @@ export function AuditDetailClient({
           key={`${audit.id}-disciplines`}
           scores={audit.disciplineScores}
           checklistScore={checklistScore}
+          hsSource={audit.areaScores ? "areas" : "checklist"}
           crcAuditScore={crcAuditScore}
           canEdit={canEdit}
           onSave={(scores) => saveDisciplineScores(audit.id, scores)}
@@ -344,6 +493,14 @@ export function AuditDetailClient({
           onSave={(risks) => saveCriticalRisks(audit.id, risks)}
         />
 
+        {audit.areaScores ? (
+          <RecordedAreasPanel
+            areas={audit.areaScores}
+            sections={checklist.sections}
+            total={checklistScore}
+            reportedTotal={audit.reportedTotal}
+          />
+        ) : (
         <EhssAuditForm
           key={audit.id}
           initialResponses={audit.responses}
@@ -371,6 +528,7 @@ export function AuditDetailClient({
             router.push("/audits");
           }}
         />
+        )}
       </section>
     </div>
   );

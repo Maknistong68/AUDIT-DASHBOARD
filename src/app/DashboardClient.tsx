@@ -10,8 +10,7 @@ import { ContractorPanel } from "@/components/ContractorPanel";
 import { ProblemOverview, causeMix } from "@/components/ProblemOverview";
 import { ProblemPanel } from "@/components/ProblemPanel";
 import { FloatingPanel } from "@/components/FloatingPanel";
-import { quarterLabel, quarterOf } from "@/lib/ehss/model";
-import { contractorLabel } from "@/lib/ehss/mock";
+import { contractorLabel, quarterLabel, quarterOf } from "@/lib/ehss/model";
 import {
   TIMEFRAMES,
   checklistQuestionStats,
@@ -75,6 +74,11 @@ export function DashboardClient() {
 
   const selected = stats.find((s) => s.contractorId === selectedId) ?? null;
 
+  /** Nothing in scope has per-question answers, so the bottom of the
+   * drill-down says why rather than reading as "nobody audited this". */
+  const recordedOnly =
+    summaries.length > 0 && summaries.every((s) => s.fromAreaScores);
+
   /** The selected contractor's reviews and their source audits. */
   const selectedWindow = useMemo(() => {
     if (!selected) return { summaries: [], audits: [] };
@@ -122,16 +126,22 @@ export function DashboardClient() {
    * everyone shares is a programme problem, not a contractor one. */
   /** The controls inside a checklist area, for the level-2 overview. A
    * hazard or a single question has none, and gets its trend instead. */
-  const areaQuestions = useMemo(
-    () =>
-      problem && problem.kind === "area"
-        ? checklistQuestionStats(summaries, scopedAudits, problem.code).slice(
-            0,
-            6,
-          )
-        : [],
-    [problem, summaries, scopedAudits],
-  );
+  /**
+   * The controls inside a checklist area, with how many contractors fail
+   * each. A question nobody has answered has nothing to report — "0/0" with
+   * an empty bar is worse than no row — so when no contractor is measured on
+   * any of them the list is empty, and level 2 promotes the quarter bars to
+   * the main visual instead of drawing them twice.
+   */
+  const areaQuestions = useMemo(() => {
+    if (!problem || problem.kind !== "area") return [];
+    const stats = checklistQuestionStats(
+      summaries,
+      scopedAudits,
+      problem.code,
+    );
+    return stats.some((q) => q.contractors > 0) ? stats.slice(0, 6) : [];
+  }, [problem, summaries, scopedAudits]);
 
   const causes = useMemo(() => causeMix(evidence), [evidence]);
 
@@ -308,7 +318,12 @@ export function DashboardClient() {
         >
           {problem ? (
             showEvidence ? (
-              <ProblemPanel problem={problem} evidence={evidence} peer={peer} />
+              <ProblemPanel
+                problem={problem}
+                evidence={evidence}
+                peer={peer}
+                recordedOnly={recordedOnly}
+              />
             ) : (
               <ProblemOverview
                 problem={problem}

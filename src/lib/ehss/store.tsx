@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * Client data store. The built-in dataset in mock.ts is the baseline; user
- * edits (new quarterly reviews, answer changes, contractor activation) are
- * layered on top and persisted in localStorage, so the demo behaves like a
- * real system without a database.
+ * Client data store. The recorded dataset in recorded.ts is the baseline —
+ * the real Q4 2025 and Q1 2026 Health & Safety audits, and nothing invented.
+ * User edits (new quarterly reviews, answer changes, contractor activation)
+ * are layered on top and persisted in localStorage, so the app behaves like
+ * a real system without a database.
  *
  * SSR safety: state starts as the baseline (so the server and first client
  * render agree), then overrides are applied after mount. `hydrated` says
@@ -24,7 +25,7 @@ import {
   audits as baseAudits,
   contractors as baseContractors,
   subRegions as baseSubRegions,
-} from "./mock";
+} from "./recorded";
 import type {
   EhssAudit,
   EhssAuditStatus,

@@ -4,10 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEhss } from "@/lib/ehss/store";
-import { contractorLabel } from "@/lib/ehss/mock";
 import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatDate, formatScore } from "@/lib/format";
 import {
+  contractorLabel,
   nextQuarter,
   previousQuarter,
   quarterLabel,

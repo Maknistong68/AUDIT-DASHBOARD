@@ -6,7 +6,7 @@ import {
   isGapCode,
   readIssues,
 } from "./issues";
-import { audits, contractors, subRegions } from "./mock";
+import { audits, contractors, subRegions } from "./fixture";
 import { collectObservations, issueBreakdown, summarizeAll } from "./summaries";
 
 describe("the taxonomy", () => {

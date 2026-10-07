@@ -89,15 +89,34 @@ export interface SubRegion {
 
 export interface EhssContractor {
   id: string;
-  /** Project / work-order number, as used on the scorecard: "Al Fahd (1272)". */
+  /**
+   * The last three digits of the work order — all the app holds of it.
+   * Contractors read as initials + those digits ("SIBS (838)"), which is
+   * deliberately vague: it is enough to tell two projects apart and trend
+   * them, and not enough to identify anyone. See ./recorded.
+   */
   code: string;
-  name: string; // organizational name only — never a person
+  /** Initials only — never a full company name, and never a person. */
+  name: string;
   subRegionId: string;
   /** Contractors are deactivated when their project completes: they keep
    * their audit history but drop out of the active league table and out of
    * the quarterly review obligation. */
   active: boolean;
 }
+
+/**
+ * One checklist area's raw points, as a historical audit recorded them:
+ * section A, B1–B12, C1 or C2. `possible` is the applicable weight, so it
+ * varies between audits — N/A questions drop out of it, which is the
+ * workbook's own rule.
+ */
+export interface RecordedArea {
+  scored: number;
+  possible: number;
+}
+
+export type RecordedAreaScores = Record<string, RecordedArea>;
 
 export interface EhssAudit {
   id: string;
@@ -122,7 +141,27 @@ export interface EhssAudit {
    * figure derived from these.
    */
   criticalRisks: import("./critical-risks").CriticalRiskScores;
+  /**
+   * Area points from an audit recorded before this app existed, keyed by
+   * checklist area ("A", "B6", "C2"). Historical audits were kept as a
+   * narrative per question with no machine-readable answer, so the area
+   * points are the finest real grain available; when they are present they
+   * score the audit INSTEAD of `responses`, through the same aggregation.
+   * An audit entered through the app has answers and leaves this unset.
+   */
+  areaScores?: RecordedAreaScores;
+  /**
+   * The total the source sheet stated, where it was transcribed from one.
+   * Kept because it disagrees with that sheet's own points in 7 of the 20
+   * imported audits: the app scores the points and shows the stated figure
+   * beside it rather than quietly choosing between them.
+   */
+  reportedTotal?: number;
 }
+
+/** Display name: initials and the work order's last three digits, "SIBS (838)". */
+export const contractorLabel = (c: { name: string; code: string }) =>
+  `${c.name} (${c.code})`;
 
 export function quarterLabel(quarter: string): string {
   const [year, q] = quarter.split("-");

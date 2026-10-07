@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
+import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
@@ -108,6 +109,12 @@ export function ChecklistClient() {
     () => scopedAudits.filter((a) => windowIds.has(a.id)),
     [scopedAudits, windowIds],
   );
+
+  /** The matrix works from the imported area scores; the question ranking
+   * below needs answers, which an imported review does not carry. */
+  const areaScoresOnly =
+    windowSummaries.length > 0 &&
+    windowSummaries.every((s) => s.fromAreaScores);
 
   const { areas, contractors: roster } = useMemo(
     () => checklistMatrix(windowSummaries),
@@ -257,7 +264,9 @@ export function ChecklistClient() {
           problem. The questions at the top are the ones worth fixing
           centrally rather than contractor by contractor.
         </p>
-        {systemic.length === 0 ? (
+        {areaScoresOnly ? (
+          <RecordedOnlyNote what="This ranking needs answers question by question, so it fills in from the first review entered through the app." />
+        ) : systemic.length === 0 ? (
           <div className="chart-empty">No finalized reviews in scope.</div>
         ) : (
           <div className="table-scroll">
