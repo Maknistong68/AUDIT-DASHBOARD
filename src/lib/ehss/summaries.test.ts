@@ -3,6 +3,7 @@ import { audits, contractorLabel, contractors, subRegions } from "./mock";
 import { weightedOverall } from "./disciplines";
 import { CHECKLIST } from "./checklist";
 import { DOMAIN_BY_ID } from "./domains";
+import { GAP_CATEGORIES } from "./issues";
 import {
   areaTrends,
   domainBreakdown,
@@ -10,9 +11,7 @@ import {
   collectObservations,
   contractorStats,
   finalized,
-  focusAreas,
-  observationBreakdown,
-  strengthAreas,
+  issueBreakdown,
   summarizeAll,
   topIssues,
   windowByContractor,
@@ -180,23 +179,7 @@ describe("area trends — the executive brief's basis", () => {
     for (const t of programme) expect(t.reviews).toBeLessThanOrEqual(quarters);
   });
 
-  it("focus areas are below target and never improving", () => {
-    const focus = focusAreas(forContractor("afh1272"), 5);
-    expect(focus.length).toBeGreaterThan(0);
-    for (const t of focus) {
-      expect(t.latest).toBeLessThan(90);
-      expect(t.direction).not.toBe("improving");
-    }
-    // Worst gap first.
-    const gaps = focus.map((t) => t.gap!);
-    expect([...gaps].sort((a, b) => b - a)).toEqual(gaps);
-  });
 
-  it("strengths are at target or improving", () => {
-    for (const t of strengthAreas(forContractor("ech"), 4)) {
-      expect(t.latest >= 90 || t.direction === "improving").toBe(true);
-    }
-  });
 });
 
 describe("findings", () => {
@@ -216,11 +199,19 @@ describe("findings", () => {
     }
   });
 
-  it("counts gap classifications across finalized reviews only", () => {
+  it("counts gap categories across finalized reviews only", () => {
     const rows = collectObservations(audits, contractors);
-    expect(rows.every((r) => r.observation !== "OB1")).toBe(true);
-    const breakdown = observationBreakdown(rows);
-    expect(breakdown.reduce((sum, b) => sum + b.count, 0)).toBe(rows.length);
+    // The positive category never appears on a gap row.
+    expect(rows.every((r) => !r.issues.includes("GOOD"))).toBe(true);
+    expect(rows.every((r) => r.issues.length > 0)).toBe(true);
+
+    const breakdown = issueBreakdown(rows);
+    // A finding carries several categories, so the counts sum to MORE than
+    // the number of findings — never fewer, and never to the finding count.
+    const total = breakdown.reduce((sum, b) => sum + b.count, 0);
+    expect(total).toBe(rows.reduce((sum, r) => sum + r.issues.length, 0));
+    expect(total).toBeGreaterThan(rows.length);
+    for (const b of breakdown) expect(b.count).toBeLessThanOrEqual(rows.length);
   });
 });
 
@@ -272,10 +263,14 @@ describe("SHEW domains", () => {
     for (const r of rows) expect(DOMAIN_BY_ID[r.domain]).toBeDefined();
   });
 
-  it("builds a pillar x gap-type matrix whose cells sum to the findings", () => {
+  it("builds a pillar x category matrix, counting tags not findings", () => {
     const m = domainGapMatrix(rows);
-    expect(m.observations).toEqual(["OB2", "OB3", "OB4", "OB5"]);
-    expect(m.cells.reduce((sum, c) => sum + c.count, 0)).toBe(rows.length);
+    expect(m.issues).toEqual(GAP_CATEGORIES.map((c) => c.code));
+    // Cells count category tags; totals count findings. A finding with
+    // several categories lands in several cells, so cells sum higher.
+    const cellTotal = m.cells.reduce((sum, c) => sum + c.count, 0);
+    expect(cellTotal).toBe(rows.reduce((sum, r) => sum + r.issues.length, 0));
+    expect(cellTotal).toBeGreaterThan(rows.length);
     expect(m.domains.reduce((sum, d) => sum + d.total, 0)).toBe(rows.length);
     expect(m.max).toBe(Math.max(...m.cells.map((c) => c.count)));
     // Only pillars that actually have findings appear as rows.

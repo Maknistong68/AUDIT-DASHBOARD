@@ -21,19 +21,36 @@ override in package.json is load-bearing: without it Next pins a vulnerable
 
 An **EHSS quarterly audit scoring and trend platform** for Oxagon
 contractors, modeled on the *Excellence EHSS Quarterly Performance Review*
-workbook and the master contractor scorecard. Two invariants shape
-everything:
+workbook and the master contractor scorecard.
+
+**Five audits are being developed**, one per scorecard discipline: H&S,
+Critical Risk Control, Environment, Security and Worker Welfare. Only H&S
+has its full checklist so far (81 questions) and CRC has its 14-hazard
+register; the other three carry a recorded score until their checklists
+arrive. Anything built for H&S should be written so the other four can use
+it — the issue taxonomy, the recurrence model and the analytics are all
+discipline-agnostic by design, and new work should stay that way rather
+than hard-coding the H&S checklist.
+
+Two invariants shape everything:
 
 1. **No personal data.** Contractor-level results only; no worker records,
    photos, or auditor phone numbers. The only personal data in the whole app
    is the optional display name in the `demo_profile` cookie. This is a
    Saudi PDPL compliance position, not a preference —
    `docs/COMPLIANCE-KSA.md` is the assessment, and §2 of it is the Record of
-   Processing Activities. Adding a field that names a person invalidates it.
-2. **No free text in the audit.** Answers are Full/Partial/No/N-A; comments
-   are the standardized observation codes OB1–OB5 (`src/lib/ehss/model.ts`).
-   Every Partial/No answer requires an OB2–OB5 classification. Don't add
-   free-text or photo fields.
+   Processing Activities. **It is also what lets the data be hosted outside
+   the Kingdom** (§4): the project determined the data is not sensitive *on
+   the basis that it names nobody*. A field that names a person does not
+   just add a feature — it changes which laws apply and where the system may
+   run.
+2. **No free text in the audit.** Answers are Full/Partial/No/N-A, and the
+   reason is picked from the twelve **issue categories** in
+   `src/lib/ehss/issues.ts` — never typed. At least one gap category is
+   required on every Partial/No, and **several may apply**: a finding
+   usually has more than one cause, and forcing one label loses the rest.
+   Don't add free-text or photo fields; a comments box is how an audit tool
+   acquires personal data by accident.
 
 ## Architecture
 
@@ -146,8 +163,20 @@ everything:
   as a programme-wide failure. `checklistAreas()` treats section A as one
   area (its questions have no sub-section) plus B1–B12, C1, C2 — 15 areas,
   81 questions, pinned in `checklist-analysis.test.ts`.
-- `/brief` is the executive one-pager (what to focus on / what is working) —
-  the view the project director actually reads; keep it to one page.
+- **Issue categories** (`issues.ts`) answer *why* a requirement was not met,
+  which the checklist never says. Two rules hold the list together: every
+  category implies a **different fix and a different owner** (merge any two
+  that don't), and **nothing is specific to one discipline** — the same
+  twelve serve all five audits, so a report can compare across them. They
+  are **multi-select**, so every count derived from them (the SHEW heat-map
+  cells, `issueBreakdown`, `issueTrendByQuarter`) sums to MORE than the
+  number of findings; each view says so, and that is not a bug to fix by
+  dropping categories. `readIssues()` upgrades records written before the
+  change — the superseded OB1–OB5 map to their nearest single category
+  rather than being expanded into guesses nobody made.
+- Trends over categories use **small multiples** (`IssueTrendGrid`), not one
+  plot: twelve lines is a thicket, and plotting "the top five" would repaint
+  the colours whenever a filter changed the ranking.
 - Charts are hand-built SVG (`src/components/charts/`), single accent hue;
   rating badges use the status palette with labels (never color alone).
   Charts draw at their container's measured width via `useChartWidth`, so
@@ -173,9 +202,12 @@ There is no Supabase layer, no migrations and no auth — the earlier
 welfare-audit schema was deleted (see git history). It did not match the
 EHSS model and carried a `profiles` table of real names, so re-enabling it
 was never the path forward. When a database is added, model it on
-`src/lib/ehss/` and read `docs/COMPLIANCE-KSA.md` §4 and §5.7 first: the
-hosting region and the no-personal-data schema rules are decided before the
-first migration, not after.
+`src/lib/ehss/` and read `docs/COMPLIANCE-KSA.md` §4 and §5.5 first. The
+region is **unconstrained** — the project has determined this data is not
+sensitive and may be stored outside the Kingdom — so pick on latency, cost
+and operational fit. The no-personal-data schema rules are what keep that
+determination true, so they are decided before the first migration, not
+after.
 
 `middleware.ts` gates on the `demo_profile` cookie and nothing else. The
 role is a UI affordance, not a security boundary.

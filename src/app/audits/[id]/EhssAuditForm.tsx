@@ -4,19 +4,20 @@ import { useMemo, useState } from "react";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import {
   ANSWER_LABELS,
-  OBSERVATION_BY_CODE,
-  OBSERVATION_OPTIONS,
   ratingFor,
   type EhssAnswer,
   type EhssAuditStatus,
   type EhssResponse,
-  type ObservationCode,
 } from "@/lib/ehss/model";
+import {
+  GAP_CATEGORIES,
+  ISSUE_BY_CODE,
+  type IssueCode,
+} from "@/lib/ehss/issues";
 import { answeredCount, scoreAudit } from "@/lib/ehss/scoring";
 import { formatScore } from "@/lib/format";
 
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
-const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
 
 const confirmDiscard = () =>
   window.confirm("Discard this draft review? This cannot be undone.");
@@ -52,28 +53,48 @@ export function EhssAuditForm({
     setError(null);
     setResponses((prev) => {
       const cur = prev[code];
-      const keepGapObs =
+      // Moving between Partial and No keeps the categories — the cause did
+      // not change, only how badly. Anything else clears them, because a
+      // category chosen for a gap is meaningless on a Full or N/A.
+      const keep =
         (answer === "partial" || answer === "no") &&
-        cur?.observation &&
-        OBSERVATION_BY_CODE[cur.observation].gap;
+        cur !== undefined &&
+        (cur.answer === "partial" || cur.answer === "no");
+      return {
+        ...prev,
+        [code]: { answer, issues: keep ? cur!.issues : [] },
+      };
+    });
+  };
+
+  const toggleIssue = (code: string, issue: IssueCode) => {
+    setDirty(true);
+    setMessage(null);
+    setError(null);
+    setResponses((prev) => {
+      const cur = prev[code]!;
+      const has = cur.issues.includes(issue);
       return {
         ...prev,
         [code]: {
-          answer,
-          observation:
-            answer === "na" ? null : keepGapObs ? cur!.observation : null,
+          answer: cur.answer,
+          // Kept in register order so two auditors who pick the same
+          // categories produce the same record.
+          issues: GAP_CATEGORIES.map((c) => c.code).filter((c) =>
+            has ? cur.issues.includes(c) && c !== issue : cur.issues.includes(c) || c === issue,
+          ),
         },
       };
     });
   };
 
-  const setObservation = (code: string, observation: ObservationCode | null) => {
+  const setGoodPractice = (code: string, on: boolean) => {
     setDirty(true);
     setMessage(null);
     setError(null);
     setResponses((prev) => ({
       ...prev,
-      [code]: { answer: prev[code]!.answer, observation },
+      [code]: { answer: prev[code]!.answer, issues: on ? ["GOOD"] : [] },
     }));
   };
 
@@ -85,7 +106,11 @@ export function EhssAuditForm({
   const missingObservations = useMemo(() => {
     let n = 0;
     for (const r of Object.values(responses)) {
-      if ((r.answer === "partial" || r.answer === "no") && !r.observation) n++;
+      if (
+        (r.answer === "partial" || r.answer === "no") &&
+        r.issues.length === 0
+      )
+        n++;
     }
     return n;
   }, [responses]);
@@ -151,37 +176,49 @@ export function EhssAuditForm({
 
                     {r && r.answer !== "na" && (
                       <div className="q-detail">
-                        <label className="field">
-                          <span>
-                            {needsObservation
-                              ? "Observation (required)"
-                              : "Observation (optional)"}
-                          </span>
-                          <select
-                            value={r.observation ?? ""}
-                            disabled={!canEdit}
-                            onChange={(e) =>
-                              setObservation(
-                                q.code,
-                                (e.target.value || null) as ObservationCode | null,
-                              )
-                            }
-                          >
-                            <option value="">
-                              {needsObservation
-                                ? "Select a classification…"
-                                : "None"}
-                            </option>
-                            {(needsObservation
-                              ? GAP_OPTIONS
-                              : OBSERVATION_OPTIONS.filter((o) => !o.gap)
-                            ).map((o) => (
-                              <option key={o.code} value={o.code}>
-                                {o.code} — {o.label}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        {needsObservation ? (
+                          <>
+                            <span className="q-detail-label">
+                              Why? <em>pick every cause that applies</em>
+                              {r.issues.length === 0 && (
+                                <strong className="q-required">required</strong>
+                              )}
+                            </span>
+                            <div
+                              className="issue-picker"
+                              role="group"
+                              aria-label={`Issue categories for ${q.code}`}
+                            >
+                              {GAP_CATEGORIES.map((c) => {
+                                const on = r.issues.includes(c.code);
+                                return (
+                                  <button
+                                    key={c.code}
+                                    type="button"
+                                    aria-pressed={on}
+                                    disabled={!canEdit}
+                                    title={`${c.description} — ${c.owner}`}
+                                    onClick={() => toggleIssue(q.code, c.code)}
+                                  >
+                                    <b>{c.code}</b> {c.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <label className="checkbox-field">
+                            <input
+                              type="checkbox"
+                              checked={r.issues.includes("GOOD")}
+                              disabled={!canEdit}
+                              onChange={(e) =>
+                                setGoodPractice(q.code, e.target.checked)
+                              }
+                            />
+                            {ISSUE_BY_CODE.GOOD.label} — beyond the minimum
+                          </label>
+                        )}
                       </div>
                     )}
                   </div>

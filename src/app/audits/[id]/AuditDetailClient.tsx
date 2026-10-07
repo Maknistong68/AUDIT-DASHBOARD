@@ -78,7 +78,7 @@ function DisciplinePanel({
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="brief-score" style={{ fontSize: 28 }}>
+          <div className="panel-score" style={{ fontSize: 28 }}>
             {formatScore(overall)}
           </div>
           <RatingBadge rating={ratingFor(overall)} />
@@ -198,7 +198,7 @@ function CriticalRiskPanel({
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div className="brief-score" style={{ fontSize: 28 }}>
+          <div className="panel-score" style={{ fontSize: 28 }}>
             {formatScore(derived)}
           </div>
           <RatingBadge rating={ratingFor(derived)} />

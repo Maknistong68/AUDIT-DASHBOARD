@@ -2,11 +2,8 @@
 
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
-import {
-  OBSERVATION_BY_CODE,
-  OBSERVATION_OPTIONS,
-  quarterLabel,
-} from "@/lib/ehss/model";
+import { quarterLabel } from "@/lib/ehss/model";
+import { GAP_CATEGORIES, ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import { formatScore } from "@/lib/format";
 import type {
   EvidenceRow,
@@ -36,11 +33,10 @@ export function ProblemPanel({
   // this: a wall of OB2s is a paperwork problem, a wall of OB3s means the
   // procedure exists and site is not following it. Different fix, so it is
   // worth the rail space.
-  const mix = OBSERVATION_OPTIONS.filter((o) => o.gap)
-    .map((o) => ({
+  const mix = GAP_CATEGORIES.map((o) => ({
       code: o.code,
-      label: o.label.replace(" gap", ""),
-      count: evidence.filter((e) => e.observation === o.code).length,
+      label: o.label,
+      count: evidence.filter((e) => e.issues.includes(o.code)).length,
     }))
     .filter((o) => o.count > 0)
     .sort((a, b) => b.count - a.count);
@@ -168,8 +164,8 @@ export function ProblemPanel({
                   <span className="dd-e-meta">
                     {e.code}
                     {e.weight !== null && ` · weight ${e.weight}`}
-                    {e.observation &&
-                      ` · ${e.observation} ${OBSERVATION_BY_CODE[e.observation].label}`}
+                    {e.issues.length > 0 &&
+                      ` · ${e.issues.map((c) => ISSUE_BY_CODE[c].label).join(", ")}`}
                   </span>
                 </span>
               </li>

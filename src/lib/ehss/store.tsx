@@ -34,6 +34,7 @@ import type {
 } from "./model";
 import type { DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
+import { readIssues } from "./issues";
 
 const STORAGE_KEY = "ehss-demo-v1";
 
@@ -48,6 +49,33 @@ interface Overrides {
 
 const EMPTY: Overrides = { contractorActive: {}, audits: {}, deletedAuditIds: [] };
 
+/**
+ * Reviews saved before issue categories replaced the single OB code carry
+ * `observation` instead of `issues`. Upgrade them on read rather than
+ * forcing anyone to clear their browser — `readIssues` maps the old code to
+ * its nearest category and ignores anything unrecognised.
+ */
+function upgradeAudits(
+  audits: Record<string, EhssAudit>,
+): Record<string, EhssAudit> {
+  const out: Record<string, EhssAudit> = {};
+  for (const [id, audit] of Object.entries(audits)) {
+    const responses: EhssAudit["responses"] = {};
+    for (const [code, r] of Object.entries(audit.responses ?? {})) {
+      const legacy = r as { answer: EhssAudit["responses"][string]["answer"] } & {
+        issues?: unknown;
+        observation?: unknown;
+      };
+      responses[code] = {
+        answer: legacy.answer,
+        issues: readIssues(legacy.issues ?? legacy.observation),
+      };
+    }
+    out[id] = { ...audit, responses, criticalRisks: audit.criticalRisks ?? {} };
+  }
+  return out;
+}
+
 function readOverrides(): Overrides {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -55,7 +83,7 @@ function readOverrides(): Overrides {
     const parsed = JSON.parse(raw) as Partial<Overrides>;
     return {
       contractorActive: parsed.contractorActive ?? {},
-      audits: parsed.audits ?? {},
+      audits: upgradeAudits(parsed.audits ?? {}),
       deletedAuditIds: parsed.deletedAuditIds ?? [],
     };
   } catch {

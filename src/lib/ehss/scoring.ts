@@ -123,14 +123,14 @@ export function flattenChecklist(checklist: readonly ChecklistSection[]) {
   );
 }
 
-/** Answers only — convenience for fixtures where observations don't matter. */
+/** Answers only — convenience for fixtures where categories don't matter. */
 export function toResponses(
   answers: Record<string, EhssAnswer>,
 ): Record<string, EhssResponse> {
   return Object.fromEntries(
     Object.entries(answers).map(([code, answer]) => [
       code,
-      { answer, observation: null },
+      { answer, issues: [] },
     ]),
   );
 }

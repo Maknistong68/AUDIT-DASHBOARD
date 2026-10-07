@@ -221,7 +221,7 @@ h1, h2, h3 {
 
 /* Big numerals read as one shape, the way iOS sets them. */
 .value,
-.brief-score,
+.panel-score,
 .live-score,
 .spark-score,
 .crc-score,
@@ -1150,415 +1150,6 @@ table.data td.num {
   white-space: nowrap;
 }
 
-/* ---- Executive brief ---- */
-
-.brief-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.brief-head h2 {
-  font-size: 18px;
-}
-
-.brief-headline {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  /* The rating pill cannot break mid-label, so the row breaks instead. */
-  flex-wrap: wrap;
-  padding: 12px 18px;
-  border-radius: var(--r-4);
-  background: var(--mat-2);
-  border: 1px solid var(--mat-line);
-}
-
-.brief-score {
-  font-size: clamp(38px, 5vw, 48px);
-  font-weight: 660;
-  line-height: 1;
-  letter-spacing: -0.035em;
-}
-
-.brief-meta {
-  color: var(--muted);
-  font-size: 12.5px;
-  margin-top: 5px;
-}
-
-/* The two verdict cards are tinted rather than striped — the heading still
-   says which is which. */
-.brief-focus {
-  background-image: radial-gradient(
-    120% 130% at 0% 0%,
-    color-mix(in srgb, var(--status-serious) 14%, transparent),
-    transparent 58%
-  );
-}
-
-.brief-good {
-  background-image: radial-gradient(
-    120% 130% at 0% 0%,
-    color-mix(in srgb, var(--status-good) 13%, transparent),
-    transparent 58%
-  );
-}
-
-.brief-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.brief-list li {
-  padding: 11px 14px;
-  border-radius: var(--r-3);
-  transition: background-color 140ms var(--ease);
-}
-
-.brief-list li + li {
-  border-top: 1px solid var(--mat-line);
-}
-
-.brief-list li:hover {
-  background: var(--mat-hover);
-}
-
-.brief-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.brief-item-title {
-  font-weight: 600;
-}
-
-.brief-item-score {
-  font-variant-numeric: tabular-nums;
-  font-weight: 650;
-}
-
-.brief-item-note {
-  color: var(--ink-2);
-  font-size: 12.5px;
-  margin-top: 3px;
-}
-
-/* ---- Master scorecard ---- */
-
-table.scorecard {
-  min-width: 760px;
-}
-
-/* Ten columns: at the shared cell padding the scorecard overruns the card on
-   a full-width desktop by a few dozen pixels, which parks the row's action
-   off-screen. Tighter gutters bring it inside; it still scrolls on a phone. */
-table.scorecard th,
-table.scorecard td {
-  padding-left: 9px;
-  padding-right: 9px;
-}
-
-table.scorecard .th-weight {
-  font-weight: 400;
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
-table.data td.strong {
-  font-weight: 650;
-}
-
-td.cell-good {
-  background: color-mix(in srgb, var(--band-compliant) 16%, transparent);
-}
-
-td.cell-weak {
-  background: color-mix(in srgb, var(--band-non) 14%, transparent);
-}
-
-.inactive-tag {
-  margin-left: 8px;
-  font-size: 11px;
-  color: var(--muted);
-  border: 1px solid var(--mat-line);
-  background: var(--mat-2);
-  border-radius: var(--r-pill);
-  padding: 1px 8px;
-}
-
-/* ---- Discipline score entry ---- */
-
-.discipline-panel {
-  border: 1px solid var(--mat-line);
-  background: var(--mat-2);
-  border-radius: var(--r-3);
-  padding: 16px 18px;
-  margin: 16px 0 6px;
-}
-
-.discipline-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
-
-.discipline-grid input {
-  max-width: none;
-}
-
-/* ---- Chart legend & tooltip rows ---- */
-
-.chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin-top: 12px;
-  font-size: 11.5px;
-  color: var(--ink-2);
-}
-
-.chart-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.key-line {
-  display: inline-block;
-  width: 14px;
-  height: 3px;
-  border-radius: var(--r-pill);
-  background: var(--muted);
-}
-
-.key-accent { background: var(--accent); }
-.key-muted { background: var(--muted); opacity: 0.55; }
-.key-good { background: var(--status-good); }
-
-.tooltip-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 4px;
-}
-
-.tooltip-row .val {
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  min-width: 22px;
-  text-align: right;
-}
-
-/* ---- Floating drill-down: a sheet ---- */
-
-.panel-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background: var(--scrim);
-  backdrop-filter: blur(6px) saturate(120%);
-  -webkit-backdrop-filter: blur(6px) saturate(120%);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 5vh 16px 24px;
-  overflow-y: auto;
-  animation: scrim-in 200ms var(--ease);
-}
-
-.panel-floating {
-  position: relative;
-  width: min(940px, 100%);
-  background: var(--mat-sheet);
-  border: 1px solid var(--mat-line);
-  border-radius: var(--r-5);
-  box-shadow: var(--shadow-3);
-  backdrop-filter: blur(30px) saturate(var(--glass-sat));
-  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
-  outline: none;
-  animation: panel-in 320ms var(--spring);
-}
-
-@keyframes scrim-in {
-  from { opacity: 0; }
-}
-
-@keyframes panel-in {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.97);
-  }
-}
-
-.panel-floating-head {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 22px 14px;
-  background: var(--mat-sheet);
-  border-bottom: 1px solid var(--mat-line);
-  border-radius: var(--r-5) var(--r-5) 0 0;
-  backdrop-filter: blur(30px) saturate(var(--glass-sat));
-  -webkit-backdrop-filter: blur(30px) saturate(var(--glass-sat));
-}
-
-.panel-floating-head h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-}
-
-.panel-floating-head .sub {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* Round close affordance, like a sheet's dismiss button. */
-.panel-close {
-  border: 1px solid var(--mat-line);
-  background: var(--mat-2);
-  color: var(--ink-2);
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
-  font-size: 13px;
-  cursor: pointer;
-  flex: none;
-  display: grid;
-  place-items: center;
-  transition: background-color 160ms var(--ease), transform 140ms var(--ease);
-}
-
-.panel-close:hover {
-  background: var(--mat-hover);
-  color: var(--ink-1);
-}
-
-.panel-close:active {
-  transform: scale(0.9);
-}
-
-.panel-floating-body {
-  padding: 18px 22px 24px;
-}
-
-/* Rating key under the league table */
-.rating-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: var(--r-3);
-  background: var(--mat-2);
-  font-size: 11.5px;
-  color: var(--ink-2);
-}
-
-.rating-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.rating-key i {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--r-pill);
-  display: inline-block;
-}
-
-.band-swatch {
-  display: inline-block;
-  width: 20px;
-  height: 14px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-}
-
-/* ---- Small-multiple trajectories ---- */
-
-.spark-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 10px;
-}
-
-.spark {
-  text-align: left;
-  font: inherit;
-  background: var(--mat-2);
-  border: 1px solid var(--mat-line);
-  border-radius: var(--r-3);
-  padding: 11px 12px 9px;
-  cursor: pointer;
-  transition: background-color 160ms var(--ease), border-color 160ms var(--ease),
-    transform 160ms var(--ease), box-shadow 160ms var(--ease);
-}
-
-.spark:hover {
-  background: var(--mat-1);
-  border-color: var(--baseline);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-1);
-}
-
-.spark:active {
-  transform: scale(0.98);
-}
-
-.spark.is-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
-.spark-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-
-.spark-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.spark-score {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--ink-1);
-}
-
-.spark-foot {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--ink-2);
-}
-
-.spark-up { color: var(--success-text); }
-.spark-down { color: var(--band-non); }
-.spark-flat { color: var(--muted); }
-
 /* ---- SHEW pillar × gap-type heat-map ---- */
 
 .heatmap-wrap {
@@ -2074,18 +1665,6 @@ table.crc-entry input[type="number"] {
     padding: 16px 14px;
   }
 
-  .brief-head {
-    gap: 14px;
-  }
-
-  .brief-headline {
-    width: 100%;
-    padding: 14px 16px;
-  }
-
-  .brief-headline > div {
-    min-width: 0;
-  }
 
   .spark-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -3289,44 +2868,6 @@ table.crc-entry input[type="number"] {
   color: var(--success-text);
 }
 
-/* ---- Brief: the movement tiles ---- */
-
-.brief-move {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-  margin: 4px 0 18px;
-}
-
-.brief-move-tile {
-  padding: 12px 14px;
-  border-radius: var(--r-3);
-  background: var(--mat-2);
-  border: 1px solid var(--mat-line);
-}
-
-.brief-move-tile .n {
-  font-size: 26px;
-  font-weight: 680;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
-  color: var(--ink-2);
-}
-
-.brief-move-tile .l {
-  font-size: 11.5px;
-  color: var(--muted);
-  margin-top: 2px;
-}
-
-.brief-move-tile.is-good .n {
-  color: var(--status-good);
-}
-
-.brief-move-tile.is-bad .n {
-  color: var(--status-critical);
-}
-
 /* ==================================================================
    H&S checklist analysis — the contractor x area matrix
    ------------------------------------------------------------------
@@ -3692,4 +3233,174 @@ table.matrix td.matrix-cell {
   color: var(--ink-1);
   font-weight: 620;
   box-shadow: var(--shadow-1);
+}
+
+/* ==================================================================
+   ISSUE CATEGORIES — the multi-select picker and its chips
+   ------------------------------------------------------------------
+   Twelve toggles rather than a dropdown: a dropdown allows exactly one
+   answer, and a finding usually has more than one cause. Toggles also
+   show the whole taxonomy at once, so an auditor picks from what is
+   there rather than recalling it.
+   ================================================================== */
+
+.q-detail-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+
+.q-detail-label em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.q-required {
+  margin-left: 8px;
+  font-size: 10.5px;
+  font-weight: 650;
+  padding: 2px 7px;
+  border-radius: var(--r-1);
+  background: color-mix(in srgb, var(--status-critical) 16%, transparent);
+  color: var(--status-critical);
+}
+
+.issue-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.issue-picker button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease), color 150ms var(--ease),
+    border-color 150ms var(--ease);
+}
+
+.issue-picker button b {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+/* :hover would otherwise out-specify [aria-pressed] and un-style a selected
+   chip exactly while the pointer is on it. */
+.issue-picker button:hover:not(:disabled):not([aria-pressed="true"]) {
+  background: var(--mat-hover);
+  color: var(--ink-1);
+}
+
+.issue-picker button[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 560;
+}
+
+.issue-picker button[aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.issue-picker button[aria-pressed="true"] b {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.issue-picker button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.issue-picker button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Chips in the findings register: several per row, so they wrap. */
+.issue-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.issue-chips i {
+  font-style: normal;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--r-1);
+  background: var(--mat-sunken);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+/* ---- Issue trend small multiples ---- */
+
+.issue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 10px;
+}
+
+.issue-panel {
+  padding: 9px 11px 7px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+}
+
+.issue-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.issue-panel-name {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.issue-panel-name b {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  margin-right: 3px;
+}
+
+.issue-panel-n {
+  font-size: 15px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.issue-panel svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2px 0;
+}
+
+.issue-panel-foot {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }

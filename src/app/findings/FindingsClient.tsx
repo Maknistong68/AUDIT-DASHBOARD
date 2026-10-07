@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { quarterLabel } from "@/lib/ehss/model";
 import {
-  OBSERVATION_BY_CODE,
-  OBSERVATION_OPTIONS,
-  quarterLabel,
-} from "@/lib/ehss/model";
+  GAP_CATEGORIES,
+  ISSUE_BY_CODE,
+} from "@/lib/ehss/issues";
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { contractorLabel } from "@/lib/ehss/mock";
@@ -17,16 +17,16 @@ import {
   findingHistories,
   recurringFindings,
   domainGapMatrix,
-  observationTrendByQuarter,
+  issueTrendByQuarter,
   summarizeAll,
 } from "@/lib/ehss/summaries";
 import { DOMAINS, DOMAIN_BY_ID } from "@/lib/ehss/domains";
 import { CRITICAL_RISKS } from "@/lib/ehss/critical-risks";
 import { DomainGapHeatmap } from "@/components/charts/DomainGapHeatmap";
 import { CriticalRiskBars } from "@/components/charts/CriticalRiskBars";
-import { ObservationTrendLines } from "@/components/charts/ObservationTrendLines";
+import { IssueTrendGrid } from "@/components/charts/IssueTrendGrid";
 
-const GAP_OPTIONS = OBSERVATION_OPTIONS.filter((o) => o.gap);
+const GAP_OPTIONS = GAP_CATEGORIES;
 
 export function FindingsClient() {
   const { subRegions, contractors, audits } = useEhss();
@@ -74,7 +74,7 @@ export function FindingsClient() {
           (o) =>
             (subRegionId === "all" || o.subRegionId === subRegionId) &&
             (contractorId === "all" || o.contractorId === contractorId) &&
-            (observation === "all" || o.observation === observation) &&
+            (observation === "all" || o.issues.includes(observation as never)) &&
             (domain === "all" || o.domain === domain),
         )
         .sort(
@@ -88,7 +88,7 @@ export function FindingsClient() {
 
   const gapMatrix = useMemo(() => domainGapMatrix(rows), [rows]);
   const observationTrend = useMemo(
-    () => observationTrendByQuarter(rows),
+    () => issueTrendByQuarter(rows),
     [rows],
   );
   const crcStats = useMemo(
@@ -174,28 +174,26 @@ export function FindingsClient() {
         </label>
       </div>
 
-      <div className="grid-2">
-        <section className="card">
-          <h2>Where the gaps are — SHEW pillar against gap type</h2>
-          <p className="sub">
-            {gapMatrix.total} findings in scope. Environment and Welfare have
-            scores but no checklist yet, so they carry no findings.
-          </p>
-          <DomainGapHeatmap matrix={gapMatrix} />
-        </section>
+      <section className="card">
+        <h2>Where the gaps are — SHEW pillar against issue category</h2>
+        <p className="sub">
+          {gapMatrix.total} findings in scope. Environment and Welfare have
+          scores but no checklist yet, so they carry no findings.
+        </p>
+        <DomainGapHeatmap matrix={gapMatrix} />
+      </section>
 
-        <section className="card">
-          <h2>Observation trends</h2>
-          <p className="sub">
-            What is driving the gaps, quarter by quarter ({rows.length} in
-            scope)
-          </p>
-          <ObservationTrendLines
-            quarters={observationTrend.quarters}
-            series={observationTrend.series}
-          />
-        </section>
-      </div>
+      <section className="card">
+        <h2>What is driving the gaps</h2>
+        <p className="sub">
+          Each issue category quarter by quarter, across {rows.length} finding
+          {rows.length === 1 ? "" : "s"} in scope.
+        </p>
+        <IssueTrendGrid
+          quarters={observationTrend.quarters}
+          series={observationTrend.series}
+        />
+      </section>
 
       <section className="card">
         <div className="track-head">
@@ -342,7 +340,13 @@ export function FindingsClient() {
                     <td>{o.subSectionTitle ?? `Section ${o.sectionCode}`}</td>
                     <td>{o.answer === "no" ? "No" : "Partial"}</td>
                     <td>
-                      {o.observation} — {OBSERVATION_BY_CODE[o.observation].label}
+                      <span className="issue-chips">
+                        {o.issues.map((c) => (
+                          <i key={c} title={ISSUE_BY_CODE[c].description}>
+                            {ISSUE_BY_CODE[c].label}
+                          </i>
+                        ))}
+                      </span>
                     </td>
                   </tr>
                 ))}

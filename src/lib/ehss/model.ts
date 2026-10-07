@@ -46,63 +46,18 @@ export interface ChecklistSection {
 }
 
 /**
- * Pre-made observation options — the standardized "comment" recorded per
- * question instead of free text or photos, so findings can be analyzed
- * later. One of OB2–OB5 is required for a Partial or No answer; OB1 is the
- * optional positive note on a Full answer; N/A carries no observation.
+ * Issue categories live in ./issues — a fixed, multi-select taxonomy of WHY
+ * a requirement was not met, chosen at entry time. The old single-select
+ * OB1–OB5 codes are superseded; `readIssues` in that module accepts them so
+ * records written before the change still load.
  */
-export type ObservationCode = "OB1" | "OB2" | "OB3" | "OB4" | "OB5";
-
-export interface ObservationOption {
-  code: ObservationCode;
-  label: string;
-  description: string;
-  /** true when the option represents a gap (valid for Partial / No). */
-  gap: boolean;
-}
-
-export const OBSERVATION_OPTIONS: ObservationOption[] = [
-  {
-    code: "OB1",
-    label: "Good practice observed",
-    description:
-      "Requirement fully met with evidence of practice beyond the minimum.",
-    gap: false,
-  },
-  {
-    code: "OB2",
-    label: "Documentation gap",
-    description:
-      "Required document/plan is missing, not approved (not Code A), or outdated.",
-    gap: true,
-  },
-  {
-    code: "OB3",
-    label: "Implementation gap",
-    description:
-      "Documented requirement is not, or only partially, implemented on site.",
-    gap: true,
-  },
-  {
-    code: "OB4",
-    label: "Resources / competence gap",
-    description:
-      "Insufficient staffing, supervision, training or competent persons.",
-    gap: true,
-  },
-  {
-    code: "OB5",
-    label: "Monitoring / reporting gap",
-    description:
-      "Tracking, records, meetings, communication or reporting not evidenced.",
-    gap: true,
-  },
-];
-
-export const OBSERVATION_BY_CODE: Record<ObservationCode, ObservationOption> =
-  Object.fromEntries(
-    OBSERVATION_OPTIONS.map((o) => [o.code, o]),
-  ) as Record<ObservationCode, ObservationOption>;
+export type { IssueCode, IssueCategory } from "./issues";
+export {
+  ISSUE_CATEGORIES,
+  ISSUE_BY_CODE,
+  GAP_CATEGORIES,
+  readIssues,
+} from "./issues";
 
 /** Rating bands — defined once in ./bands, which also carries their colours,
  * so the label a badge shows and the colour a bar takes can never drift. */
@@ -118,7 +73,13 @@ export type EhssAuditStatus = "draft" | "submitted" | "approved";
 
 export interface EhssResponse {
   answer: EhssAnswer;
-  observation: ObservationCode | null;
+  /**
+   * Why the requirement was not met. At least one gap category is required
+   * on a Partial or No; a Full answer may carry "GOOD" and nothing else;
+   * N/A carries none. Several categories are normal — a finding usually has
+   * more than one cause, and forcing one label loses the rest.
+   */
+  issues: import("./issues").IssueCode[];
 }
 
 export interface SubRegion {

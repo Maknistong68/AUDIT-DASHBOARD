@@ -1,5 +1,6 @@
 import { CHECKLIST } from "@/lib/ehss/checklist";
-import { OBSERVATION_OPTIONS, RATING_BANDS } from "@/lib/ehss/model";
+import { RATING_BANDS } from "@/lib/ehss/model";
+import { ISSUE_CATEGORIES } from "@/lib/ehss/issues";
 import { contractors, subRegions } from "@/lib/ehss/mock";
 import { readDemoProfile } from "@/lib/demo/profile";
 
@@ -58,28 +59,6 @@ export default async function AdminPage() {
         </div>
       </section>
 
-      <section className="card">
-        <h2>Observation classifications</h2>
-        <p className="sub">
-          The pre-made options recorded per question instead of free text —
-          OB2–OB5 are required on every Partial or No answer.
-        </p>
-        <div className="table-scroll">
-          <table className="data">
-            <tbody>
-              {OBSERVATION_OPTIONS.map((o) => (
-                <tr key={o.code}>
-                  <td>
-                    <strong>{o.code}</strong>
-                  </td>
-                  <td>{o.label}</td>
-                  <td style={{ color: "var(--ink-2)" }}>{o.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       <section className="card">
         <h2>Contractor register</h2>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { OBSERVATION_BY_CODE } from "@/lib/ehss/model";
+import { ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import type { DomainGapMatrix } from "@/lib/ehss/summaries";
 
 /**
@@ -30,7 +30,7 @@ export function DomainGapHeatmap({ matrix }: { matrix: DomainGapMatrix }) {
 
   const cell = (domain: string, observation: string) =>
     matrix.cells.find(
-      (c) => c.domain === domain && c.observation === observation,
+      (c) => c.domain === domain && c.issue === observation,
     );
 
   return (
@@ -39,11 +39,11 @@ export function DomainGapHeatmap({ matrix }: { matrix: DomainGapMatrix }) {
         <thead>
           <tr>
             <th />
-            {matrix.observations.map((o) => (
+            {matrix.issues.map((o) => (
               <th key={o} scope="col">
                 <span className="heat-col">{o}</span>
                 <span className="heat-col-sub">
-                  {OBSERVATION_BY_CODE[o].label.replace(" gap", "")}
+                  {ISSUE_BY_CODE[o].label}
                 </span>
               </th>
             ))}
@@ -56,7 +56,7 @@ export function DomainGapHeatmap({ matrix }: { matrix: DomainGapMatrix }) {
           {matrix.domains.map((d) => (
             <tr key={d.id}>
               <th scope="row">{d.label}</th>
-              {matrix.observations.map((o) => {
+              {matrix.issues.map((o) => {
                 const c = cell(d.id, o);
                 const count = c?.count ?? 0;
                 const s = step(count);
@@ -79,7 +79,7 @@ export function DomainGapHeatmap({ matrix }: { matrix: DomainGapMatrix }) {
                     }}
                     onPointerEnter={() => setHover(key)}
                     onPointerLeave={() => setHover(null)}
-                    title={`${d.label} · ${OBSERVATION_BY_CODE[o].label}: ${count}`}
+                    title={`${d.label} · ${ISSUE_BY_CODE[o].label}: ${count}`}
                   >
                     <span className={hover === key ? "is-hover" : undefined}>
                       {count}
@@ -94,9 +94,11 @@ export function DomainGapHeatmap({ matrix }: { matrix: DomainGapMatrix }) {
       </table>
       <p className="sub" style={{ marginTop: 10, marginBottom: 0 }}>
         Colour intensity tracks the count, which is printed in every cell.
-        Read a row for what kind of gap drives a pillar: implementation gaps
-        mean the rules exist and are not followed on site; documentation gaps
-        are a paperwork problem.
+        Read a row for what drives a pillar: implementation means the rules
+        exist and are not followed on site, documentation is a paperwork
+        problem, and each sends a different person to fix it. A finding with
+        several categories is counted under each, so cells sum to more than
+        the number of findings.
       </p>
     </div>
   );

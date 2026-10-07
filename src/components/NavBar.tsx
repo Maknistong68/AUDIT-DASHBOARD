@@ -40,17 +40,6 @@ const icon = (paths: React.ReactNode) => (
 
 const PRIMARY: NavItem[] = [
   {
-    href: "/brief",
-    label: "Brief",
-    icon: icon(
-      <>
-        <path d="M6 3h8l4 4v14H6z" />
-        <path d="M14 3v4h4" />
-        <path d="M9 13h6M9 17h4" />
-      </>,
-    ),
-  },
-  {
     href: "/",
     label: "Dashboard",
     icon: icon(

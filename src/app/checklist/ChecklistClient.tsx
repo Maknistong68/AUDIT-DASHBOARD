@@ -7,7 +7,8 @@ import { FloatingPanel } from "@/components/FloatingPanel";
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { DOMAIN_BY_ID } from "@/lib/ehss/domains";
-import { OBSERVATION_BY_CODE, quarterLabel } from "@/lib/ehss/model";
+import { quarterLabel } from "@/lib/ehss/model";
+import { ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import { formatScore } from "@/lib/format";
 import {
   TIMEFRAMES,
@@ -326,10 +327,10 @@ export function ChecklistClient() {
                 <span>
                   <strong>{question.lostPoints}</strong> points lost
                 </span>
-                {question.topObservation && (
+                {question.topIssue && (
                   <span>
-                    {question.topObservation}{" "}
-                    {OBSERVATION_BY_CODE[question.topObservation].label}
+                    most cited:{" "}
+                    <strong>{ISSUE_BY_CODE[question.topIssue].label}</strong>
                   </span>
                 )}
               </div>
@@ -351,9 +352,10 @@ export function ChecklistClient() {
                     </span>
                     <span className="qa-co">{a.label}</span>
                     <span className="qa-obs">
-                      {a.observation
-                        ? `${a.observation} ${OBSERVATION_BY_CODE[a.observation].label}`
-                        : ""}
+                      {a.issues
+                        .filter((c) => c !== "GOOD")
+                        .map((c) => ISSUE_BY_CODE[c].label)
+                        .join(", ")}
                     </span>
                     <span className="qa-q">{quarterLabel(a.quarter)}</span>
                   </li>

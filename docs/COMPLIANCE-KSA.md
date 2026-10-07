@@ -79,7 +79,7 @@ exist here. Keep it that way and the compliance position does not drift.
 | Right of access, correction, destruction (Art. 4) | ✅ | The visitor holds the only copy and can change or delete it at any time, unilaterally |
 | 30-day response to data subject requests | ✅ N/A | No stored records to respond about |
 | Records of Processing Activities (Art. 31) | ⚠️ **Gap** | Required of controllers. **This document serves as the RoPA entry — §2 is the record.** Register it with NEOM's DPO |
-| Breach notification, 72 h to SDAIA | ⚠️ **Gap** | No documented procedure. Low exposure — a breach of this app exposes no personal data — but the procedure must exist. **§5.4** |
+| Breach notification, 72 h to SDAIA | ⚠️ **Gap** | No documented procedure. Low exposure — a breach of this app exposes no personal data — but the procedure must exist. **§5.3** |
 | Data Protection Officer | ℹ️ | NEOM-level appointment, not app-level. Confirm the app is in the DPO's register |
 | Cross-border transfer (Art. 29) | ✅ *currently* | No personal data is transferred: the cookie never leaves the browser. **This changes the moment a database is added — see §4** |
 | Registration on the National Data Governance Platform | ℹ️ | NEOM-level obligation; confirm this system is listed |
@@ -88,47 +88,36 @@ exist here. Keep it that way and the compliance position does not drift.
 
 ---
 
-## 4. The one that actually matters: hosting and residency
+## 4. Hosting and residency — settled
 
-This is where the real exposure sits, and it is **not a PDPL question**.
+**The project has determined that the data this app holds is not sensitive
+and may be stored outside the Kingdom.** (Owner's decision, recorded
+2026-10-07.) The app is therefore built and hosted on that basis: no
+in-Kingdom hosting requirement, and no Transfer Risk Assessment gating
+deployment.
 
-Today the app is a demo: the dataset is generated, contractor names come
-from the scorecard, and nothing real is stored. It can be hosted anywhere.
+That determination rests on what §2 describes, so it holds only while those
+facts hold:
 
-**The moment it carries real Oxagon audit results, the picture changes.**
-Contractor EHSS performance — who is failing, on what, and by how much — is
-NEOM operational data. Under the NDMO framework that is almost certainly
-**Confidential**, and government data must remain inside the Kingdom unless
-specific authorized conditions are met. A Vercel deployment on US or EU
-infrastructure does not meet them by default.
+- **No personal data beyond an optional display name.** The moment a field
+  names a worker, an auditor or any other individual, this is personal data
+  under PDPL and the cross-border rules in §1 apply again. That is why the
+  no-personal-data rule in `CLAUDE.md` is an invariant and not a preference.
+- **Contractor-level results only.** Organizational audit scores, not
+  individual performance.
+- **No free text and no uploads.** A comments box or a site photograph is
+  how an audit tool acquires personal data by accident, and neither exists.
 
-This is a **hosting decision, not a code change**. The application is a
-standard Next.js build with no managed-platform dependencies, so it moves
-without modification.
+**Design consequences, applied:**
 
-**Recommended order of operations:**
-
-1. Get the data classification from NEOM's data office **before** choosing
-   where production runs. Everything else follows from that answer.
-2. If Confidential or above: host inside KSA. Options include a NEOM-approved
-   private cloud, or an in-Kingdom region of a CST-licensed provider
-   (Google Cloud Dammam, Oracle Jeddah, AWS KSA, STC/stc cloud). The
-   database goes in the same region.
-3. If it stays outside KSA even temporarily, that transfer needs a
-   documented Transfer Risk Assessment plus an approved mechanism
-   (Standard Contractual Clauses or Binding Common Rules) — **and the
-   transfer must be limited to the minimum data necessary.**
-4. Confirm whether NCA ECC/CCC applies through NEOM's cybersecurity
-   function. If it does, the cloud tenant controls (CCC-2:2024) apply to
-   NEOM as the tenant, not to this codebase.
-
-**The cheapest compliant path — and my recommendation:** keep the public
-Vercel deployment as the *demo* with generated data only, clearly labelled,
-and stand up a separate in-Kingdom instance for real audit data. Same
-codebase, two deployments, no rewrite. You get to keep showing the tool to
-stakeholders on a public URL while the real data never leaves the Kingdom.
-
----
+1. Host anywhere. Vercel, or any managed platform, in any region.
+2. The database, when added, may sit in any region. Pick on latency, cost
+   and operational fit rather than residency.
+3. No SCCs, Binding Common Rules or transfer assessment are needed for the
+   data as scoped.
+4. **Re-open this section if the scope changes.** Adding worker records,
+   named auditors, photographs or free text does not merely add a feature —
+   it changes which laws apply and where the system may run.
 
 ## 5. Remediation — fastest path, nothing ripped out
 
@@ -145,30 +134,21 @@ The field already defaults to "Guest". Label it optional and suggest
 initials or a job title. Data minimization you can demonstrate rather than
 assert.
 
-### 5.3 Classification banner — *~30 minutes*
-Once NEOM assigns a classification, display it in the header of the real
-deployment ("NEOM — Confidential"). NDMO expects classified data to be
-marked; it also stops anyone screenshotting it into a WhatsApp group
-without noticing.
-
-### 5.4 Breach-response note — *~30 minutes, documentation only*
+### 5.3 Breach-response note — *~30 minutes, documentation only*
 Half a page: who is notified, the 72-hour SDAIA clock, and who contacts
 the DPO. Keep it next to this file.
 
-### 5.5 Register with NEOM's DPO — *one email*
+### 5.4 Register with NEOM's DPO — *one email*
 Send this document. §2 is your Record of Processing Activities.
 
-### 5.6 Confirm classification and hosting — *the long pole, start now*
-§4. Blocks production, not development. Start the conversation before the
-database work, because the answer determines where the database goes.
-
-### 5.7 When the database is added — *design-time constraints*
+### 5.5 When the database is added — *design-time constraints*
 - Keep the no-personal-data rule at the **schema** level: no worker table,
   no free-text column in the scoring path, no attachment storage.
 - Auditor identity: store an opaque user id, not a name, in audit records.
   If auditors need to be identifiable, that is a deliberate scope change
   requiring a lawful basis and a retention period — not a default.
-- Database region must match the hosting decision from §4.
+- Database region is unconstrained (§4) — choose on latency, cost and
+  operational fit.
 - Set a retention period for audit records (EHSS records typically 3–7
   years; confirm against NEOM's retention schedule).
 
@@ -198,12 +178,13 @@ branches are reachable.
 **Is it Saudi-law compliant?** For PDPL, yes — and by a wide margin, because
 the app was designed around not collecting personal data rather than around
 protecting it after collection. The three open items are documents, not
-defects, and §5.1–5.5 closes them in about two hours.
+defects, and §5.1–5.4 closes them in about two hours.
 
-**The real constraint is residency**, and it is not a legal problem with the
-software — it is a decision about where production runs, which needs
-NEOM's data classification to answer. Start that conversation now; it is
-the only item on this list with a lead time.
+**Residency is settled** (§4): the data is not sensitive and may be stored
+outside the Kingdom, so hosting is an engineering choice rather than a
+compliance one. The thing that keeps it settled is the no-personal-data
+rule — it is what makes the determination true, so it is enforced in the
+schema and the UI rather than left to discipline.
 
 ---
 

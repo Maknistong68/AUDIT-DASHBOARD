@@ -26,9 +26,9 @@ import {
   type EhssAnswer,
   type EhssAudit,
   type EhssContractor,
-  type ObservationCode,
   type SubRegion,
 } from "./model";
+import { GAP_CATEGORIES, type IssueCode } from "./issues";
 
 export interface SectionSummary {
   code: string;
@@ -81,7 +81,8 @@ export interface ObservationRow {
   /** SHEW pillar the audited control belongs to. */
   domain: DomainId;
   answer: "partial" | "no";
-  observation: ObservationCode;
+  /** Every category the auditor chose; at least one on a gap. */
+  issues: IssueCode[];
 }
 
 const FLAT = flattenChecklist(CHECKLIST);
@@ -328,7 +329,7 @@ export function collectObservations(
     for (const item of FLAT) {
       const r = audit.responses[item.question.code];
       if (!r || (r.answer !== "partial" && r.answer !== "no")) continue;
-      if (!r.observation) continue;
+      if (r.issues.length === 0) continue;
       rows.push({
         auditId: audit.id,
         contractorId: contractor.id,
@@ -341,7 +342,7 @@ export function collectObservations(
         sectionCode: item.section,
         domain: item.question.domain,
         answer: r.answer,
-        observation: r.observation,
+        issues: r.issues,
       });
     }
   }
@@ -361,7 +362,8 @@ export interface IssueRow {
   /** Weighted points lost — the question's actual impact on the score. */
   lostPoints: number;
   /** Most frequent standardized classification for this question. */
-  topObservation: ObservationCode | null;
+  /** The category most often cited for this question. */
+  topIssue: IssueCode | null;
 }
 
 /**
@@ -371,7 +373,7 @@ export interface IssueRow {
 export function topIssues(audits: EhssAudit[], limit: number): IssueRow[] {
   const acc = new Map<
     string,
-    Omit<IssueRow, "topObservation"> & { obs: Map<ObservationCode, number> }
+    Omit<IssueRow, "topIssue"> & { obs: Map<IssueCode, number> }
   >();
 
   for (const audit of audits) {
@@ -391,15 +393,15 @@ export function topIssues(audits: EhssAudit[], limit: number): IssueRow[] {
           noCount: 0,
           partialCount: 0,
           lostPoints: 0,
-          obs: new Map<ObservationCode, number>(),
+          obs: new Map<IssueCode, number>(),
         };
       cur.occurrences += 1;
       if (r.answer === "no") cur.noCount += 1;
       else cur.partialCount += 1;
       cur.lostPoints +=
         item.question.weight * (1 - ANSWER_VALUE[r.answer]);
-      if (r.observation) {
-        cur.obs.set(r.observation, (cur.obs.get(r.observation) ?? 0) + 1);
+      for (const code of r.issues) {
+        cur.obs.set(code, (cur.obs.get(code) ?? 0) + 1);
       }
       acc.set(item.question.code, cur);
     }
@@ -409,7 +411,7 @@ export function topIssues(audits: EhssAudit[], limit: number): IssueRow[] {
     .map(({ obs, ...rest }) => ({
       ...rest,
       lostPoints: round(rest.lostPoints),
-      topObservation:
+      topIssue:
         [...obs.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
     }))
     .sort(
@@ -418,12 +420,21 @@ export function topIssues(audits: EhssAudit[], limit: number): IssueRow[] {
     .slice(0, limit);
 }
 
-/** Gap observations grouped by classification, most frequent first. */
-export function observationBreakdown(
+/**
+ * Findings grouped by issue category, most frequent first.
+ *
+ * A finding with three categories counts once under each, so the counts sum
+ * to MORE than the number of findings. `share` is therefore the share of
+ * findings carrying that category, not a slice of a pie — every caller that
+ * displays it has to say so.
+ */
+export function issueBreakdown(
   rows: ObservationRow[],
-): Array<{ code: ObservationCode; count: number; share: number }> {
-  const counts = new Map<ObservationCode, number>();
-  for (const r of rows) counts.set(r.observation, (counts.get(r.observation) ?? 0) + 1);
+): Array<{ code: IssueCode; count: number; share: number }> {
+  const counts = new Map<IssueCode, number>();
+  for (const r of rows)
+    for (const code of r.issues)
+      counts.set(code, (counts.get(code) ?? 0) + 1);
   const total = rows.length;
   return [...counts.entries()]
     .map(([code, count]) => ({
@@ -590,38 +601,7 @@ export function areaTrends(summaries: AuditSummary[]): AreaTrend[] {
   });
 }
 
-/**
- * Areas the director should act on: below target and not improving, worst
- * gap first. A big gap that is already improving ranks below a smaller gap
- * that has been stuck for several reviews.
- */
-export function focusAreas(trends: AreaTrend[], limit: number): AreaTrend[] {
-  return trends
-    .filter((t) => t.latest < TARGET_SCORE && t.direction !== "improving")
-    .sort(
-      (a, b) =>
-        b.gap! - a.gap! ||
-        b.reviews - a.reviews ||
-        a.title.localeCompare(b.title),
-    )
-    .slice(0, limit);
-}
 
-/**
- * What is going well and should be held: at or above target, or clearly
- * improving. Best first.
- */
-export function strengthAreas(trends: AreaTrend[], limit: number): AreaTrend[] {
-  return trends
-    .filter((t) => t.latest >= TARGET_SCORE || t.direction === "improving")
-    .sort(
-      (a, b) =>
-        b.latest - a.latest ||
-        (b.change ?? 0) - (a.change ?? 0) ||
-        a.title.localeCompare(b.title),
-    )
-    .slice(0, limit);
-}
 
 /* ------------------------------------------------------------------ */
 /* Trends over quarters                                                */
@@ -629,18 +609,25 @@ export function strengthAreas(trends: AreaTrend[], limit: number): AreaTrend[] {
 
 /** Observation counts per classification per quarter — "are documentation
  * gaps rising while implementation gaps fall?" */
-export function observationTrendByQuarter(
+export function issueTrendByQuarter(
   rows: ObservationRow[],
-): { quarters: string[]; series: Array<{ code: ObservationCode; values: number[] }> } {
+  limit = GAP_CATEGORIES.length,
+): { quarters: string[]; series: Array<{ code: IssueCode; values: number[] }> } {
   const quarters = [...new Set(rows.map((r) => r.quarter))].sort((a, b) =>
     a.localeCompare(b),
   );
-  const codes: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
+  // All twelve by default: the consumer draws small multiples, which have
+  // no series-count ceiling, and trimming to "the top N" would make the set
+  // shift under a filter — the thing that ruled out a single line chart.
+  const ranked = issueBreakdown(rows).slice(0, limit).map((b) => b.code);
+  const codes: IssueCode[] = GAP_CATEGORIES.filter((c) =>
+    ranked.includes(c.code),
+  ).map((c) => c.code);
   const series = codes.map((code) => ({
     code,
     values: quarters.map(
       (q) =>
-        rows.filter((r) => r.quarter === q && r.observation === code).length,
+        rows.filter((r) => r.quarter === q && r.issues.includes(code)).length,
     ),
   }));
   return { quarters, series };
@@ -705,13 +692,13 @@ export function domainBreakdown(rows: ObservationRow[]): DomainCount[] {
 
 export interface DomainGapCell {
   domain: DomainId;
-  observation: ObservationCode;
+  issue: IssueCode;
   count: number;
 }
 
 export interface DomainGapMatrix {
   domains: Array<{ id: DomainId; label: string; total: number }>;
-  observations: ObservationCode[];
+  issues: IssueCode[];
   cells: DomainGapCell[];
   max: number;
   total: number;
@@ -723,20 +710,29 @@ export interface DomainGapMatrix {
  * on site; "Health × documentation" is a paperwork problem. They need
  * completely different interventions.
  */
+/**
+ * SHEW pillar × issue category.
+ *
+ * A finding with three categories appears in three cells, so the cells sum
+ * to more than `total` — `total` and each `domains[].total` count FINDINGS,
+ * the cells count category tags. The card says so; do not "fix" the cells
+ * to sum to the total, because that would mean dropping a cause the auditor
+ * actually recorded.
+ */
 export function domainGapMatrix(rows: ObservationRow[]): DomainGapMatrix {
-  const observations: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
+  const issues: IssueCode[] = GAP_CATEGORIES.map((c) => c.code);
   const present = DOMAINS.filter((d) =>
     rows.some((r) => r.domain === d.id),
   );
   const cells: DomainGapCell[] = [];
   let max = 0;
   for (const d of present) {
-    for (const o of observations) {
+    for (const o of issues) {
       const count = rows.filter(
-        (r) => r.domain === d.id && r.observation === o,
+        (r) => r.domain === d.id && r.issues.includes(o),
       ).length;
       if (count > max) max = count;
-      cells.push({ domain: d.id, observation: o, count });
+      cells.push({ domain: d.id, issue: o, count });
     }
   }
   return {
@@ -745,7 +741,7 @@ export function domainGapMatrix(rows: ObservationRow[]): DomainGapMatrix {
       label: d.label,
       total: rows.filter((r) => r.domain === d.id).length,
     })),
-    observations,
+    issues,
     cells,
     max,
     total: rows.length,
@@ -1017,7 +1013,7 @@ export interface EvidenceRow {
   /** Percentage for a score series, null for an answer row. */
   score: number | null;
   answer: "partial" | "no" | null;
-  observation: ObservationCode | null;
+  issues: IssueCode[];
   weight: number | null;
 }
 
@@ -1047,7 +1043,7 @@ export function problemEvidence(
         text: problem.label,
         score: s.criticalRisks[problem.code as CriticalRiskId] ?? null,
         answer: null,
-        observation: null,
+        issues: [],
         weight: null,
       }))
       .filter((r) => r.score !== null)
@@ -1078,7 +1074,7 @@ export function problemEvidence(
         text: question.text,
         score: null,
         answer: response.answer,
-        observation: response.observation,
+        issues: response.issues,
         weight: question.weight,
       });
       if (rows.length >= limit) return rows;
@@ -1187,7 +1183,7 @@ export type FindingStatus =
 export interface FindingTimelineEntry {
   quarter: string;
   answer: EhssAnswer;
-  observation: ObservationCode | null;
+  issues: IssueCode[];
 }
 
 export interface FindingHistory {
@@ -1262,7 +1258,7 @@ export function findingHistories(
         timeline.push({
           quarter: review.quarter,
           answer: response.answer,
-          observation: response.observation,
+          issues: response.issues,
         });
       }
       if (timeline.length === 0) continue;
@@ -1566,7 +1562,8 @@ export interface ChecklistQuestionStat {
   partialCount: number;
   /** Weighted points lost across every review in scope. */
   lostPoints: number;
-  topObservation: ObservationCode | null;
+  /** The category most often cited for this question. */
+  topIssue: IssueCode | null;
 }
 
 /**
@@ -1600,7 +1597,7 @@ export function checklistQuestionStats(
       let noCount = 0;
       let partialCount = 0;
       let lost = 0;
-      const observations = new Map<ObservationCode, number>();
+      const categories = new Map<IssueCode, number>();
 
       for (const audit of inScope) {
         const response = audit.responses[question.code];
@@ -1611,15 +1608,12 @@ export function checklistQuestionStats(
         if (response.answer === "no") noCount++;
         else partialCount++;
         lost += question.weight * (1 - ANSWER_VALUE[response.answer]);
-        if (response.observation) {
-          observations.set(
-            response.observation,
-            (observations.get(response.observation) ?? 0) + 1,
-          );
+        for (const code of response.issues) {
+          categories.set(code, (categories.get(code) ?? 0) + 1);
         }
       }
 
-      const top = [...observations.entries()].sort((a, b) => b[1] - a[1])[0];
+      const top = [...categories.entries()].sort((a, b) => b[1] - a[1])[0];
 
       return {
         code: question.code,
@@ -1636,7 +1630,7 @@ export function checklistQuestionStats(
         noCount,
         partialCount,
         lostPoints: round(lost),
-        topObservation: top ? top[0] : null,
+        topIssue: top ? top[0] : null,
       };
     })
     .sort(
@@ -1653,7 +1647,7 @@ export interface QuestionByContractor {
   label: string;
   quarter: string;
   answer: EhssAnswer;
-  observation: ObservationCode | null;
+  issues: IssueCode[];
 }
 
 export function questionByContractor(
@@ -1679,7 +1673,7 @@ export function questionByContractor(
       label: `${summary.contractorName} (${summary.contractorCode})`,
       quarter: summary.quarter,
       answer: response.answer,
-      observation: response.observation,
+      issues: response.issues,
     });
   }
 

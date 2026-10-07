@@ -29,7 +29,7 @@ function build(answers: EhssAnswer[]): EhssAudit[] {
     auditDate: `2026-0${i + 1}-01`,
     inspectionNo: `I${i}`,
     status: "approved" as const,
-    responses: { [Q]: { answer, observation: answer === "full" ? null : "OB3" } },
+    responses: { [Q]: { answer, issues: answer === "full" ? [] : ["IMP"] } },
     disciplineScores: { hs: 70 },
     criticalRisks: {},
   }));

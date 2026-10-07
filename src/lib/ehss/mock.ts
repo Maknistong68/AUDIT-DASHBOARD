@@ -15,9 +15,9 @@ import type {
   EhssAudit,
   EhssContractor,
   EhssResponse,
-  ObservationCode,
   SubRegion,
 } from "./model";
+import { GAP_CATEGORIES, type IssueCode } from "./issues";
 import type { DisciplineId, DisciplineScores } from "./disciplines";
 import {
   CRITICAL_RISKS,
@@ -51,7 +51,7 @@ export const contractorLabel = (c: { name: string; code: string }) =>
   `${c.name} (${c.code})`;
 
 const FLAT = flattenChecklist(CHECKLIST);
-const GAP_OBSERVATIONS: ObservationCode[] = ["OB2", "OB3", "OB4", "OB5"];
+const GAP_CODES: IssueCode[] = GAP_CATEGORIES.map((c) => c.code);
 
 /** Deterministic pseudo-random in [0, 1) from a seed and index. */
 function det(seed: number, i: number): number {
@@ -59,8 +59,27 @@ function det(seed: number, i: number): number {
   return x - Math.floor(x);
 }
 
-function gapObservation(seed: number, i: number): ObservationCode {
-  return GAP_OBSERVATIONS[Math.floor(det(seed + 7, i) * 4)]!;
+/**
+ * One to three categories per finding, drawn from the twelve.
+ *
+ * Real findings usually have more than one cause, so a demo where every
+ * finding carries exactly one would make the multi-select look decorative
+ * and understate every category's count. Stable per contractor-and-question
+ * so the categories do not churn between quarters, which would break the
+ * recurrence view the same way unsticky answers did.
+ */
+function gapIssues(seed: number, i: number): IssueCode[] {
+  const first = GAP_CODES[Math.floor(det(seed + 7, i) * GAP_CODES.length)]!;
+  const extra = det(seed + 23, i);
+  const count = extra < 0.42 ? 1 : extra < 0.85 ? 2 : 3;
+  const out = [first];
+  for (let k = 1; k < count; k++) {
+    const pick =
+      GAP_CODES[Math.floor(det(seed + 31 * k, i) * GAP_CODES.length)]!;
+    if (!out.includes(pick)) out.push(pick);
+  }
+  // Register order reads better than draw order in a table.
+  return GAP_CODES.filter((c) => out.includes(c));
 }
 
 /**
@@ -86,7 +105,7 @@ function genResponses(
     // Whether a question applies is a property of the contractor's scope,
     // so it does not change from quarter to quarter.
     if (det(base + 3, i) < 0.06) {
-      responses[question.code] = { answer: "na", observation: null };
+      responses[question.code] = { answer: "na", issues: [] };
       return;
     }
     const r = 0.8 * det(base, i) + 0.2 * det(base + qi * 97, i);
@@ -96,12 +115,12 @@ function genResponses(
     else answer = "no";
     responses[question.code] = {
       answer,
-      observation:
+      issues:
         answer === "full"
           ? det(base + 11, i) < 0.12
-            ? "OB1"
-            : null
-          : gapObservation(base, i),
+            ? ["GOOD"]
+            : []
+          : gapIssues(base, i),
     };
   });
   return responses;
@@ -114,8 +133,8 @@ function workbookResponses(): Record<string, EhssResponse> {
     const answer = WORKBOOK_FIXTURE_ANSWERS[question.code]!;
     responses[question.code] = {
       answer,
-      observation:
-        answer === "partial" || answer === "no" ? gapObservation(42, i) : null,
+      issues:
+        answer === "partial" || answer === "no" ? gapIssues(42, i) : [],
     };
   });
   return responses;

@@ -9,7 +9,8 @@ import { ScoreMeter } from "@/components/ScoreMeter";
 import { RatingBadge, AuditStatusBadge } from "@/components/Badges";
 import { TrendChart } from "@/components/charts/TrendChart";
 import { formatDate, formatScore } from "@/lib/format";
-import { OBSERVATION_BY_CODE, quarterLabel } from "@/lib/ehss/model";
+import { quarterLabel } from "@/lib/ehss/model";
+import { ISSUE_BY_CODE } from "@/lib/ehss/issues";
 import {
   TIMEFRAMES,
   collectObservations,
@@ -178,8 +179,8 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
                     <td className="num">{i.occurrences}</td>
                     <td className="num">{i.lostPoints}</td>
                     <td>
-                      {i.topObservation
-                        ? `${i.topObservation} — ${OBSERVATION_BY_CODE[i.topObservation].label}`
+                      {i.topIssue
+                        ? `${i.topIssue} — ${ISSUE_BY_CODE[i.topIssue].label}`
                         : "—"}
                     </td>
                   </tr>
