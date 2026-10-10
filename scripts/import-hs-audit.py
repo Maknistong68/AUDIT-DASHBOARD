@@ -12,11 +12,14 @@ sub-sections, section C with its two, and a stated total.
 Three rules this importer follows, each the result of checking the source
 rather than trusting it:
 
-1. IT READS POINTS, NOT PERCENTAGES. The sheet's percentage column is
-   computed by a formula that divides by a stale denominator in C1, C2 and
-   sometimes B6 — C2 is wrong in every audit checked, by up to 16 points.
-   The scored/possible columns are consistent everywhere, so the percentage
-   is recomputed here with the workbook's own documented rule.
+1. IT READS POINTS, NOT PERCENTAGES. The workbook holds no formulas at all —
+   every cell is a hardcoded number — and its percentage cells have drifted
+   from the points beside them in 32 places, C2 in every single audit. The
+   points columns are sound (all 40 section sums add up exactly), so the
+   percentage is recomputed here with the workbook's own documented rule:
+   points / applicable weight. See docs/IMPORT-2025Q4-2026Q1.md, and
+   scripts/verify-against-sheet.py, which proves this importer read the right
+   cells by reading them a different way.
 
 2. IT NEVER READS ROW 3. That row holds auditor names and mobile numbers.
    Importing them would put personal data in the app, which would

@@ -127,6 +127,24 @@ Two invariants shape everything:
     never flagged as an error — it survives as one muted line of provenance
     on the audit page, for whoever is holding last quarter's report and
     wonders why the number moved. Do not reintroduce it as a comparison.
+  - **The dataset is verified against the workbook itself**, not just against
+    the import record: `scripts/verify-against-sheet.py <workbook>
+    src/lib/ehss/recorded.ts` re-reads the xlsx by searching for the sheet's
+    own labels ("Project:", "Total Possible Points", each area's printed
+    title) where the importer uses fixed row offsets. Two different ways of
+    reading one file, required to agree, so a shifted row in next quarter's
+    template fails loudly instead of importing the wrong cells. Run it on
+    every new quarter. Last run (2026-10-10): PASS — 279 area cells and 76
+    metadata fields identical, the one 21.5/21 score capped as designed.
+    It also fails on an undeclared duplicate block, which is how the PPCO
+    row pasted under SIBS was caught.
+  - **The workbook contains no formulas** — every cell is a hardcoded number,
+    so its percentages, section rows and totals do not recalculate and have
+    drifted from its points. Section B and section C do not even use the same
+    roll-up rule, and no rule explains the stated total in 11 of 20 blocks.
+    Do not write code that reconciles to those figures; there is nothing
+    consistent to reconcile to. The points are sound (all 40 section sums
+    add up exactly) and are what the app scores.
   - **The calculation is cross-checked, not trusted.** `calculation.test.ts`
     re-derives every audit's areas, sections and total straight from the
     import record in `data/`, with the arithmetic written out longhand in the
