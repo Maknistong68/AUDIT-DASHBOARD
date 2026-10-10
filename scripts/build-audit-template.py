@@ -149,8 +149,16 @@ def build_block(ws):
         # reads "N/A" and drops out of the averages above, rather than
         # scoring zero — N/A questions are excluded from the denominator,
         # which is the workbook's own rule and where C2 went wrong.
+        #
+        # ROUND(...,4) is a fraction to 4 places, i.e. a percentage to 2 —
+        # exactly what scoring.ts does at each level. Without it the sheet
+        # averages full-precision ratios while the app averages rounded ones,
+        # and the two disagree by a hundredth of a point: section C of
+        # ABYATONA (134) Q4 2025 comes to 53.02 unrounded against the
+        # dashboard's 53.03. Small, but a reconciliation nobody should ever
+        # have to explain.
         put(row, 9,
-            f'=IF(AND(N(G{row})>0,H{row}<>""),H{row}/G{row},"N/A")',
+            f'=IF(AND(N(G{row})>0,H{row}<>""),ROUND(H{row}/G{row},4),"N/A")',
             font=CALC, fmt="0.0%", align="center")
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
         ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=6)
@@ -169,8 +177,8 @@ def build_block(ws):
             fmt="0.#", align="center")
         # AVERAGE skips the text "N/A", so an area that does not apply is
         # excluded instead of dragging the section down.
-        put(row, 9, f'=IFERROR(AVERAGE(I{first}:I{last}),"N/A")', font=bold,
-            fill=SECT_FILL, fmt="0.0%", align="center")
+        put(row, 9, f'=IFERROR(ROUND(AVERAGE(I{first}:I{last}),4),"N/A")',
+            font=bold, fill=SECT_FILL, fmt="0.0%", align="center")
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
         ws.merge_cells(start_row=row, start_column=3, end_row=row, end_column=6)
 
@@ -180,7 +188,7 @@ def build_block(ws):
         fill=TOTAL_FILL)
     ws.merge_cells(f"A{TOTAL_ROW}:F{TOTAL_ROW}")
     put(TOTAL_ROW, 7,
-        f'=IFERROR(AVERAGE(I8,I{SECTION_B_ROW},I{SECTION_C_ROW}),"N/A")',
+        f'=IFERROR(ROUND(AVERAGE(I8,I{SECTION_B_ROW},I{SECTION_C_ROW}),4),"N/A")',
         font=Font(name=FONT, size=11, bold=True), fill=TOTAL_FILL,
         fmt="0.0%", align="center")
     put(TOTAL_ROW, 8, "Rating", font=bold, fill=TOTAL_FILL, align="center")

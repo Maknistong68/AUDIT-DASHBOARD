@@ -147,7 +147,18 @@ Two invariants shape everything:
     `scoring.ts` and `bands.ts` — so a quarter entered through it agrees with
     the dashboard by construction. Change the roll-up in one place and you
     must change it in the other; `scripts/build-audit-template.py` names the
-    rule in a comment beside each formula.
+    rule in a comment beside each formula, and
+    `scripts/verify-template-formulas.py` is the check that they have not
+    drifted — it reads the formulas back out of the .xlsx, evaluates them
+    against a real audit's points and requires the figures to EQUAL the
+    dashboard's, not merely come close. A tolerance would have accepted the
+    drift it found: every level has to carry `ROUND(...,4)`, because
+    `scoring.ts` rounds each area to two decimals before averaging, and
+    averaging full-precision ratios instead put section C of ABYATONA (134)
+    Q4 2025 at 53.02 against the app's 53.03. It cannot prove Excel PARSES
+    the formulas — only opening the file or the xlsx skill's `recalc.py`
+    does, and LibreOffice could not finish a recalculation in the cloud
+    sandbox — so every function used is kept to the pre-2007 set.
     **Never re-save the populated source workbooks with openpyxl**: they hold
     28 embedded site photographs that it discards silently (10.6 MB -> 0.4 MB
     in a round-trip test, every image gone).
