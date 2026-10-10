@@ -138,6 +138,19 @@ Two invariants shape everything:
     metadata fields identical, the one 21.5/21 score capped as designed.
     It also fails on an undeclared duplicate block, which is how the PPCO
     row pasted under SIBS was caught.
+  - **The entry template is `templates/HS-AUDIT-TEMPLATE.xlsx`**, generated
+    by `scripts/build-audit-template.py`, and it is the fix for the source
+    sheets having no formulas. It keeps the exact geometry the importer reads
+    (project in C1, date in G1, row 8 section A, rows 10-21 B1-B12, rows
+    23-24 C1-C2, points in G and H, total in G25, blocks ten columns apart),
+    and computes area, section, total and rating with the same rules as
+    `scoring.ts` and `bands.ts` — so a quarter entered through it agrees with
+    the dashboard by construction. Change the roll-up in one place and you
+    must change it in the other; `scripts/build-audit-template.py` names the
+    rule in a comment beside each formula.
+    **Never re-save the populated source workbooks with openpyxl**: they hold
+    28 embedded site photographs that it discards silently (10.6 MB -> 0.4 MB
+    in a round-trip test, every image gone).
   - **The workbook contains no formulas** — every cell is a hardcoded number,
     so its percentages, section rows and totals do not recalculate and have
     drifted from its points. Section B and section C do not even use the same
