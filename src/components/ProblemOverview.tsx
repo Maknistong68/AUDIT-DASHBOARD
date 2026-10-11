@@ -30,6 +30,7 @@ export function ProblemOverview({
   causes,
   questions,
   onOpenEvidence,
+  hasEvidence,
 }: {
   problem: ProblemRow;
   peer: ProblemPeer | null;
@@ -38,6 +39,9 @@ export function ProblemOverview({
   /** Controls inside the area; empty for a hazard or a single question. */
   questions: ChecklistQuestionStat[];
   onOpenEvidence: () => void;
+  /** Whether there is anything behind the next level. A button that opens an
+   * empty panel is worse than no button: it reads as a half-built screen. */
+  hasEvidence: boolean;
 }) {
   const causeMax = Math.max(1, ...causes.map((c) => c.count));
   const hasSeries = problem.series.length > 0;
@@ -185,10 +189,12 @@ export function ProblemOverview({
           )}
         </div>
 
-        <button type="button" className="pv-more" onClick={onOpenEvidence}>
-          See what the auditors recorded
-          <span aria-hidden>›</span>
-        </button>
+        {hasEvidence && (
+          <button type="button" className="pv-more" onClick={onOpenEvidence}>
+            See what the auditors recorded
+            <span aria-hidden>›</span>
+          </button>
+        )}
       </section>
     </div>
   );

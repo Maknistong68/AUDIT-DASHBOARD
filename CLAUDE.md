@@ -271,17 +271,31 @@ Two invariants shape everything:
   filter labels SHORT — a segmented control cannot shrink below its labels,
   and the long ones pushed a 320px phone sideways; it now scrolls rather
   than widens, but short labels are the real fix.
-- **An empty question-level view must say WHY, not "nothing in scope".**
-  Every audit on record was imported as area points, so the gap register, the
-  SHEW heat-map, the issue categories, per-question recurrence and the
-  question rankings are all empty, and will be until audits are entered
-  through the app. A bare zero there is not neutral — "0 gap observations"
-  and "0 came back" read as a clean audit on contractors averaging 64.9%.
-  `RecordedOnlyNote` is the shared explanation; a count that cannot be
-  computed shows "—", not 0. `AuditSummary.fromAreaScores` is how a view
-  knows. The same rule killed the "0/0" control rows at drill-down level 2:
-  where no contractor is measured on a question, the list is empty and the
-  quarter bars take the main column, per the level-2 rule above.
+- **A view with no data behind it is ABSENT, not explained.** This screen is
+  shown to directors. An empty card under a heading reads as an unfinished
+  product, and a note explaining why it is empty reads as an excuse — the
+  owner's words, 2026-10-11, on a paragraph that used to sit at drill-down
+  level 3. There was a `RecordedOnlyNote` component for exactly that; it is
+  deleted, and it should not come back.
+  Every audit on record holds area points and no answers, so the gap
+  register, the SHEW heat-map, the issue categories, per-question recurrence
+  and the question rankings have nothing to show. Each of those now renders
+  only with its own data, and `/findings` — where every card is
+  question-level — carries one line pointing at the checklist tab instead of
+  a page of empty headings and filters over nothing.
+  Three rules follow, and they are all conditional rendering, never deletion,
+  so everything returns by itself once reviews carry answers:
+  1. **No dead ends.** Level 2 offers "See what the auditors recorded" only
+     when `evidence.length > 0`. A button opening an empty panel is worse
+     than no button.
+  2. **No misleading zeros.** "0 gap observations" and "0 came back" read as
+     a clean audit on contractors averaging 64.9%, so the tile and the
+     movement strip are absent rather than zeroed. A dash is better than a
+     zero but still invites the question the card cannot answer.
+  3. **No unmeasurable rows.** Where no contractor is measured on a question,
+     the level-2 control list is empty and the quarter bars take the main
+     column, per the level-2 rule above.
+  `AuditSummary.fromAreaScores` is how a view knows.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
   `/findings` is observation-centric (the gap register, SHEW heat-map,

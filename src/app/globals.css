@@ -1686,38 +1686,6 @@ table.data tr.is-out td {
   opacity: 0.55;
 }
 
-/* The movement strip's stand-in, in the same slot and at the same height, so
-   the problem list below does not shift when a contractor has no movement. */
-.dd-move-none {
-  margin: 0 0 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-2);
-  background: var(--mat-sunken);
-  color: var(--ink-2);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-/* Why a question-level view is empty: an explanation, not an error. Reads as
-   a quiet note rather than a warning — nothing is wrong, the data for that
-   view simply has not been collected in this form yet. */
-.recorded-note {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--r-2);
-  background: var(--mat-sunken);
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.recorded-note strong {
-  color: var(--ink-1);
-}
-
 /* Recorded area scores: the bullet bar and its number on one line, the
    number right-aligned on a fixed column so the bars all start together. */
 .area-score {

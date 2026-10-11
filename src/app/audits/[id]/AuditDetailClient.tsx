@@ -208,9 +208,7 @@ function CriticalRiskPanel({
           Critical Risk Control — focus audit
         </h3>
         <p className="sub" style={{ margin: "4px 0 0" }}>
-          Not run for this review. CRC is a separate focus audit over the{" "}
-          {CRITICAL_RISKS.length} hazardous-work items, each scored only where
-          the contractor&apos;s scope involves it.
+          Not run for this review.
         </p>
       </div>
     );
@@ -347,10 +345,7 @@ function RecordedAreasPanel({
             Recorded area scores
           </h3>
           <p className="sub" style={{ margin: "2px 0 0" }}>
-            Imported from the quarter&apos;s audit sheet, which recorded points
-            per area and a narrative per question — so there are no per-question
-            answers, and nothing question-level (findings, causes, recurrence)
-            exists for this review.
+            Points scored against the points that applied, per checklist area.
           </p>
         </div>
         <div style={{ textAlign: "right" }}>

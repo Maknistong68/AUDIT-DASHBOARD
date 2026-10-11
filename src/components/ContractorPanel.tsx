@@ -45,28 +45,22 @@ function Direction({ direction }: { direction: ProblemRow["direction"] }) {
  * have to scroll is a list nobody finishes.
  */
 /**
- * The movement strip, or the reason there isn't one.
+ * The movement strip — closed, improving, recurring, came back.
  *
- * Recurrence is tracked answer by answer, so a contractor whose reviews were
- * all imported as area scores has no movement to show. Four zeros would read
- * as "nothing recurring and nothing came back" — good news — on a contractor
- * nobody has yet tracked question by question.
+ * Recurrence is tracked answer by answer, so a contractor whose reviews hold
+ * only area scores has no movement, and the strip is absent rather than
+ * showing four zeros. Zeros here would read as "nothing recurring, nothing
+ * came back" — good news — about a contractor nobody has tracked that way.
  */
 function MovementStrip({
   movement,
-  recordedOnly,
+  tracked,
 }: {
   movement: FindingMovement;
-  recordedOnly: boolean;
+  /** False when no review in the window carries per-question answers. */
+  tracked: boolean;
 }) {
-  if (recordedOnly) {
-    return (
-      <p className="dd-move-none">
-        Findings are tracked answer by answer, and these reviews were imported
-        as area scores — so there is no movement to show yet.
-      </p>
-    );
-  }
+  if (!tracked) return null;
   return (
     <ul className="dd-move" aria-label="Movement since the last review">
       <li className="is-good">
@@ -246,7 +240,7 @@ export function ContractorPanel({
       <section className="dd-main">
         <MovementStrip
           movement={movement}
-          recordedOnly={stats.audits.every((a) => a.fromAreaScores)}
+          tracked={stats.audits.some((a) => !a.fromAreaScores)}
         />
 
         <h3 className="dd-h">

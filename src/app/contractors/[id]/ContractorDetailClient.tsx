@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
 import { StatTile } from "@/components/StatTile";
-import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import { ScoreMeter } from "@/components/ScoreMeter";
 import { RatingBadge, AuditStatusBadge } from "@/components/Badges";
 import { TrendChart } from "@/components/charts/TrendChart";
@@ -109,14 +108,17 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
           }
           hint="across the window"
         />
-        {/* A zero here would read as "no problems found" on a contractor
-            scoring in the sixties. An imported review has no per-question
-            answers at all, so the honest tile is a dash. */}
-        <StatTile
-          label="Gap observations"
-          value={recordedOnly ? "—" : String(observations.length)}
-          hint={recordedOnly ? "not recorded per question" : "in the window"}
-        />
+        {/* Only shown once reviews carry per-question answers. A zero would
+            read as "no problems found" on a contractor scoring in the
+            sixties, and a dash invites the question this card cannot
+            answer. */}
+        {!recordedOnly && (
+          <StatTile
+            label="Gap observations"
+            value={String(observations.length)}
+            hint="in the window"
+          />
+        )}
       </div>
 
       <div className="grid-2">
@@ -156,17 +158,16 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
         </section>
       </div>
 
+      {/* The card appears with its data. A heading over an empty box reads
+          as an unfinished screen to anyone being shown this. */}
+      {issues.length > 0 && (
       <section className="card">
         <h2>Top issues</h2>
         <p className="sub">
           Questions costing the most score in the window, by weighted points
           lost
         </p>
-        {recordedOnly ? (
-          <RecordedOnlyNote what="This contractor's weakest questions fill in from the first review entered through the app; its weakest checklist AREAS are on the dashboard now." />
-        ) : issues.length === 0 ? (
-          <div className="chart-empty">No Partial or No answers in scope.</div>
-        ) : (
+        {(
           <div className="table-scroll">
             <table className="data">
               <thead>
@@ -201,6 +202,7 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
           </div>
         )}
       </section>
+      )}
 
       <section className="card">
         <h2>Review history</h2>

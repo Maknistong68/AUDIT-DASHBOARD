@@ -74,11 +74,6 @@ export function DashboardClient() {
 
   const selected = stats.find((s) => s.contractorId === selectedId) ?? null;
 
-  /** Nothing in scope has per-question answers, so the bottom of the
-   * drill-down says why rather than reading as "nobody audited this". */
-  const recordedOnly =
-    summaries.length > 0 && summaries.every((s) => s.fromAreaScores);
-
   /** The selected contractor's reviews and their source audits. */
   const selectedWindow = useMemo(() => {
     if (!selected) return { summaries: [], audits: [] };
@@ -318,12 +313,7 @@ export function DashboardClient() {
         >
           {problem ? (
             showEvidence ? (
-              <ProblemPanel
-                problem={problem}
-                evidence={evidence}
-                peer={peer}
-                recordedOnly={recordedOnly}
-              />
+              <ProblemPanel problem={problem} evidence={evidence} peer={peer} />
             ) : (
               <ProblemOverview
                 problem={problem}
@@ -331,6 +321,7 @@ export function DashboardClient() {
                 causes={causes}
                 questions={areaQuestions}
                 onOpenEvidence={() => setShowEvidence(true)}
+                hasEvidence={evidence.length > 0}
               />
             )
           ) : (

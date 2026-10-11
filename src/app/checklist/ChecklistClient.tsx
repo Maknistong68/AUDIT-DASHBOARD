@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
-import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
@@ -256,6 +255,9 @@ export function ChecklistClient() {
         )}
       </section>
 
+      {/* Ranked by how many contractors fail each question, so it needs
+          per-question answers. Hidden until there are some. */}
+      {!areaScoresOnly && (
       <section className="card">
         <h2>Failed by the most contractors</h2>
         <p className="sub">
@@ -264,9 +266,7 @@ export function ChecklistClient() {
           problem. The questions at the top are the ones worth fixing
           centrally rather than contractor by contractor.
         </p>
-        {areaScoresOnly ? (
-          <RecordedOnlyNote what="This ranking needs answers question by question, so it fills in from the first review entered through the app." />
-        ) : systemic.length === 0 ? (
+        {systemic.length === 0 ? (
           <div className="chart-empty">No finalized reviews in scope.</div>
         ) : (
           <div className="table-scroll">
@@ -307,6 +307,7 @@ export function ChecklistClient() {
           </div>
         )}
       </section>
+      )}
 
       {(area || question) && (
         <FloatingPanel

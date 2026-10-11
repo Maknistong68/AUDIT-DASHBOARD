@@ -9,7 +9,6 @@ import {
 } from "@/lib/ehss/issues";
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
-import { RecordedOnlyNote } from "@/components/RecordedOnlyNote";
 import {
   closedFindings,
   collectObservations,
@@ -108,22 +107,23 @@ export function FindingsClient() {
     () => findingHistories(scopedSummaries, scopedAudits),
     [scopedSummaries, scopedAudits],
   );
-  /** True when nothing in scope has per-question answers, so every
-   * question-level card below is empty for a reason worth stating. */
-  const areaScoresOnly =
-    scopedSummaries.length > 0 &&
-    scopedSummaries.every((s) => s.fromAreaScores);
-
   const stuck = useMemo(() => recurringFindings(histories, 12), [histories]);
   const closed = useMemo(() => closedFindings(histories, 12), [histories]);
   const tracked = track === "stuck" ? stuck : closed;
 
+  /** Each card renders only with its own data. A page of empty headings
+   * reads as an unfinished product to anyone being shown it, and every one
+   * of these fills in by itself once reviews carry per-question answers. */
+  const hasFindings = rows.length > 0;
+  const hasHistories = stuck.length > 0 || closed.length > 0;
+  const hasCrc = crcStats.length > 0;
+  const hasAnything = hasFindings || hasHistories || hasCrc;
+
   return (
     <div className="stack">
       <AnalysisTabs />
-      {areaScoresOnly && (
-        <RecordedOnlyNote what="The gap register, the pillar heat-map, the cause trends and the recurrence tracking below fill in from the first review entered through the app." />
-      )}
+      {/* Filters over nothing are furniture. They come back with the data. */}
+      {hasAnything && (
       <div className="filter-row">
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Sub-region</span>
@@ -182,7 +182,9 @@ export function FindingsClient() {
           </select>
         </label>
       </div>
+      )}
 
+      {hasFindings && (
       <section className="card">
         <h2>Where the gaps are — SHEW pillar against issue category</h2>
         <p className="sub">
@@ -191,7 +193,9 @@ export function FindingsClient() {
         </p>
         <DomainGapHeatmap matrix={gapMatrix} />
       </section>
+      )}
 
+      {hasFindings && (
       <section className="card">
         <h2>What is driving the gaps</h2>
         <p className="sub">
@@ -203,7 +207,9 @@ export function FindingsClient() {
           series={observationTrend.series}
         />
       </section>
+      )}
 
+      {hasHistories && (
       <section className="card">
         <div className="track-head">
           <div>
@@ -288,6 +294,9 @@ export function FindingsClient() {
         )}
       </section>
 
+      )}
+
+      {hasCrc && (
       <section className="card">
         <h2>Critical Risk Control — by hazardous work</h2>
         <p className="sub">
@@ -306,19 +315,11 @@ export function FindingsClient() {
             </>
           )}
         </p>
-        {crcStats.length === 0 ? (
-          <div className="recorded-note">
-            <strong>No Critical Risk Control audit on record.</strong> The
-            imported reviews cover Health &amp; Safety only. CRC is a separate
-            focus audit over the {CRITICAL_RISKS.length} hazardous-work items,
-            scored per contractor against the hazards its scope involves — it
-            fills in once those audits are entered.
-          </div>
-        ) : (
-          <CriticalRiskBars stats={crcStats} />
-        )}
+        <CriticalRiskBars stats={crcStats} />
       </section>
+      )}
 
+      {hasFindings && (
       <section className="card">
         <h2>Gap observations</h2>
         <p className="sub">
@@ -376,6 +377,20 @@ export function FindingsClient() {
           </div>
         )}
       </section>
+      )}
+
+      {/* Nothing on this page is question-level except the CRC bars, so with
+          no answers on record the whole page is empty. The filters alone are
+          worse than a plain line saying where the analysis actually is. */}
+      {!hasAnything && (
+        <section className="card">
+          <p className="sub" style={{ margin: 0 }}>
+            Findings are recorded question by question. The reviews on record
+            carry area scores, so the analysis for them is on the{" "}
+            <Link href="/checklist">H&amp;S checklist</Link> tab.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
