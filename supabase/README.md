@@ -88,9 +88,28 @@ the source workbook. Implementing it again in SQL would create a second
 version to keep in step — exactly the drift that put the entry spreadsheet
 0.01 out from the app. The database stores facts; the app scores them.
 
-Verified on Postgres 16: all five files run clean, and the 19 seeded audits
-recompute to the same totals the dashboard shows, to the hundredth
-(ABYATONA 134 Q4 2025 = 58.34, RPCO Q1 2026 = 45.76).
+## Verified against the spreadsheet, not assumed
+
+Last run 2026-10-14 on Postgres 16, against `HS_AUDIT_FINDINGS.xlsx`:
+
+- all five files load clean
+- **279 area cells and 76 metadata fields in the database are the
+  workbook's own numbers**, checked one by one by
+  `scripts/verify-sql-against-sheet.py`
+- the 19 seeded audits recompute, in SQL, to the same totals the dashboard
+  shows — all 19 identical to the hundredth (ABYATONA 134 Q4 2025 = 58.34,
+  RPCO Q1 2026 = 45.76, ECH Q1 2026 = 74.44)
+
+Re-run it after any change to the seed:
+
+```bash
+python3 scripts/verify-sql-against-sheet.py <workbook.xlsx>
+```
+
+The seed is generated from the app's data, so this ought to be implied — but
+a generator can drop a row, an `on conflict do nothing` can skip one and a
+constraint can reject one, and nothing else would notice. This reads what is
+actually in the tables.
 
 ## Regenerating
 
