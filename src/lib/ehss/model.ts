@@ -145,9 +145,10 @@ export interface EhssAudit {
    * Area points from an audit recorded before this app existed, keyed by
    * checklist area ("A", "B6", "C2"). Historical audits were kept as a
    * narrative per question with no machine-readable answer, so the area
-   * points are the finest real grain available; when they are present they
-   * score the audit INSTEAD of `responses`, through the same aggregation.
-   * An audit entered through the app has answers and leaves this unset.
+   * points are the finest real grain available. An area scores from these
+   * until every one of its questions has an answer, and from the answers
+   * after that — per area, so re-auditing one area never discards the rest.
+   * An audit entered through the app leaves this unset.
    */
   areaScores?: RecordedAreaScores;
   /**

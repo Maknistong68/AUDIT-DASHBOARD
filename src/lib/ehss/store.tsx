@@ -31,6 +31,7 @@ import type {
   EhssAuditStatus,
   EhssContractor,
   EhssResponse,
+  RecordedAreaScores,
   SubRegion,
 } from "./model";
 import type { DisciplineScores } from "./disciplines";
@@ -137,6 +138,16 @@ interface StoreValue {
     auditId: string,
     responses: Record<string, EhssResponse>,
   ) => void;
+  /** The 15 checklist areas as raw points. Passing an area with
+   * `possible <= 0` drops it, which is how an area is un-recorded. */
+  saveAreaScores: (auditId: string, areas: RecordedAreaScores) => void;
+  /** Date, inspection number and quarter. Contractor is deliberately not
+   * editable: an audit moved to another contractor is a different audit,
+   * and would silently rewrite two contractors' trends. */
+  saveAuditMeta: (
+    auditId: string,
+    meta: Pick<EhssAudit, "auditDate" | "inspectionNo" | "quarter">,
+  ) => void;
   saveDisciplineScores: (auditId: string, scores: DisciplineScores) => void;
   saveCriticalRisks: (auditId: string, risks: CriticalRiskScores) => void;
   setAuditStatus: (auditId: string, status: EhssAuditStatus) => void;
@@ -214,6 +225,39 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     [update, currentAudit],
   );
 
+  const saveAreaScores = useCallback(
+    (auditId: string, areas: RecordedAreaScores) =>
+      update((prev) => {
+        const audit = currentAudit(auditId, prev);
+        if (!audit) return prev;
+        // An audit with no area left on record stops being an imported one:
+        // dropping the key rather than keeping {} is what makes the
+        // "recorded points" source genuinely gone instead of empty.
+        const kept = Object.keys(areas).length > 0 ? areas : undefined;
+        return {
+          ...prev,
+          audits: { ...prev.audits, [auditId]: { ...audit, areaScores: kept } },
+        };
+      }),
+    [update, currentAudit],
+  );
+
+  const saveAuditMeta = useCallback(
+    (
+      auditId: string,
+      meta: Pick<EhssAudit, "auditDate" | "inspectionNo" | "quarter">,
+    ) =>
+      update((prev) => {
+        const audit = currentAudit(auditId, prev);
+        if (!audit) return prev;
+        return {
+          ...prev,
+          audits: { ...prev.audits, [auditId]: { ...audit, ...meta } },
+        };
+      }),
+    [update, currentAudit],
+  );
+
   const saveDisciplineScores = useCallback(
     (auditId: string, scores: DisciplineScores) =>
       update((prev) => {
@@ -284,6 +328,8 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       setContractorActive,
       createAudit,
       saveResponses,
+      saveAreaScores,
+      saveAuditMeta,
       saveDisciplineScores,
       saveCriticalRisks,
       setAuditStatus,
@@ -297,6 +343,8 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       setContractorActive,
       createAudit,
       saveResponses,
+      saveAreaScores,
+      saveAuditMeta,
       saveDisciplineScores,
       saveCriticalRisks,
       setAuditStatus,

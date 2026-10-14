@@ -3269,6 +3269,92 @@ table.matrix td.matrix-cell {
   color: var(--ink-1);
 }
 
+/* An area carried by the points a sheet recorded, rather than by answers:
+   scored, but at the coarser grain. Distinct from "done" because the two
+   are not the same claim. */
+.entry-jump button.is-points i {
+  background: var(--accent);
+}
+
+/* Which of the two sources is scoring this area. It sits in the area
+   header because the score beside it changes hands silently otherwise. */
+.area-source {
+  margin-right: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: none;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.area-source.is-points {
+  color: var(--accent-strong);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.area-source.is-answers {
+  color: var(--ink-2);
+  border-color: color-mix(in srgb, var(--status-good) 40%, transparent);
+}
+
+/* The area's raw points, as the sheet records them: scored against the
+   points that applied. Two fields and nothing else — the percentage is
+   derived and shown in the header above. */
+.area-points {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 16px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border-radius: var(--r-3);
+  background: var(--mat-sunken);
+}
+
+.area-points .field {
+  margin-bottom: 0;
+}
+
+.area-points .field span {
+  font-size: 11px;
+}
+
+.area-points .field em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 400;
+}
+
+.area-points input {
+  width: 110px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Taking an answer back off a question. Set apart from the four answers:
+   it is not a fifth answer, it is the absence of one. */
+.q-clear {
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 550;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 7px 10px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+.q-clear:hover {
+  color: var(--ink-1);
+  background: var(--mat-hover);
+}
+
 /* The jump target must clear both sticky bars. */
 .q-area {
   scroll-margin-top: 170px;

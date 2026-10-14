@@ -6,8 +6,7 @@
 import { CHECKLIST } from "./checklist";
 import {
   flattenChecklist,
-  scoreAudit,
-  scoreRecordedAreas,
+  scoreAreasAndAnswers,
   type AuditScore,
 } from "./scoring";
 import { DOMAINS, type DomainId } from "./domains";
@@ -103,21 +102,26 @@ const round = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /**
  * The Health & Safety checklist score for an audit, however it was recorded:
- * from its answers, or from the area points of an audit imported from a
- * sheet. One definition, so a page cannot read an imported audit as unscored.
+ * from its answers, from the area points of an audit imported from a sheet,
+ * or from both at once. One definition, so a page cannot read an imported
+ * audit as unscored.
  *
- * **Answers win.** Area points are a coarse stand-in for an audit nobody
- * recorded question by question; the moment someone answers the checklist,
- * that is the audit and the imported totals are history. Without this an
- * auditor could fill in all 81 questions on an imported review and watch the
- * score refuse to move, which is the worst kind of bug in a scoring tool —
- * silent, and wrong in the direction of the old number.
+ * **Answers win, area by area.** Area points are a coarse stand-in for an
+ * audit nobody recorded question by question; the moment someone answers an
+ * area's questions, that is the audit and the imported figure for that area
+ * is history. The two failure modes this avoids are both silent: a score
+ * that refuses to move while the auditor fills the checklist in, and — the
+ * reason this is per area rather than per audit — one answer wiping fourteen
+ * areas of real recorded points out of the total. `scoreAreasAndAnswers`
+ * carries the rule and the reasoning; both single-source cases fall out of
+ * it unchanged.
  */
 export function scoreChecklist(audit: EhssAudit): AuditScore {
-  const answered = Object.keys(audit.responses).length > 0;
-  return audit.areaScores && !answered
-    ? scoreRecordedAreas(CHECKLIST, audit.areaScores)
-    : scoreAudit(CHECKLIST, audit.responses);
+  return scoreAreasAndAnswers(
+    CHECKLIST,
+    audit.areaScores ?? {},
+    audit.responses,
+  );
 }
 
 export function summarizeAudit(

@@ -70,12 +70,26 @@ Two invariants shape everything:
    transcription); submitting a review writes the checklist total into it.
 
    **The H&S precedence chain, in order:** a recorded `disciplineScores.hs`
-   → the 81 checklist **answers**, if the review has any → the imported
-   **area points**. Answers beat area points because the points are a coarse
-   stand-in for an audit nobody recorded question by question: once someone
-   answers the checklist, that is the audit, and a score that refused to move
-   would be silently wrong toward the old number. `scoreChecklist()` is where
-   this lives and the only place it should.
+   → the checklist **answers** → the imported **area points**. Answers beat
+   area points because the points are a coarse stand-in for an audit nobody
+   recorded question by question: once someone answers the checklist, that is
+   the audit, and a score that refused to move would be silently wrong toward
+   the old number.
+
+   **That second step is decided PER AREA, not per audit.** An area scores
+   from its questions once all of them are answered, and from its recorded
+   points until then; an area with neither drops out of the mean. It was per
+   audit, and that was destructive in both directions — one answer on an
+   imported review switched the whole thing to the checklist and dropped the
+   other fourteen areas of real recorded points out of the total, while the
+   opposite ordering shows an auditor last quarter's number as they fill this
+   quarter's in. ALL answered rather than SOME, because a recorded area is a
+   complete figure and three answers out of eight is not one. The formula is
+   untouched: this chooses each area's SOURCE, and the roll-up above it is
+   the same arithmetic either way. `scoreAreasAndAnswers()` carries the rule,
+   `scoreChecklist()` is the only caller a page should use, and
+   `areaSource()` is how the entry screen SAYS which source an area is on —
+   a score that changes hands silently is the bug this replaces.
 
 ### The EHSS domain (`src/lib/ehss/`) is the core
 
@@ -92,10 +106,11 @@ Two invariants shape everything:
   `+0.012` total fudge is intentionally NOT reproduced.
   **Two entry points, one aggregation**: `scoreAudit` from answers,
   `scoreRecordedAreas` from an imported audit's area points, both through the
-  shared `aggregate` — the same formula at two grains. `scoreChecklist(audit)`
-  in `summaries.ts` picks between them, and is the only thing that should:
-  a page that reaches for `scoreAudit` directly will read every imported
-  audit as unscored.
+  shared `aggregate` — the same formula at two grains — and
+  `scoreAreasAndAnswers` for a review that holds both, choosing per area (see
+  the precedence chain above). `scoreChecklist(audit)` in `summaries.ts` is
+  the only thing a page should call: one that reaches for `scoreAudit`
+  directly will read every imported audit as unscored.
 - **`scoring.test.ts`** — pins the engine to the workbook's real numbers
   (A 46.94, B 74.60, C 61, total 60.85). If scoring changes, these
   fixtures are the contract — update only with a matching workbook change.
@@ -289,6 +304,24 @@ Two invariants shape everything:
   Drawing each quarter independently made nearly every finding look reopened
   the next quarter and the recurrence view read as noise. Keep it sticky —
   the recurrence tests read as meaningless otherwise.
+- **The audit page shows the whole checklist and every field is editable.**
+  It used to show a read-only fifteen-row table for an imported review and
+  the 81-question form only for a draft, so a mis-keyed point from a
+  transcribed sheet had nowhere to be fixed. Now one screen carries the
+  review's own details (quarter, date, inspection number, status), the
+  discipline and critical-risk scores, and all 15 areas — each with its
+  recorded points as inputs, its score, which of the two sources that score
+  is coming from, and the questions it asks. Editing an approved review
+  takes one deliberate "Edit this review"; a draft is open as before, and a
+  viewer cannot edit either. Submission asks for what the review is actually
+  missing rather than all 81 answers: an area already on record as points is
+  complete at the grain it was audited, so only areas with no points need
+  their questions answered.
+  Every panel there seeds a `useState` from the audit, so they are keyed on
+  `hydrated` — the store starts from the recorded baseline for SSR and
+  applies the browser's saved edits a tick later, and without the key a panel
+  keeps the baseline it was born with and a saved edit reads as lost on
+  reload.
 - **The entry form is the auditor's screen, and it is long by nature**: 81
   questions with a twelve-toggle cause picker on every gap runs to about
   thirteen screens. `EhssAuditForm` carries a sticky toolbar that answers

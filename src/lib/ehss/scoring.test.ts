@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import { CHECKLIST, WORKBOOK_FIXTURE_ANSWERS } from "./checklist";
 import {
   answeredCount,
+  areaSource,
   flattenChecklist,
+  scoreAreasAndAnswers,
   scoreAudit,
   scoreQuestions,
+  scoreRecordedAreas,
   toResponses,
 } from "./scoring";
-import { ratingFor } from "./model";
+import { ratingFor, type RecordedAreaScores } from "./model";
 
 describe("checklist structure", () => {
   it("has the workbook's sections and question counts", () => {
@@ -134,5 +137,104 @@ describe("rating bands", () => {
     expect(ratingFor(65)).toBe("Minimally Compliant");
     expect(ratingFor(45)).toBe("Non-Compliant");
     expect(ratingFor(null)).toBeNull();
+  });
+});
+
+describe("per-area source — an imported review being re-audited in the app", () => {
+  /** The 15 checklist areas, keyed as the imported sheets key them. */
+  const AREA_KEYS = CHECKLIST.flatMap((s) =>
+    s.subSections.map((ss) => ss.code ?? s.code),
+  );
+  const questionsOf = (key: string) =>
+    CHECKLIST.flatMap((s) =>
+      s.subSections
+        .filter((ss) => (ss.code ?? s.code) === key)
+        .flatMap((ss) => ss.questions),
+    );
+  /** Every area recorded at half its nominal weight: a flat 50% audit. */
+  const HALF: RecordedAreaScores = Object.fromEntries(
+    AREA_KEYS.map((key) => {
+      const possible = questionsOf(key).reduce((n, q) => n + q.weight, 0);
+      return [key, { scored: possible / 2, possible }];
+    }),
+  );
+
+  it("reduces to scoreRecordedAreas when nothing is answered", () => {
+    expect(scoreAreasAndAnswers(CHECKLIST, HALF, {})).toEqual(
+      scoreRecordedAreas(CHECKLIST, HALF),
+    );
+  });
+
+  it("reduces to scoreAudit when no area points exist", () => {
+    const responses = toResponses(WORKBOOK_FIXTURE_ANSWERS);
+    expect(scoreAreasAndAnswers(CHECKLIST, {}, responses)).toEqual(
+      scoreAudit(CHECKLIST, responses),
+    );
+  });
+
+  it("keeps an area on its recorded points until every question is answered", () => {
+    const qs = questionsOf("B1");
+    // All but the last question answered Full: still the recorded 50%,
+    // because a part of an area is not a figure for the area.
+    const partial = toResponses(
+      Object.fromEntries(qs.slice(0, -1).map((q) => [q.code, "full" as const])),
+    );
+    expect(areaSource(qs, HALF, "B1", partial)).toEqual({
+      source: "points",
+      score: 50,
+    });
+
+    const complete = toResponses(
+      Object.fromEntries(qs.map((q) => [q.code, "full" as const])),
+    );
+    expect(areaSource(qs, HALF, "B1", complete)).toEqual({
+      source: "answers",
+      score: 100,
+    });
+  });
+
+  it("never lets one answered area discard another area's points", () => {
+    // The bug this rule exists for: under audit-level precedence a single
+    // answer switched the whole review to the checklist and dropped the
+    // other fourteen areas out of the score entirely.
+    const qs = questionsOf("B1");
+    const oneArea = toResponses(
+      Object.fromEntries(qs.map((q) => [q.code, "full" as const])),
+    );
+    const mixed = scoreAreasAndAnswers(CHECKLIST, HALF, oneArea);
+    const b = mixed.sections.find((s) => s.code === "B")!;
+    expect(b.subSections.find((ss) => ss.code === "B1")!.score).toBe(100);
+    for (const ss of b.subSections) {
+      if (ss.code === "B1") continue;
+      expect(ss.score).toBe(50);
+    }
+    // B's twelve areas: eleven at 50 and one at 100.
+    expect(b.score).toBe(Math.round(((11 * 50 + 100) / 12) * 100) / 100);
+    expect(mixed.sections.find((s) => s.code === "A")!.score).toBe(50);
+    expect(mixed.sections.find((s) => s.code === "C")!.score).toBe(50);
+  });
+
+  it("drops an area with neither points nor answers out of the mean", () => {
+    const { A, ...withoutA } = HALF;
+    expect(A).toBeDefined();
+    const score = scoreAreasAndAnswers(CHECKLIST, withoutA, {});
+    expect(score.sections.find((s) => s.code === "A")!.score).toBeNull();
+    expect(areaSource(questionsOf("A"), withoutA, "A", {})).toEqual({
+      source: "none",
+      score: null,
+    });
+    // A dropping out leaves B and C, both still 50.
+    expect(score.total).toBe(50);
+  });
+
+  it("lets an all-N/A re-audit retire an area rather than scoring it", () => {
+    const qs = questionsOf("C2");
+    const na = toResponses(
+      Object.fromEntries(qs.map((q) => [q.code, "na" as const])),
+    );
+    expect(areaSource(qs, HALF, "C2", na)).toEqual({
+      source: "none",
+      score: null,
+    });
   });
 });

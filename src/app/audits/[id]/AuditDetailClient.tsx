@@ -1,21 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEhss } from "@/lib/ehss/store";
 import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
-import { formatDate, formatScore } from "@/lib/format";
+import { formatScore } from "@/lib/format";
 import { CHECKLIST } from "@/lib/ehss/checklist";
-import { scoreAudit } from "@/lib/ehss/scoring";
+import { scoreAreasAndAnswers } from "@/lib/ehss/scoring";
 import { scoreChecklist } from "@/lib/ehss/summaries";
-import { checklistAreas } from "@/lib/ehss/summaries";
-import { TargetBar } from "@/components/charts/Marks";
 import {
   contractorLabel,
+  previousQuarter,
   quarterLabel,
+  quarterOf,
   ratingFor,
+  type EhssAudit,
+  type EhssAuditStatus,
   type EhssResponse,
+  type RecordedAreaScores,
 } from "@/lib/ehss/model";
 import {
   DISCIPLINES,
@@ -32,6 +35,139 @@ import {
 import { DOMAIN_BY_ID } from "@/lib/ehss/domains";
 import { EhssAuditForm } from "./EhssAuditForm";
 import type { UserRole } from "@/lib/types";
+
+const STATUSES: EhssAuditStatus[] = ["draft", "submitted", "approved"];
+
+const QUESTION_COUNT = CHECKLIST.reduce(
+  (n, sec) => n + sec.subSections.reduce((m, ss) => m + ss.questions.length, 0),
+  0,
+);
+
+/** The quarters a review may be dated to: the ones on record, plus the
+ * current and previous one — never the next. An audit for a quarter nobody
+ * has audited is a draft dated in the future. */
+function quarterChoices(known: string[], own: string): string[] {
+  const current = quarterOf(new Date());
+  return [
+    ...new Set([...known, previousQuarter(current), current, own]),
+  ].sort((a, b) => b.localeCompare(a));
+}
+
+/**
+ * The review's own details — when it was done, what it is numbered, which
+ * quarter it counts for, and where it is in the draft/submitted/approved
+ * sequence. Editable, because a transcribed review is as likely to carry a
+ * typed date as a mis-keyed point.
+ *
+ * The contractor is not here. Moving a review to another contractor is not
+ * an edit, it is two edits to two contractors' trends, and it would be made
+ * by someone who had mis-read a row rather than by someone who meant it.
+ */
+function AuditMetaPanel({
+  audit,
+  quarters,
+  canEdit,
+  isAdmin,
+  onSave,
+  onStatus,
+}: {
+  audit: EhssAudit;
+  quarters: string[];
+  canEdit: boolean;
+  isAdmin: boolean;
+  onSave: (meta: Pick<EhssAudit, "auditDate" | "inspectionNo" | "quarter">) => void;
+  onStatus: (status: EhssAuditStatus) => void;
+}) {
+  const [draft, setDraft] = useState({
+    auditDate: audit.auditDate,
+    inspectionNo: audit.inspectionNo,
+    quarter: audit.quarter,
+  });
+  const [saved, setSaved] = useState(false);
+  const changed =
+    draft.auditDate !== audit.auditDate ||
+    draft.inspectionNo !== audit.inspectionNo ||
+    draft.quarter !== audit.quarter;
+
+  const set = (field: keyof typeof draft, value: string) => {
+    setSaved(false);
+    setDraft((prev) => ({ ...prev, [field]: value }));
+  };
+
+  return (
+    <div className="discipline-panel">
+      <div className="drilldown-head">
+        <h3 className="panel-title" style={{ margin: 0 }}>
+          Review details
+        </h3>
+        <AuditStatusBadge status={audit.status} />
+      </div>
+      <div className="discipline-grid">
+        <label className="field">
+          <span>Quarter</span>
+          <select
+            disabled={!canEdit}
+            value={draft.quarter}
+            onChange={(e) => set("quarter", e.target.value)}
+          >
+            {quarters.map((q) => (
+              <option key={q} value={q}>
+                {quarterLabel(q)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Audit date</span>
+          <input
+            type="date"
+            disabled={!canEdit}
+            value={draft.auditDate}
+            onChange={(e) => set("auditDate", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Inspection no.</span>
+          <input
+            type="text"
+            disabled={!canEdit}
+            value={draft.inspectionNo}
+            onChange={(e) => set("inspectionNo", e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>Status</span>
+          <select
+            disabled={!canEdit}
+            value={audit.status}
+            onChange={(e) => onStatus(e.target.value as EhssAuditStatus)}
+          >
+            {STATUSES.filter((st) => st !== "approved" || isAdmin).map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {canEdit && (
+        <p>
+          <button
+            className="ghost"
+            type="button"
+            disabled={!changed}
+            onClick={() => {
+              onSave(draft);
+              setSaved(true);
+            }}
+          >
+            {changed ? "Save details" : saved ? "Saved" : "Saved"}
+          </button>
+        </p>
+      )}
+    </div>
+  );
+}
 
 /** Scores for the four disciplines without their own checklist, plus the
  * Health & Safety score the 81-question checklist produces. */
@@ -304,116 +440,6 @@ function CriticalRiskPanel({
   );
 }
 
-/**
- * An audit imported from a sheet, shown at the grain it was actually
- * recorded at.
- *
- * The source sheets kept a narrative per question and no machine-readable
- * answer, so there are no Full/Partial/No answers to show — only the 15 area
- * scores, which is what the app scores it from. Rendering the blank
- * 81-question form instead would read as "nobody audited this".
- *
- * The score is CALCULATED FROM THE POINTS, always. The percentage the sheet
- * stated is not a record (owner's instruction, 2026-10-07) — its formula
- * disagrees with its own points columns in 18 of the 19 imported audits — so
- * it is not offered as an alternative figure or flagged as an error. It is
- * kept as one muted line of provenance, because someone holding last
- * quarter's report needs to know why the number in front of them differs.
- */
-function RecordedAreasPanel({
-  areas,
-  sections,
-  total,
-  reportedTotal,
-}: {
-  areas: NonNullable<import("@/lib/ehss/model").EhssAudit["areaScores"]>;
-  sections: Array<{ code: string; title: string; score: number | null }>;
-  total: number | null;
-  reportedTotal: number | undefined;
-}) {
-  const rows = checklistAreas();
-  const differs =
-    reportedTotal !== undefined &&
-    total !== null &&
-    Math.abs(reportedTotal - total) >= 0.5;
-
-  return (
-    <div className="discipline-panel">
-      <div className="drilldown-head">
-        <div>
-          <h3 className="panel-title" style={{ margin: 0 }}>
-            Recorded area scores
-          </h3>
-          <p className="sub" style={{ margin: "2px 0 0" }}>
-            Points scored against the points that applied, per checklist area.
-          </p>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div className="panel-score" style={{ fontSize: 28 }}>
-            {formatScore(total)}
-          </div>
-          <RatingBadge rating={ratingFor(total)} />
-        </div>
-      </div>
-
-      {differs && (
-        <p className="sub" style={{ marginTop: 0 }}>
-          The source sheet stated {reportedTotal}%. This score is calculated
-          from the sheet&apos;s own points.
-        </p>
-      )}
-
-      <div className="table-scroll">
-        <table className="data">
-          <thead>
-            <tr>
-              <th style={{ width: 56 }}>Area</th>
-              <th>Title</th>
-              <th style={{ width: 110 }} className="num">
-                Points
-              </th>
-              <th style={{ width: 160 }}>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((area) => {
-              const recorded = areas[area.code];
-              const score =
-                recorded && recorded.possible > 0
-                  ? Math.round((recorded.scored / recorded.possible) * 10000) /
-                    100
-                  : null;
-              return (
-                <tr key={area.code} className={recorded ? undefined : "is-out"}>
-                  <td>{area.code}</td>
-                  <td>{area.title}</td>
-                  <td className="num">
-                    {recorded
-                      ? `${recorded.scored} / ${recorded.possible}`
-                      : "not recorded"}
-                  </td>
-                  <td>
-                    <span className="area-score">
-                      <TargetBar score={score} label={area.title} />
-                      <em>{formatScore(score)}</em>
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="sub">
-        {sections
-          .map((x) => `${x.code} ${formatScore(x.score)}`)
-          .join("  ·  ")}
-      </p>
-    </div>
-  );
-}
-
 export function AuditDetailClient({
   auditId,
   role,
@@ -428,13 +454,38 @@ export function AuditDetailClient({
     subRegions,
     audits,
     saveResponses,
+    saveAreaScores,
+    saveAuditMeta,
     saveDisciplineScores,
     saveCriticalRisks,
     setAuditStatus,
     deleteAudit,
   } = useEhss();
 
+  /**
+   * An approved review is editable, but not by accident. The gate used to be
+   * `status === "draft"`, which made a transcribed review permanently
+   * read-only and left a mis-keyed point with nowhere to be fixed; a plain
+   * open form would let a stray click rewrite a signed-off score instead.
+   * One deliberate action in between is the whole of the difference.
+   */
+  const [unlocked, setUnlocked] = useState(false);
+
   const audit = audits.find((a) => a.id === auditId);
+  /**
+   * Every panel below seeds a `useState` from the audit, so each is keyed to
+   * remount when the store finishes hydrating. The provider starts from the
+   * recorded baseline so SSR and the first client render agree, and applies
+   * the browser's saved edits a tick later — without this key the panels
+   * would still be holding the baseline they were born with, and a saved
+   * edit would read as lost the moment the page was reloaded.
+   */
+  const panelKey = `${auditId}-${hydrated}`;
+  const quarters = useMemo(
+    () => quarterChoices(audits.map((a) => a.quarter), audit?.quarter ?? ""),
+    [audits, audit?.quarter],
+  );
+
   if (!audit) {
     return (
       <div className="card">
@@ -451,63 +502,120 @@ export function AuditDetailClient({
   const contractor = contractors.find((c) => c.id === audit.contractorId);
   const subRegion = subRegions.find((s) => s.id === contractor?.subRegionId);
   const isAdmin = role === "admin";
-  const canEdit = audit.status === "draft" && (isAdmin || role === "auditor");
+  const mayEdit = isAdmin || role === "auditor";
+  const canEdit = mayEdit && (audit.status === "draft" || unlocked);
   const checklist = scoreChecklist(audit);
   const checklistScore = checklist.total;
   const crcAuditScore = crcScore(audit.criticalRisks);
+  /** Which source the H&S figure came from overall. Mixed is real now that
+   * precedence is per area: an imported review being re-audited area by
+   * area is scored from both until the last area changes hands. */
+  const areaKeys = Object.keys(audit.areaScores ?? {});
+  const answeredAny = Object.keys(audit.responses).length > 0;
+  const hsSource: "checklist" | "areas" =
+    areaKeys.length > 0 && !answeredAny ? "areas" : "checklist";
 
   return (
     <div className="stack">
       <section className="card">
-        <h2>
-          {contractor ? contractorLabel(contractor) : "Contractor"} — EHSS
-          Quarterly Review
-        </h2>
-        <p className="sub">
-          {subRegion?.name} · {quarterLabel(audit.quarter)} ·{" "}
-          {formatDate(audit.auditDate)} · {audit.inspectionNo} ·{" "}
-          <AuditStatusBadge status={audit.status} />
-          {contractor && !contractor.active && " · contractor inactive"}
-        </p>
+        <div className="drilldown-head">
+          <div>
+            <h2 style={{ margin: 0 }}>
+              {contractor ? contractorLabel(contractor) : "Contractor"} — EHSS
+              Quarterly Review
+            </h2>
+            <p className="sub" style={{ margin: "4px 0 0" }}>
+              {subRegion?.name} · {quarterLabel(audit.quarter)} ·{" "}
+              {audit.inspectionNo}
+              {contractor && !contractor.active && " · contractor inactive"}
+              {audit.reportedTotal !== undefined && (
+                <>
+                  {" "}
+                  · source sheet stated {audit.reportedTotal}%; this score is
+                  calculated from its points
+                </>
+              )}
+            </p>
+          </div>
+          {mayEdit && audit.status !== "draft" && (
+            <button
+              className="ghost"
+              type="button"
+              aria-pressed={unlocked}
+              onClick={() => setUnlocked((on) => !on)}
+            >
+              {unlocked ? "Done editing" : "Edit this review"}
+            </button>
+          )}
+        </div>
+
+        <AuditMetaPanel
+          key={`${panelKey}-meta`}
+          audit={audit}
+          quarters={quarters}
+          canEdit={canEdit}
+          isAdmin={isAdmin}
+          onSave={(meta) => saveAuditMeta(audit.id, meta)}
+          onStatus={(status) => setAuditStatus(audit.id, status)}
+        />
 
         <DisciplinePanel
-          key={`${audit.id}-disciplines`}
+          key={`${panelKey}-disciplines`}
           scores={audit.disciplineScores}
           checklistScore={checklistScore}
-          hsSource={audit.areaScores ? "areas" : "checklist"}
+          hsSource={hsSource}
           crcAuditScore={crcAuditScore}
           canEdit={canEdit}
           onSave={(scores) => saveDisciplineScores(audit.id, scores)}
         />
 
         <CriticalRiskPanel
-          key={`${audit.id}-crc`}
+          key={`${panelKey}-crc`}
           risks={audit.criticalRisks}
           canEdit={canEdit}
           onSave={(risks) => saveCriticalRisks(audit.id, risks)}
         />
 
-        {audit.areaScores ? (
-          <RecordedAreasPanel
-            areas={audit.areaScores}
-            sections={checklist.sections}
-            total={checklistScore}
-            reportedTotal={audit.reportedTotal}
-          />
-        ) : (
+        {/* No score beside this heading: the sticky toolbar directly below
+            carries the live figure, and the same number drawn twice a
+            hand's width apart invites the reader to look for the
+            difference. */}
+        <div style={{ marginTop: 18 }}>
+          <h3 className="panel-title" style={{ margin: 0 }}>
+            Health &amp; Safety checklist
+          </h3>
+          <p className="sub" style={{ margin: "2px 0 0" }}>
+            All {QUESTION_COUNT} questions in their 15 areas. An area scores
+            from the points recorded against it until every one of its
+            questions is answered, and from the answers after that.
+          </p>
+        </div>
+
         <EhssAuditForm
-          key={audit.id}
+          key={`${panelKey}-${unlocked}`}
           initialResponses={audit.responses}
+          initialAreas={audit.areaScores ?? {}}
           canEdit={canEdit}
           status={audit.status}
           isAdmin={isAdmin}
-          onSave={(responses: Record<string, EhssResponse>) =>
-            saveResponses(audit.id, responses)
-          }
-          onSubmit={(responses: Record<string, EhssResponse>) => {
+          onSave={(
+            responses: Record<string, EhssResponse>,
+            areas: RecordedAreaScores,
+          ) => {
             saveResponses(audit.id, responses);
-            // A completed checklist becomes the Health & Safety score.
-            const total = scoreAudit(CHECKLIST, responses).total;
+            saveAreaScores(audit.id, areas);
+          }}
+          onSubmit={(
+            responses: Record<string, EhssResponse>,
+            areas: RecordedAreaScores,
+          ) => {
+            saveResponses(audit.id, responses);
+            saveAreaScores(audit.id, areas);
+            // The completed checklist becomes the Health & Safety score,
+            // scored the same way the page shows it: per area, from
+            // whichever of the two sources that area is on record at.
+            const total = scoreAreasAndAnswers(CHECKLIST, areas, responses)
+              .total;
             if (total !== null) {
               saveDisciplineScores(audit.id, {
                 ...audit.disciplineScores,
@@ -522,7 +630,6 @@ export function AuditDetailClient({
             router.push("/audits");
           }}
         />
-        )}
       </section>
     </div>
   );

@@ -8,13 +8,14 @@ import {
   type EhssAnswer,
   type EhssAuditStatus,
   type EhssResponse,
+  type RecordedAreaScores,
 } from "@/lib/ehss/model";
 import {
   GAP_CATEGORIES,
   ISSUE_BY_CODE,
   type IssueCode,
 } from "@/lib/ehss/issues";
-import { answeredCount, scoreAudit } from "@/lib/ehss/scoring";
+import { areaSource, scoreAreasAndAnswers } from "@/lib/ehss/scoring";
 import { formatScore } from "@/lib/format";
 
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
@@ -44,8 +45,91 @@ function matches(filter: FormFilter, r: EhssResponse | undefined): boolean {
 const confirmDiscard = () =>
   window.confirm("Discard this draft review? This cannot be undone.");
 
+/** A number field that accepts an empty box: the area points are optional
+ * per area, and "" has to survive typing rather than snapping to 0. */
+const parsePoints = (raw: string): number | null => {
+  if (raw.trim() === "") return null;
+  const n = Number(raw);
+  return Number.isNaN(n) || n < 0 ? null : n;
+};
+
+/**
+ * One checklist area's editable points.
+ *
+ * The 19 imported reviews hold exactly this and no answers: points scored
+ * against the points that applied, per area. `possible` is per audit and
+ * not the checklist's nominal weight, because the workbook drops an N/A
+ * question's weight out of it — so it is entered, not derived.
+ */
+function AreaPoints({
+  area,
+  points,
+  nominal,
+  canEdit,
+  onChange,
+}: {
+  area: string;
+  points: { scored: number; possible: number } | undefined;
+  /** The area's weight with every question applicable — the ceiling the
+   * sheet's own entry would use before N/A questions come out of it. */
+  nominal: number;
+  canEdit: boolean;
+  onChange: (next: { scored: number; possible: number } | undefined) => void;
+}) {
+  const set = (field: "scored" | "possible", raw: string) => {
+    const value = parsePoints(raw);
+    const base = points ?? { scored: 0, possible: 0 };
+    const next = { ...base, [field]: value ?? 0 };
+    // Clearing the applicable points is how an area stops being on record;
+    // a 0/0 area is not "scored zero", it is not scored.
+    onChange(next.possible <= 0 && next.scored <= 0 ? undefined : next);
+  };
+
+  const over = points !== undefined && points.scored > points.possible;
+
+  return (
+    <div className="area-points">
+      <label className="field">
+        <span>Points scored</span>
+        <input
+          type="number"
+          min={0}
+          step={0.5}
+          disabled={!canEdit}
+          placeholder="—"
+          value={points?.scored ?? ""}
+          onChange={(e) => set("scored", e.target.value)}
+        />
+      </label>
+      <label className="field">
+        <span>
+          Points that applied{" "}
+          <em title="The area's full weight when every question applies. N/A questions come out of it.">
+            of {nominal}
+          </em>
+        </span>
+        <input
+          type="number"
+          min={0}
+          step={0.5}
+          disabled={!canEdit}
+          placeholder="—"
+          value={points?.possible ?? ""}
+          onChange={(e) => set("possible", e.target.value)}
+        />
+      </label>
+      {over && (
+        <span className="form-error">
+          {area} scores more points than applied.
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function EhssAuditForm({
   initialResponses,
+  initialAreas,
   canEdit,
   status,
   isAdmin = false,
@@ -55,16 +139,25 @@ export function EhssAuditForm({
   onDelete,
 }: {
   initialResponses: Record<string, EhssResponse>;
+  /** Area points from an imported review; `{}` for one entered here. */
+  initialAreas: RecordedAreaScores;
   canEdit: boolean;
   status: EhssAuditStatus;
   isAdmin?: boolean;
-  onSave?: (responses: Record<string, EhssResponse>) => void;
-  onSubmit?: (responses: Record<string, EhssResponse>) => void;
+  onSave?: (
+    responses: Record<string, EhssResponse>,
+    areas: RecordedAreaScores,
+  ) => void;
+  onSubmit?: (
+    responses: Record<string, EhssResponse>,
+    areas: RecordedAreaScores,
+  ) => void;
   onApprove?: () => void;
   onDelete?: () => void;
 }) {
   const [responses, setResponses] =
     useState<Record<string, EhssResponse>>(initialResponses);
+  const [areas, setAreas] = useState<RecordedAreaScores>(initialAreas);
   const [dirty, setDirty] = useState(false);
   /** What to show. An 81-question form is only workable if you can ask it
    * what is left. */
@@ -72,10 +165,14 @@ export function EhssAuditForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const setAnswer = (code: string, answer: EhssAnswer) => {
+  const touch = () => {
     setDirty(true);
     setMessage(null);
     setError(null);
+  };
+
+  const setAnswer = (code: string, answer: EhssAnswer) => {
+    touch();
     setResponses((prev) => {
       const cur = prev[code];
       // Moving between Partial and No keeps the categories — the cause did
@@ -92,10 +189,20 @@ export function EhssAuditForm({
     });
   };
 
+  /** Taking an answer back off a question — the only way to undo a misclick
+   * on an imported review, where every answer costs the area its recorded
+   * figure once the set is complete. */
+  const clearAnswer = (code: string) => {
+    touch();
+    setResponses((prev) => {
+      const next = { ...prev };
+      delete next[code];
+      return next;
+    });
+  };
+
   const toggleIssue = (code: string, issue: IssueCode) => {
-    setDirty(true);
-    setMessage(null);
-    setError(null);
+    touch();
     setResponses((prev) => {
       const cur = prev[code]!;
       const has = cur.issues.includes(issue);
@@ -114,41 +221,57 @@ export function EhssAuditForm({
   };
 
   const setGoodPractice = (code: string, on: boolean) => {
-    setDirty(true);
-    setMessage(null);
-    setError(null);
+    touch();
     setResponses((prev) => ({
       ...prev,
       [code]: { answer: prev[code]!.answer, issues: on ? ["GOOD"] : [] },
     }));
   };
 
-  const score = useMemo(() => scoreAudit(CHECKLIST, responses), [responses]);
-  const progress = useMemo(
-    () => answeredCount(CHECKLIST, responses),
-    [responses],
+  const setAreaPoints = (
+    key: string,
+    next: { scored: number; possible: number } | undefined,
+  ) => {
+    touch();
+    setAreas((prev) => {
+      const out = { ...prev };
+      if (next === undefined) delete out[key];
+      else out[key] = next;
+      return out;
+    });
+  };
+
+  const score = useMemo(
+    () => scoreAreasAndAnswers(CHECKLIST, areas, responses),
+    [areas, responses],
   );
+
   /**
    * The checklist's scoreable areas, flattened: section A as one (its
-   * questions sit in no sub-section) then B1-B12, C1, C2. Each carries its
-   * own progress so the jump strip can show what is left without the
-   * auditor scrolling to find out.
+   * questions sit in no sub-section) then B1-B12, C1, C2 — the same 15 the
+   * imported sheets are keyed by. Each carries the questions it asks and
+   * the weight they add up to, so the area's points row and its questions
+   * sit together rather than in two tables that have to be read against
+   * each other.
    */
-  const areas = useMemo(() => {
+  const areaList = useMemo(() => {
     const out: Array<{
       key: string;
       section: string;
-      label: string;
-      codes: string[];
+      title: string;
+      questions: (typeof CHECKLIST)[number]["subSections"][number]["questions"];
+      nominal: number;
     }> = [];
     for (const section of CHECKLIST) {
       const bare = section.subSections.filter((ss) => ss.code === null);
       if (bare.length > 0) {
+        const questions = bare.flatMap((ss) => ss.questions);
         out.push({
           key: section.code,
           section: section.code,
-          label: section.code,
-          codes: bare.flatMap((ss) => ss.questions.map((q) => q.code)),
+          title: section.title,
+          questions,
+          nominal: questions.reduce((n, q) => n + q.weight, 0),
         });
       }
       for (const ss of section.subSections) {
@@ -156,30 +279,85 @@ export function EhssAuditForm({
         out.push({
           key: ss.code,
           section: section.code,
-          label: ss.code,
-          codes: ss.questions.map((q) => q.code),
+          title: ss.title ?? ss.code,
+          questions: ss.questions,
+          nominal: ss.questions.reduce((n, q) => n + q.weight, 0),
         });
       }
     }
     return out;
   }, []);
 
-  const areaProgress = useMemo(() => {
-    const map = new Map<string, { answered: number; total: number; needs: number }>();
-    for (const area of areas) {
+  /**
+   * Per area: how far through its questions, how many gaps still need a
+   * cause, and — the part that matters on a review imported from a sheet —
+   * WHICH of the two sources is scoring it right now.
+   */
+  const areaState = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        answered: number;
+        total: number;
+        needs: number;
+        source: "answers" | "points" | "none";
+        score: number | null;
+        hasPoints: boolean;
+      }
+    >();
+    for (const area of areaList) {
       let answered = 0;
       let needs = 0;
-      for (const code of area.codes) {
-        const r = responses[code];
+      for (const q of area.questions) {
+        const r = responses[q.code];
         if (!r) continue;
         answered++;
         if ((r.answer === "partial" || r.answer === "no") && r.issues.length === 0)
           needs++;
       }
-      map.set(area.key, { answered, total: area.codes.length, needs });
+      const { source, score: areaScore } = areaSource(
+        area.questions,
+        areas,
+        area.key,
+        responses,
+      );
+      map.set(area.key, {
+        answered,
+        total: area.questions.length,
+        needs,
+        source,
+        score: areaScore,
+        hasPoints: areas[area.key] !== undefined,
+      });
     }
     return map;
-  }, [areas, responses]);
+  }, [areaList, areas, responses]);
+
+  const answeredTotal = useMemo(() => {
+    let answered = 0;
+    let total = 0;
+    for (const area of areaList) {
+      total += area.questions.length;
+      for (const q of area.questions) if (responses[q.code]) answered++;
+    }
+    return { answered, total };
+  }, [areaList, responses]);
+
+  /**
+   * What blocks submission. An area already on record as points is complete
+   * at the grain it was audited — demanding its eight answers would make
+   * every imported review unsubmittable. An area with no points has nothing
+   * behind it until its questions are answered.
+   */
+  const outstanding = useMemo(() => {
+    let n = 0;
+    for (const area of areaList) {
+      const st = areaState.get(area.key)!;
+      if (st.hasPoints) continue;
+      n += area.questions.length - st.answered;
+    }
+    return n;
+  }, [areaList, areaState]);
 
   const missingObservations = useMemo(() => {
     let n = 0;
@@ -193,13 +371,27 @@ export function EhssAuditForm({
     return n;
   }, [responses]);
 
+  const unscoredAreas = useMemo(
+    () => areaList.filter((a) => areaState.get(a.key)!.score === null).length,
+    [areaList, areaState],
+  );
+
   const jump = (key: string) => {
     document
       .getElementById(`area-${key}`)
       ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const pct = progress.total === 0 ? 0 : (progress.answered / progress.total) * 100;
+  const pct =
+    answeredTotal.total === 0
+      ? 0
+      : (answeredTotal.answered / answeredTotal.total) * 100;
+
+  const save = () => {
+    onSave?.(responses, areas);
+    setDirty(false);
+    setMessage("Saved.");
+  };
 
   return (
     <div>
@@ -207,7 +399,7 @@ export function EhssAuditForm({
         <div className="entry-bar-top">
           <span className="entry-progress" aria-live="polite">
             <strong>
-              {progress.answered}/{progress.total}
+              {answeredTotal.answered}/{answeredTotal.total}
             </strong>{" "}
             answered
           </span>
@@ -242,26 +434,33 @@ export function EhssAuditForm({
           </span>
         </div>
         <div className="entry-jump" role="group" aria-label="Jump to area">
-          {areas.map((a) => {
-            const prog = areaProgress.get(a.key)!;
-            const done = prog.answered === prog.total;
+          {areaList.map((a) => {
+            const st = areaState.get(a.key)!;
+            const cls =
+              st.needs > 0
+                ? "is-needs"
+                : st.source === "answers"
+                  ? "is-done"
+                  : st.source === "points"
+                    ? "is-points"
+                    : st.answered > 0
+                      ? "is-part"
+                      : undefined;
+            const how =
+              st.source === "points"
+                ? "scored from recorded points"
+                : st.source === "answers"
+                  ? "scored from the checklist"
+                  : "not scored yet";
             return (
               <button
                 key={a.key}
                 type="button"
-                className={
-                  prog.needs > 0
-                    ? "is-needs"
-                    : done
-                      ? "is-done"
-                      : prog.answered > 0
-                        ? "is-part"
-                        : undefined
-                }
+                className={cls}
                 onClick={() => jump(a.key)}
-                title={`${a.label} — ${prog.answered} of ${prog.total} answered${prog.needs > 0 ? `, ${prog.needs} need a cause` : ""}`}
+                title={`${a.key} — ${how}; ${st.answered} of ${st.total} answered${st.needs > 0 ? `, ${st.needs} need a cause` : ""}`}
               >
-                {a.label}
+                {a.key}
                 <i aria-hidden />
               </button>
             );
@@ -270,134 +469,167 @@ export function EhssAuditForm({
       </div>
 
       {CHECKLIST.map((section) => {
-        const visibleInSection = section.subSections.some((ss) =>
-          ss.questions.some((q) => matches(filter, responses[q.code])),
+        const sectionAreas = areaList.filter((a) => a.section === section.code);
+        const visible = sectionAreas.filter(
+          (a) =>
+            filter === "all" ||
+            a.questions.some((q) => matches(filter, responses[q.code])),
         );
-        if (!visibleInSection) return null;
+        if (visible.length === 0) return null;
         return (
-        <div key={section.code}>
-          <div className="section-head">
-            <span>
-              {section.code}. {section.title}
-            </span>
-            <span className="section-score">
-              {formatScore(
-                score.sections.find((s) => s.code === section.code)?.score ??
-                  null,
-              )}
-            </span>
-          </div>
-          {section.subSections.map((ss) => {
-            const shown = ss.questions.filter((q) =>
-              matches(filter, responses[q.code]),
-            );
-            if (shown.length === 0) return null;
-            return (
-            <div
-              key={ss.code ?? section.code}
-              id={`area-${ss.code ?? section.code}`}
-              className="q-area"
-            >
-              {ss.code && (
-                <div className="q-category">
-                  {ss.code} — {ss.title}
-                  <span className="section-score">
-                    {formatScore(
-                      score.sections
-                        .find((s) => s.code === section.code)
-                        ?.subSections.find((x) => x.code === ss.code)?.score ??
-                        null,
-                    )}
-                  </span>
-                </div>
-              )}
-              {shown.map((q) => {
-                const r = responses[q.code];
-                const needsObservation =
-                  r && (r.answer === "partial" || r.answer === "no");
-                return (
-                  <div className="q-item" key={q.code}>
-                    <div>
-                      <span className="code">{q.code}</span>
-                      <span className="q-text">{q.text}</span>{" "}
-                      <span className="q-weight">w{q.weight}</span>
-                    </div>
-                    <div
-                      className="result-toggle"
-                      role="group"
-                      aria-label={`Answer for ${q.code}`}
+          <div key={section.code}>
+            <div className="section-head">
+              <span>
+                {section.code}. {section.title}
+              </span>
+              <span className="section-score">
+                {formatScore(
+                  score.sections.find((s) => s.code === section.code)?.score ??
+                    null,
+                )}
+              </span>
+            </div>
+            {visible.map((area) => {
+              const st = areaState.get(area.key)!;
+              const shown = area.questions.filter((q) =>
+                matches(filter, responses[q.code]),
+              );
+              return (
+                <div key={area.key} id={`area-${area.key}`} className="q-area">
+                  <div className="q-category">
+                    <span>
+                      {area.key} — {area.title}
+                    </span>
+                    <span
+                      className={`area-source is-${st.source}`}
+                      title={
+                        st.source === "points"
+                          ? `Scored from the points recorded for ${area.key}. Answer all ${st.total} questions and the checklist takes over.`
+                          : st.source === "answers"
+                            ? `Scored from the ${st.total} checklist answers.`
+                            : "No points and no answers on record for this area, so it is left out of the section average."
+                      }
                     >
-                      {ANSWERS.map((a) => (
-                        <button
-                          key={a}
-                          type="button"
-                          aria-pressed={r?.answer === a}
-                          disabled={!canEdit}
-                          onClick={() => setAnswer(q.code, a)}
-                        >
-                          {ANSWER_LABELS[a]}
-                        </button>
-                      ))}
-                    </div>
+                      {st.source === "points"
+                        ? "from points"
+                        : st.source === "answers"
+                          ? "from answers"
+                          : "not scored"}
+                    </span>
+                    <span className="section-score">
+                      {formatScore(st.score)}
+                    </span>
+                  </div>
 
-                    {r && r.answer !== "na" && (
-                      <div className="q-detail">
-                        {needsObservation ? (
-                          <>
-                            <span className="q-detail-label">
-                              Why? <em>pick every cause that applies</em>
-                              {r.issues.length === 0 && (
-                                <strong className="q-required">required</strong>
-                              )}
-                            </span>
-                            <div
-                              className="issue-picker"
-                              role="group"
-                              aria-label={`Issue categories for ${q.code}`}
-                            >
-                              {GAP_CATEGORIES.map((c) => {
-                                const on = r.issues.includes(c.code);
-                                return (
-                                  <button
-                                    key={c.code}
-                                    type="button"
-                                    aria-pressed={on}
-                                    disabled={!canEdit}
-                                    title={`${c.description} — ${c.owner}`}
-                                    onClick={() => toggleIssue(q.code, c.code)}
-                                  >
-                                    <b>{c.code}</b> {c.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        ) : (
-                          <label className="checkbox-field">
-                            <input
-                              type="checkbox"
-                              checked={r.issues.includes("GOOD")}
+                  <AreaPoints
+                    area={area.key}
+                    points={areas[area.key]}
+                    nominal={area.nominal}
+                    canEdit={canEdit}
+                    onChange={(next) => setAreaPoints(area.key, next)}
+                  />
+
+                  {shown.map((q) => {
+                    const r = responses[q.code];
+                    const needsObservation =
+                      r && (r.answer === "partial" || r.answer === "no");
+                    return (
+                      <div className="q-item" key={q.code}>
+                        <div>
+                          <span className="code">{q.code}</span>
+                          <span className="q-text">{q.text}</span>{" "}
+                          <span className="q-weight">w{q.weight}</span>
+                        </div>
+                        <div
+                          className="result-toggle"
+                          role="group"
+                          aria-label={`Answer for ${q.code}`}
+                        >
+                          {ANSWERS.map((a) => (
+                            <button
+                              key={a}
+                              type="button"
+                              aria-pressed={r?.answer === a}
                               disabled={!canEdit}
-                              onChange={(e) =>
-                                setGoodPractice(q.code, e.target.checked)
-                              }
-                            />
-                            {ISSUE_BY_CODE.GOOD.label} — beyond the minimum
-                          </label>
+                              onClick={() => setAnswer(q.code, a)}
+                            >
+                              {ANSWER_LABELS[a]}
+                            </button>
+                          ))}
+                          {canEdit && r && (
+                            <button
+                              type="button"
+                              className="q-clear"
+                              title={`Clear the answer to ${q.code}`}
+                              onClick={() => clearAnswer(q.code)}
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+
+                        {r && r.answer !== "na" && (
+                          <div className="q-detail">
+                            {needsObservation ? (
+                              <>
+                                <span className="q-detail-label">
+                                  Why? <em>pick every cause that applies</em>
+                                  {r.issues.length === 0 && (
+                                    <strong className="q-required">
+                                      required
+                                    </strong>
+                                  )}
+                                </span>
+                                <div
+                                  className="issue-picker"
+                                  role="group"
+                                  aria-label={`Issue categories for ${q.code}`}
+                                >
+                                  {GAP_CATEGORIES.map((c) => {
+                                    const on = r.issues.includes(c.code);
+                                    return (
+                                      <button
+                                        key={c.code}
+                                        type="button"
+                                        aria-pressed={on}
+                                        disabled={!canEdit}
+                                        title={`${c.description} — ${c.owner}`}
+                                        onClick={() =>
+                                          toggleIssue(q.code, c.code)
+                                        }
+                                      >
+                                        <b>{c.code}</b> {c.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            ) : (
+                              <label className="checkbox-field">
+                                <input
+                                  type="checkbox"
+                                  checked={r.issues.includes("GOOD")}
+                                  disabled={!canEdit}
+                                  onChange={(e) =>
+                                    setGoodPractice(q.code, e.target.checked)
+                                  }
+                                />
+                                {ISSUE_BY_CODE.GOOD.label} — beyond the minimum
+                              </label>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            );
-          })}
-        </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         );
       })}
 
-      {progress.answered === progress.total && filter === "todo" && (
+      {answeredTotal.answered === answeredTotal.total && filter === "todo" && (
         <div className="entry-empty">
           Every question is answered.{" "}
           <button type="button" onClick={() => setFilter("all")}>
@@ -419,14 +651,15 @@ export function EhssAuditForm({
           {formatScore(score.total)}
         </span>
         <span style={{ color: "var(--muted)", fontSize: 12.5 }}>
-          {ratingFor(score.total) ?? "unrated"} · {progress.answered}/
-          {progress.total} answered
+          {ratingFor(score.total) ?? "unrated"} · {answeredTotal.answered}/
+          {answeredTotal.total} answered
           {status === "draft" && score.total !== null ? " · provisional" : ""}
         </span>
         {missingObservations > 0 && (
           <span className="form-error">
             {missingObservations} gap
-            {missingObservations === 1 ? "" : "s"} still need a classification
+            {missingObservations === 1 ? " still needs" : "s still need"} a
+            classification
           </span>
         )}
         {error && <span className="form-error">{error}</span>}
@@ -443,7 +676,7 @@ export function EhssAuditForm({
                 className="ghost"
                 type="button"
                 onClick={() => {
-                  if (progress.answered > 0 && !confirmDiscard()) return;
+                  if (answeredTotal.answered > 0 && !confirmDiscard()) return;
                   onDelete();
                 }}
               >
@@ -454,37 +687,41 @@ export function EhssAuditForm({
               className="ghost"
               type="button"
               disabled={!dirty}
-              onClick={() => {
-                onSave?.(responses);
-                setDirty(false);
-                setMessage("Saved.");
-              }}
+              onClick={save}
             >
               {dirty ? "Save" : "Saved"}
             </button>
-            <button
-              className="primary"
-              type="button"
-              onClick={() => {
-                if (progress.answered < progress.total) {
-                  setError(
-                    `Answer all ${progress.total} questions before submitting (${progress.answered} done).`,
-                  );
-                  return;
-                }
-                if (missingObservations > 0) {
-                  setError(
-                    "Every Partial or No answer needs an observation classification.",
-                  );
-                  return;
-                }
-                onSubmit?.(responses);
-                setDirty(false);
-                setMessage("Review submitted.");
-              }}
-            >
-              Submit review
-            </button>
+            {status !== "approved" && (
+              <button
+                className="primary"
+                type="button"
+                onClick={() => {
+                  if (unscoredAreas > 0) {
+                    setError(
+                      `${unscoredAreas} checklist area${unscoredAreas === 1 ? " has" : "s have"} neither points nor answers.`,
+                    );
+                    return;
+                  }
+                  if (outstanding > 0) {
+                    setError(
+                      `${outstanding} question${outstanding === 1 ? "" : "s"} in areas with no recorded points still need an answer.`,
+                    );
+                    return;
+                  }
+                  if (missingObservations > 0) {
+                    setError(
+                      "Every Partial or No answer needs an observation classification.",
+                    );
+                    return;
+                  }
+                  onSubmit?.(responses, areas);
+                  setDirty(false);
+                  setMessage("Review submitted.");
+                }}
+              >
+                {status === "draft" ? "Submit review" : "Re-submit review"}
+              </button>
+            )}
           </>
         )}
         {isAdmin && status === "submitted" && onApprove && (
