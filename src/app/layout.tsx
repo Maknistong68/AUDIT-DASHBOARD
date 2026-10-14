@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { readDemoProfile } from "@/lib/demo/profile";
+import { readDemoProfile } from "@/lib/session/profile";
 import { EhssStoreProvider } from "@/lib/ehss/store";
 import { AdminShortcut, TabBar, TopNav } from "@/components/NavBar";
 
@@ -43,12 +43,12 @@ export default async function RootLayout({
                 <>
                   <TopNav role={profile.role} />
                   <span className="who">
-                    {profile.name} · {profile.role} · demo
+                    {profile.name} · {profile.role}
                   </span>
                   {profile.role === "admin" && <AdminShortcut />}
                   <form action="/restart" method="post">
                     <button className="ghost" type="submit">
-                      Restart demo
+                      Sign out
                     </button>
                   </form>
                 </>

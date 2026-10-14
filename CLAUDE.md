@@ -196,11 +196,23 @@ Two invariants shape everything:
   `checklistAreas()`. A was silently absent from the trends before, and it is
   the largest area in the checklist.
 
-### App shell (Next.js 15 App Router, demo mode)
+### App shell (Next.js 15 App Router)
 
-- **No database, no auth.** Middleware gates on the `demo_profile` cookie
-  set by `/welcome` (name + role); role only affects UI affordances.
-  Analytics always exclude draft audits.
+- **No database yet, no auth.** Middleware gates on the `demo_profile`
+  cookie set by `/welcome` (name + role); role only affects UI affordances.
+  Analytics always exclude draft audits. The cookie keeps its old name
+  because renaming it signs every open session out and it is shown nowhere;
+  its module moved to `src/lib/session/`.
+- **Nothing user-facing says "demo".** It used to: the welcome page
+  advertised "built-in sample data — 11 contractors, four quarters", every
+  header carried a `· demo` badge and a "Restart demo" button. All of that
+  described the generated dataset that no longer exists, and the owner saw
+  it and reasonably read the whole app as a mock (2026-10-14). The data is
+  13 real contractors and 19 real audits; the copy says so. The localStorage
+  key moved from `ehss-demo-v1` to `ehss-v2` in the same change, which
+  deliberately orphans anything a browser still held from the demo era.
+  Keep this straight: `fixture.ts` is the only invented data left and
+  nothing in `src/app` may import it, which `recorded.test.ts` enforces.
 - **`store.tsx` is the data layer.** `EhssStoreProvider` (mounted in the root
   layout) merges the `recorded.ts` baseline with user overrides persisted in
   `localStorage`: new reviews, edited answers, discipline scores, contractor

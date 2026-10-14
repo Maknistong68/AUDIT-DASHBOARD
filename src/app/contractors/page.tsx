@@ -1,4 +1,4 @@
-import { readDemoProfile } from "@/lib/demo/profile";
+import { readDemoProfile } from "@/lib/session/profile";
 import { ContractorsClient } from "./ContractorsClient";
 
 export const dynamic = "force-dynamic";

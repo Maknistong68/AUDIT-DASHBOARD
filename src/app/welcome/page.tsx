@@ -6,8 +6,8 @@ export default function WelcomePage() {
       <h2>Welcome to the Audit Dashboard</h2>
       <p className="sub">
         EHSS quarterly scoring and trend analytics for Oxagon contractors.
-        This demo runs on built-in sample data — 11 contractors across two
-        sub-regions, four quarters of reviews. Choose a role to look around.
+        13 contractors across two sub-regions, with the Health &amp; Safety
+        reviews for Q4 2025 and Q1 2026.
       </p>
       <form action={completeOnboarding}>
         <label className="field">
@@ -26,7 +26,7 @@ export default function WelcomePage() {
           />
         </label>
         <label className="field">
-          <span>Explore as</span>
+          <span>Sign in as</span>
           <select name="role" defaultValue="auditor">
             <option value="auditor">Auditor — record and score reviews</option>
             <option value="admin">Admin — plus the reference screens</option>
@@ -45,9 +45,8 @@ export default function WelcomePage() {
         <strong>Your privacy.</strong> The name is optional and is only used
         to label this session — initials or a job title work fine. It stays
         in a cookie in this browser and is never sent to a server, never
-        stored in any audit record, and never shared. Reviews you create are
-        saved in this browser only. <strong>Restart demo</strong>, in the
-        header, erases both.
+        stored in any audit record, and never shared. <strong>Sign out</strong>,
+        in the header, erases it.
       </p>
       <p className="sub" style={{ marginTop: 10, marginBottom: 0 }}>
         The audits themselves hold contractor-level results only — no worker

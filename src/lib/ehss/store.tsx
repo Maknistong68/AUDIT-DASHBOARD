@@ -37,7 +37,11 @@ import type { DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
 import { readIssues } from "./issues";
 
-const STORAGE_KEY = "ehss-demo-v1";
+/* Renamed from "ehss-demo-v1" when the generated demo dataset was replaced
+ * by the real audits. The rename is deliberate: it orphans anything a
+ * browser still held from the demo era, which would otherwise keep
+ * surfacing contractors and reviews that no longer exist. */
+const STORAGE_KEY = "ehss-v2";
 
 interface Overrides {
   /** Contractor id -> active flag, when the user changed it. */
@@ -137,7 +141,7 @@ interface StoreValue {
   saveCriticalRisks: (auditId: string, risks: CriticalRiskScores) => void;
   setAuditStatus: (auditId: string, status: EhssAuditStatus) => void;
   deleteAudit: (auditId: string) => void;
-  resetDemo: () => void;
+  resetLocalEdits: () => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -269,7 +273,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
-  const resetDemo = useCallback(() => update(() => EMPTY), [update]);
+  const resetLocalEdits = useCallback(() => update(() => EMPTY), [update]);
 
   const value = useMemo<StoreValue>(
     () => ({
@@ -284,7 +288,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       saveCriticalRisks,
       setAuditStatus,
       deleteAudit,
-      resetDemo,
+      resetLocalEdits,
     }),
     [
       hydrated,
@@ -297,7 +301,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       saveCriticalRisks,
       setAuditStatus,
       deleteAudit,
-      resetDemo,
+      resetLocalEdits,
     ],
   );
 

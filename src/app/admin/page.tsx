@@ -2,7 +2,7 @@ import { CHECKLIST } from "@/lib/ehss/checklist";
 import { RATING_BANDS } from "@/lib/ehss/model";
 import { ISSUE_CATEGORIES } from "@/lib/ehss/issues";
 import { contractors, subRegions } from "@/lib/ehss/recorded";
-import { readDemoProfile } from "@/lib/demo/profile";
+import { readDemoProfile } from "@/lib/session/profile";
 
 export const dynamic = "force-dynamic";
 

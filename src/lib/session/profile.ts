@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import type { UserRole } from "../types";
 
+/* The cookie name still reads "demo_profile". Renaming it would sign
+ * every open session out and gains nothing — it is not shown anywhere. */
 export const DEMO_PROFILE_COOKIE = "demo_profile";
 
 export interface DemoProfile {

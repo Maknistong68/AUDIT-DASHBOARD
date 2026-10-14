@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { DEMO_PROFILE_COOKIE } from "@/lib/demo/profile";
+import { DEMO_PROFILE_COOKIE } from "@/lib/session/profile";
 
 /** Clear the onboarding cookie and start over. The only stored state this
  * app keeps about a person is that cookie, so this erases all of it. */
