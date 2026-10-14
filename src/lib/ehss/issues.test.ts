@@ -10,8 +10,10 @@ import { audits, contractors, subRegions } from "./fixture";
 import { collectObservations, issueBreakdown, summarizeAll } from "./summaries";
 
 describe("the taxonomy", () => {
-  it("has twelve gap categories and one positive", () => {
-    expect(GAP_CATEGORIES).toHaveLength(12);
+  it("has seven gap categories and one positive", () => {
+    // Seven is the readable ceiling: past about seven classes carrying
+    // meaning, adjacent ones blur and a table beats a chart.
+    expect(GAP_CATEGORIES).toHaveLength(7);
     expect(ISSUE_CATEGORIES.filter((c) => !c.gap).map((c) => c.code)).toEqual([
       "GOOD",
     ]);
@@ -37,7 +39,7 @@ describe("the taxonomy", () => {
   });
 
   it("is discipline-agnostic — nothing names one audit", () => {
-    // The same twelve serve H&S, Critical Risk, Environment, Security and
+    // The same seven serve H&S, Critical Risk, Environment, Security and
     // Worker Welfare, so a category that named one would not travel.
     const parochial = /health & safety|welfare|security|environment|critical risk/i;
     for (const c of ISSUE_CATEGORIES) {
@@ -53,7 +55,7 @@ describe("the taxonomy", () => {
 
 describe("reading stored categories", () => {
   it("keeps a valid array and drops anything unrecognised", () => {
-    expect(readIssues(["DOC", "nope", "SUB"])).toEqual(["DOC", "SUB"]);
+    expect(readIssues(["DOC", "nope", "IMP"])).toEqual(["DOC", "IMP"]);
     expect(readIssues([])).toEqual([]);
   });
 
@@ -63,8 +65,30 @@ describe("reading stored categories", () => {
     expect(readIssues("OB3")).toEqual(["IMP"]);
     // OB4 and OB5 each bundled several causes; they map to the closest one
     // rather than being expanded into guesses the auditor never made.
-    expect(readIssues("OB4")).toEqual(["TRN"]);
-    expect(readIssues("OB5")).toEqual(["INS"]);
+    expect(readIssues("OB4")).toEqual(["CMP"]);
+    expect(readIssues("OB5")).toEqual(["SUP"]);
+  });
+
+  it("folds the twelve-category codes onto their survivors", () => {
+    // Nothing is invented: each old code said one thing, and it is kept.
+    expect(readIssues(["TRN"])).toEqual(["CMP"]);
+    expect(readIssues(["INS"])).toEqual(["SUP"]);
+    expect(readIssues(["EQP"])).toEqual(["RES"]);
+    expect(readIssues(["REC"])).toEqual(["DOC"]);
+    expect(readIssues(["COM"])).toEqual(["LED"]);
+    // SUB recorded a PLACE, not a cause. The place is already on the finding
+    // as its checklist area, so it maps to the likeliest cause instead of
+    // being kept as a duplicate of the area.
+    expect(readIssues(["SUB"])).toEqual(["IMP"]);
+  });
+
+  it("does not duplicate when two old codes fold into one", () => {
+    expect(readIssues(["DOC", "REC"])).toEqual(["DOC"]);
+    expect(readIssues(["TRN", "CMP"])).toEqual(["CMP"]);
+  });
+
+  it("returns categories in register order whatever order they were stored", () => {
+    expect(readIssues(["LED", "DOC", "SUP"])).toEqual(["DOC", "SUP", "LED"]);
   });
 
   it("treats anything else as no categories", () => {

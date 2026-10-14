@@ -1249,7 +1249,16 @@ export function problemPeer(
  * ------------------------------------------------------------------ */
 
 /** Consecutive open reviews before a finding counts as recurring. */
-export const RECURRING_THRESHOLD = 3;
+/**
+ * How many consecutive reviews an open finding takes to count as recurring.
+ *
+ * TWO, which is the owner's own definition (2026-10-14): "it happened on the
+ * previous audit and it happened again to the next audit". It was three,
+ * which is a defensible threshold and not the one this programme uses — and
+ * at three nothing in two quarters of data could ever qualify, so the
+ * distinction that matters most to a director was invisible.
+ */
+export const RECURRING_THRESHOLD = 2;
 
 export type FindingStatus =
   /** Open in the latest review, and in RECURRING_THRESHOLD or more in a row. */

@@ -259,7 +259,11 @@ Two invariants shape everything:
 - **Recurrence** (`findingHistories()` and friends): the same question
   tracked answer-by-answer across a contractor's quarters. Two rules decide
   everything and are pinned in `recurrence.test.ts` — a finding is
-  `recurring` at `RECURRING_THRESHOLD` (3) consecutive open reviews, and
+  `recurring` at `RECURRING_THRESHOLD` (**2**) consecutive open reviews,
+  which is the owner's own definition (2026-10-14): "it happened on the
+  previous audit and it happened again to the next audit". It was 3, a
+  defensible threshold and not this programme's; at 3 nothing in two
+  quarters of data could ever qualify. And
   **N/A never closes a finding** ("not applicable this quarter" usually
   means the work was not running, which is not evidence anything was
   fixed; it breaks the streak without earning a closure). `reopened`
@@ -308,6 +312,15 @@ Two invariants shape everything:
      the level-2 control list is empty and the quarter bars take the main
      column, per the level-2 rule above.
   `AuditSummary.fromAreaScores` is how a view knows.
+- **No future audits.** `quarterOptions()` offers the quarters on record plus
+  the current and previous one, never the next: an audit for a quarter nobody
+  has audited is a draft dated in the future. The auditor creates the review
+  when there is something to record (owner's direction, 2026-10-14).
+- **Do not touch `checklist.ts` or `scoring.ts`** without the owner saying
+  so (2026-10-14: "don't change anything on the checklist, don't change any
+  formulas"). Where the source sheet's own arithmetic disagrees with its
+  points, the app keeps its formula and ignores the sheet's — that is settled
+  and is not to be "fixed" by matching the sheet.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
   `/findings` is observation-centric (the gap register, SHEW heat-map,
@@ -324,10 +337,20 @@ Two invariants shape everything:
   area (its questions have no sub-section) plus B1–B12, C1, C2 — 15 areas,
   81 questions, pinned in `checklist-analysis.test.ts`.
 - **Issue categories** (`issues.ts`) answer *why* a requirement was not met,
-  which the checklist never says. Two rules hold the list together: every
-  category implies a **different fix and a different owner** (merge any two
-  that don't), and **nothing is specific to one discipline** — the same
-  twelve serve all five audits, so a report can compare across them. They
+  which the checklist never says. **SEVEN** since 2026-10-14 (owner's
+  direction), down from twelve: DOC, PLN, IMP, CMP, SUP, RES, LED, plus
+  GOOD. Three rules hold the list together: every category implies a
+  **different fix and a different owner** (merge any two that don't);
+  **nothing is specific to one discipline**, so the same seven serve all five
+  audits; and **a category is a CAUSE, never a PLACE**. That third rule is
+  what cut it — `SUB` (subcontractor control) was a category *and* is
+  checklist area B6, so a missing subcontractor assessment was filed as its
+  own cause when it is a Documentation failure that happens to sit in B6.
+  Keeping the axes apart lets a report say "our B6 problem is 70%
+  documentation", which names the fix. `REC`→DOC, `INS`→SUP, `EQP`→RES,
+  `COM`→LED, `TRN`→CMP, `SUB`→IMP in `LEGACY`, and `readIssues()` dedupes
+  when two old codes fold into one. Seven is also the readable ceiling: past
+  about seven classes carrying meaning, adjacent ones blur. They
   are **multi-select**, so every count derived from them (the SHEW heat-map
   cells, `issueBreakdown`, `issueTrendByQuarter`) sums to MORE than the
   number of findings; each view says so, and that is not a bug to fix by

@@ -53,16 +53,25 @@ describe("finding status", () => {
   });
 
   it(`calls ${RECURRING_THRESHOLD} consecutive open reviews recurring`, () => {
-    const h = historyFor(["no", "partial", "partial"])!;
-    expect(RECURRING_THRESHOLD).toBe(3);
+    // The owner's definition: it happened on the previous audit and it
+    // happened again on the next one. Two, not three.
+    expect(RECURRING_THRESHOLD).toBe(2);
+    const h = historyFor(["full", "partial", "partial"])!;
     expect(h.status).toBe("recurring");
-    expect(h.openStreak).toBe(3);
+    expect(h.openStreak).toBe(2);
   });
 
   it("stops one short of the threshold", () => {
-    const h = historyFor(["full", "partial", "partial"])!;
+    // Open in the latest review only: a finding, not yet a pattern.
+    const h = historyFor(["full", "full", "partial"])!;
     expect(h.status).toBe("open");
-    expect(h.openStreak).toBe(2);
+    expect(h.openStreak).toBe(1);
+  });
+
+  it("keeps counting past the threshold", () => {
+    const h = historyFor(["no", "partial", "partial"])!;
+    expect(h.status).toBe("recurring");
+    expect(h.openStreak).toBe(3);
   });
 
   it("calls a finding that closed and came back reopened", () => {

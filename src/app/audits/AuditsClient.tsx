@@ -8,7 +8,6 @@ import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatDate, formatScore } from "@/lib/format";
 import {
   contractorLabel,
-  nextQuarter,
   previousQuarter,
   quarterLabel,
   quarterOf,
@@ -18,14 +17,19 @@ import { knownQuarters, summarizeAll } from "@/lib/ehss/summaries";
 /** Quarter options: everything on record, plus the previous, current and
  * next quarter — so the coming quarter's reviews can be opened ahead of
  * time, which is when the schedule is actually planned. */
+/**
+ * Quarters a review may be opened for: the ones on record, plus the current
+ * and previous quarter.
+ *
+ * NO FUTURE QUARTER (owner's direction, 2026-10-14). It used to offer the
+ * next one so a review could be scheduled ahead; the result was that an
+ * audit could exist for a quarter nobody had audited yet, which is a draft
+ * with a date that has not happened. The auditor creates the review when
+ * there is an audit to record.
+ */
 function quarterOptions(existing: string[]): string[] {
   const current = quarterOf(new Date());
-  const set = new Set([
-    ...existing,
-    previousQuarter(current),
-    current,
-    nextQuarter(current),
-  ]);
+  const set = new Set([...existing, previousQuarter(current), current]);
   return [...set].sort((a, b) => b.localeCompare(a));
 }
 
