@@ -474,9 +474,15 @@ export function topIssues(audits: EhssAudit[], limit: number): IssueRow[] {
  * findings carrying that category, not a slice of a pie — every caller that
  * displays it has to say so.
  */
-export function issueBreakdown(
-  rows: ObservationRow[],
-): Array<{ code: IssueCode; count: number; share: number }> {
+export interface IssueCount {
+  code: IssueCode;
+  count: number;
+  /** Share of FINDINGS carrying this category — not a slice of a pie, since
+   * a finding may carry several. Every caller that shows it must say so. */
+  share: number;
+}
+
+export function issueBreakdown(rows: ObservationRow[]): IssueCount[] {
   const counts = new Map<IssueCode, number>();
   for (const r of rows)
     for (const code of r.issues)
@@ -1771,4 +1777,317 @@ export function questionByContractor(
   return rows.sort(
     (a, b) => rank[a.answer] - rank[b.answer] || a.label.localeCompare(b.label),
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* The board — what a director opens                                   */
+/*                                                                     */
+/* Three readers: the project director of each sub-region, and the H&S */
+/* team. One job between them — compare contractors, latest quarter    */
+/* first. Everything here serves that sentence and nothing else.       */
+/* ------------------------------------------------------------------ */
+
+/** The most recent quarter anything was finalized in. */
+export function latestQuarter(summaries: AuditSummary[]): string | null {
+  const quarters = finalized(summaries).map((s) => s.quarter).sort();
+  return quarters[quarters.length - 1] ?? null;
+}
+
+/** Every quarter on record, newest first. */
+export function quartersOnRecord(summaries: AuditSummary[]): string[] {
+  return [...new Set(finalized(summaries).map((s) => s.quarter))].sort((a, b) =>
+    b.localeCompare(a),
+  );
+}
+
+export interface BoardRow {
+  contractorId: string;
+  name: string;
+  code: string;
+  label: string;
+  score: number | null;
+  /** Points moved since this contractor's previous review; null on a first. */
+  delta: number | null;
+  /** Checklist areas below the 90% target in this review. */
+  areasBelow: number;
+  areasScored: number;
+}
+
+export interface BoardPanel {
+  subRegionId: string;
+  subRegionName: string;
+  rows: BoardRow[];
+  average: number | null;
+}
+
+/**
+ * The board, split by sub-region.
+ *
+ * Faceted rather than filtered because the organisation IS two sub-regions
+ * with a director each: a filter makes each of them perform a click to see
+ * their own patch, and hides the comparison the H&S team actually wants.
+ *
+ * Rows are WORST FIRST. The reader is looking for who needs attention, and
+ * putting that at the top means the answer is the first thing on the screen.
+ */
+export function boardBySubRegion(
+  summaries: AuditSummary[],
+  quarter: string | null,
+  subRegions: SubRegion[],
+): BoardPanel[] {
+  const scored = finalized(summaries);
+  const inQuarter = quarter
+    ? scored.filter((s) => s.quarter === quarter)
+    : [];
+
+  return subRegions.map((sr) => {
+    const rows: BoardRow[] = inQuarter
+      .filter((s) => s.subRegionId === sr.id)
+      .map((s) => {
+        const history = scored
+          .filter((h) => h.contractorId === s.contractorId)
+          .sort((a, b) => a.quarter.localeCompare(b.quarter));
+        const index = history.findIndex((h) => h.id === s.id);
+        const previous = index > 0 ? history[index - 1] : undefined;
+        const areas = s.subSections.filter((ss) => ss.score !== null);
+        return {
+          contractorId: s.contractorId,
+          name: s.contractorName,
+          code: s.contractorCode,
+          label: `${s.contractorName} (${s.contractorCode})`,
+          score: s.total,
+          delta:
+            previous?.total != null && s.total != null
+              ? round(s.total - previous.total)
+              : null,
+          areasBelow: areas.filter((ss) => ss.score! < TARGET_SCORE).length,
+          areasScored: areas.length,
+        };
+      })
+      .sort((a, b) => (a.score ?? 101) - (b.score ?? 101));
+
+    const values = rows
+      .map((r) => r.score)
+      .filter((v): v is number => v !== null);
+    return {
+      subRegionId: sr.id,
+      subRegionName: sr.name,
+      rows,
+      average:
+        values.length === 0
+          ? null
+          : round(values.reduce((sum, v) => sum + v, 0) / values.length),
+    };
+  });
+}
+
+export interface ProgrammeKpis {
+  quarter: string | null;
+  /** Mean of the quarter's reviews. */
+  average: number | null;
+  /** Movement against the quarter before, over the contractors in both. */
+  delta: number | null;
+  contractors: number;
+  belowTarget: number;
+  /** The checklist area with the lowest programme mean this quarter. */
+  weakestArea: { code: string; title: string; score: number } | null;
+  /** Areas below target in this review AND the one before it, programme-wide.
+   * The owner's definition of recurring: it happened last audit and again
+   * this one. */
+  recurringAreas: number;
+}
+
+export function programmeKpis(
+  summaries: AuditSummary[],
+  quarter: string | null,
+): ProgrammeKpis {
+  const scored = finalized(summaries);
+  const inQuarter = quarter ? scored.filter((s) => s.quarter === quarter) : [];
+  const values = inQuarter
+    .map((s) => s.total)
+    .filter((v): v is number => v !== null);
+
+  // Movement is measured over the contractors present in BOTH quarters, so a
+  // contractor joining or leaving does not read as the programme moving.
+  const previousQ = [...new Set(scored.map((s) => s.quarter))]
+    .sort()
+    .filter((q) => quarter !== null && q < quarter)
+    .pop();
+  let delta: number | null = null;
+  if (previousQ) {
+    const before = new Map(
+      scored
+        .filter((s) => s.quarter === previousQ && s.total !== null)
+        .map((s) => [s.contractorId, s.total!]),
+    );
+    const pairs = inQuarter.filter(
+      (s) => s.total !== null && before.has(s.contractorId),
+    );
+    if (pairs.length > 0) {
+      const moved = pairs.reduce(
+        (sum, s) => sum + (s.total! - before.get(s.contractorId)!),
+        0,
+      );
+      delta = round(moved / pairs.length);
+    }
+  }
+
+  // Weakest area this quarter, by programme mean.
+  const perArea = new Map<string, { title: string; sum: number; n: number }>();
+  for (const s of inQuarter) {
+    for (const ss of s.subSections) {
+      if (ss.code === null || ss.score === null) continue;
+      const cur = perArea.get(ss.code) ?? {
+        title: ss.title ?? ss.code,
+        sum: 0,
+        n: 0,
+      };
+      cur.sum += ss.score;
+      cur.n += 1;
+      perArea.set(ss.code, cur);
+    }
+  }
+  let weakestArea: ProgrammeKpis["weakestArea"] = null;
+  for (const [code, v] of perArea) {
+    const mean = round(v.sum / v.n);
+    if (weakestArea === null || mean < weakestArea.score) {
+      weakestArea = { code, title: v.title, score: mean };
+    }
+  }
+
+  return {
+    quarter,
+    average:
+      values.length === 0
+        ? null
+        : round(values.reduce((sum, v) => sum + v, 0) / values.length),
+    delta,
+    contractors: inQuarter.length,
+    belowTarget: values.filter((v) => v < TARGET_SCORE).length,
+    weakestArea,
+    recurringAreas: stickyAreas(summaries).filter((a) => a.recurring).length,
+  };
+}
+
+export interface AreaStanding {
+  code: string;
+  title: string;
+  section: string;
+  /** Score in the latest review that covered it. */
+  score: number | null;
+  /** The review before that; null when there is only one. */
+  previous: number | null;
+  /** Below target in BOTH — the owner's definition of recurring: it happened
+   * on the previous audit and it happened again on the next one. */
+  recurring: boolean;
+  /** Below target now but not before. */
+  isNew: boolean;
+  /** At or above target now. */
+  met: boolean;
+}
+
+/**
+ * Where a contractor — or the whole programme — stands area by area, and
+ * whether a gap is sticking.
+ *
+ * Recurrence here is at AREA level, because that is what the recorded data
+ * can actually support: the imported quarters hold area points and no
+ * per-question answers, so "this question came back" has nothing behind it
+ * while "this area was weak again" has two real numbers behind it.
+ */
+export function stickyAreas(summaries: AuditSummary[]): AreaStanding[] {
+  const scored = finalized(summaries);
+  const quarters = [...new Set(scored.map((s) => s.quarter))].sort();
+  if (quarters.length === 0) return [];
+
+  const perQuarter = new Map<string, Map<string, { title: string; section: string; sum: number; n: number }>>();
+  for (const quarter of quarters) {
+    const areas = new Map<string, { title: string; section: string; sum: number; n: number }>();
+    for (const s of scored.filter((x) => x.quarter === quarter)) {
+      for (const ss of s.subSections) {
+        if (ss.code === null || ss.score === null) continue;
+        const cur = areas.get(ss.code) ?? {
+          title: ss.title ?? ss.code,
+          section: ss.section,
+          sum: 0,
+          n: 0,
+        };
+        cur.sum += ss.score;
+        cur.n += 1;
+        areas.set(ss.code, cur);
+      }
+    }
+    perQuarter.set(quarter, areas);
+  }
+
+  const latest = perQuarter.get(quarters[quarters.length - 1]!)!;
+  const before =
+    quarters.length >= 2 ? perQuarter.get(quarters[quarters.length - 2]!) : undefined;
+
+  return [...latest.entries()].map(([code, v]) => {
+    const score = round(v.sum / v.n);
+    const prev = before?.get(code);
+    const previous = prev ? round(prev.sum / prev.n) : null;
+    const weakNow = score < TARGET_SCORE;
+    const weakBefore = previous !== null && previous < TARGET_SCORE;
+    return {
+      code,
+      title: v.title,
+      section: v.section,
+      score,
+      previous,
+      recurring: weakNow && weakBefore,
+      isNew: weakNow && !weakBefore,
+      met: !weakNow,
+    };
+  });
+}
+
+export interface SectionStanding {
+  code: string;
+  title: string;
+  /** What to print. The checklist's own titles are long enough to truncate
+   * in a bar row ("Process & Procedures (Assessed on Site)"), and the point
+   * of this view is to say WHERE in three words. */
+  shortTitle: string;
+  score: number | null;
+}
+
+/** A, B and C in the words a director would use. */
+const SECTION_SHORT: Record<string, string> = {
+  A: "Management",
+  B: "On site",
+  C: "Planning & leadership",
+};
+
+/**
+ * Section A / B / C for one contractor — "where" the gap is, at the coarsest
+ * grain that still means something: office systems, site execution, or
+ * leadership and planning.
+ */
+export function sectionStanding(summaries: AuditSummary[]): SectionStanding[] {
+  const scored = finalized(summaries);
+  const out = new Map<string, { title: string; sum: number; n: number }>();
+  for (const s of scored) {
+    for (const sec of s.sections) {
+      if (sec.score === null) continue;
+      const cur = out.get(sec.code) ?? { title: sec.title, sum: 0, n: 0 };
+      cur.sum += sec.score;
+      cur.n += 1;
+      out.set(sec.code, cur);
+    }
+  }
+  return ["A", "B", "C"].flatMap((code) => {
+    const v = out.get(code);
+    return v
+      ? [
+          {
+            code,
+            title: v.title,
+            shortTitle: SECTION_SHORT[code] ?? v.title,
+            score: round(v.sum / v.n),
+          },
+        ]
+      : [];
+  });
 }

@@ -152,54 +152,68 @@ Each item is a separate piece of work with its own verification.
 
 **Structure**
 
-- [ ] 1. Remove the "dashboard is ONE chart" rule and the `100dvh` lock; the
+- [x] 1. Remove the "dashboard is ONE chart" rule and the `100dvh` lock; the
       board becomes a KPI row plus two sub-region panels.
-- [ ] 2. Facet the board by sub-region, so each director sees their own
+- [x] 2. Facet the board by sub-region, so each director sees their own
       contractors without using a filter.
-- [ ] 3. Default every view to the latest quarter.
-- [ ] 4. Give each drill-down level its own layout instead of one shared
+- [x] 3. Default every view to the latest quarter.
+- [x] 4. Give each drill-down level its own layout instead of one shared
       floating panel.
 
 **Level 0 — the board**
 
-- [ ] 5. KPI row: four stat tiles, numbers not charts.
-- [ ] 6. Horizontal bar list per sub-region, worst first, 90% target marked
+- [x] 5. KPI row: four stat tiles, numbers not charts.
+- [x] 6. Horizontal bar list per sub-region, worst first, 90% target marked
       once per panel rather than on every row.
-- [ ] 7. Verify no sideways scroll 320–1440px and that the board no longer
+- [x] 7. Verify no sideways scroll 320–1440px and that the board no longer
       forces the viewport height.
 
 **Level 1 — one contractor**
 
-- [ ] 8. Hero: score, band, change, sparkline.
-- [ ] 9. "Where": A / B / C.
-- [ ] 10. "Why": the seven categories.
-- [ ] 11. "Is it sticking": recurring versus new.
-- [ ] 12. Weakest-areas list as the way into level 2.
+- [x] 8. Hero: score, band, change, sparkline.
+- [x] 9. "Where": A / B / C.
+- [x] 10. "Why": the seven categories.
+- [x] 11. "Is it sticking": recurring versus new.
+- [x] 12. Weakest-areas list as the way into level 2.
 
 **Level 2 — the detail**
 
-- [ ] 13. The written detail: what is missing, which questions, which
+- [x] 13. The written detail: what is missing, which questions, which
       quarters.
 
 **Categories**
 
-- [ ] 14. Reduce `issues.ts` to the seven, keeping `readIssues()` so records
+- [x] 14. Reduce `issues.ts` to the seven, keeping `readIssues()` so records
       written against the old twelve still load and map to their nearest
       survivor.
-- [ ] 15. Update the entry form's picker and every count derived from
+- [x] 15. Update the entry form's picker and every count derived from
       categories.
 
 **Inputs**
 
-- [ ] 16. Drop the future quarter from `quarterOptions()`.
-- [ ] 17. Simplify the 81-question entry form.
+- [x] 16. Drop the future quarter from `quarterOptions()`.
+- [x] 17. Simplify the 81-question entry form.
 
 **Craft**
 
-- [ ] 18. Remove the remaining explanatory prose from levels 0 and 1.
-- [ ] 19. Validate the palette with the script, light and dark.
-- [ ] 20. Screenshot every screen and check it against the anti-pattern list
+- [x] 18. Remove the remaining explanatory prose from levels 0 and 1.
+- [x] 19. Validate the palette with the script, light and dark.
+- [x] 20. Screenshot every screen and check it against the anti-pattern list
       before calling it done.
+
+## Status
+
+Built 2026-10-14. Every item above is done; items 14 and 16 landed in the
+previous commit. Verified: 161 tests, typecheck and build clean, no sideways
+scroll from 320px to 1440px across eight pages and both drill-downs, both
+themes render, and the bar fills measure 4.41:1 to 13.9:1 against their track
+(the 3:1 floor for a UI mark) with the score printed on every row so colour
+is never the only channel.
+
+Two of the four questions below were answered: recurrence is two consecutive
+audits, and the Excel data is the demo data. The remaining two were taken on
+my recommendation and can still be reversed — "where" is sections A/B/C, and
+subcontractor control stays an area rather than becoming an eighth category.
 
 ## Open questions
 

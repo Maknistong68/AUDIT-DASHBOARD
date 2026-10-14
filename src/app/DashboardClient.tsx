@@ -1,338 +1,204 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useEhss } from "@/lib/ehss/store";
-import {
-  ContractorBarChart,
-  RATING_KEY,
-} from "@/components/charts/ContractorBarChart";
-import { ContractorPanel } from "@/components/ContractorPanel";
-import { ProblemOverview, causeMix } from "@/components/ProblemOverview";
-import { ProblemPanel } from "@/components/ProblemPanel";
 import { FloatingPanel } from "@/components/FloatingPanel";
-import { contractorLabel, quarterLabel, quarterOf } from "@/lib/ehss/model";
+import { Kpis } from "@/components/board/Kpis";
+import { SubRegionPanel } from "@/components/board/SubRegionPanel";
+import { ContractorView } from "@/components/board/ContractorView";
+import { AreaView } from "@/components/board/AreaView";
+import { CHECKLIST } from "@/lib/ehss/checklist";
+import { flattenChecklist } from "@/lib/ehss/scoring";
+import { useEhss } from "@/lib/ehss/store";
+import { quarterLabel } from "@/lib/ehss/model";
 import {
-  TIMEFRAMES,
-  checklistQuestionStats,
-  contractorProblems,
-  contractorStats,
-  findingHistories,
-  findingMovement,
-  problemEvidence,
-  problemPeer,
+  boardBySubRegion,
+  collectObservations,
+  finalized,
+  issueBreakdown,
+  latestQuarter,
+  programmeKpis,
+  quartersOnRecord,
+  sectionStanding,
+  stickyAreas,
   summarizeAll,
-  timeframeById,
-  type ProblemRow,
-  type TimeframeId,
+  type AreaStanding,
+  type BoardRow,
+  type EvidenceRow,
 } from "@/lib/ehss/summaries";
 
+const FLAT = flattenChecklist(CHECKLIST);
+
 /**
- * The dashboard is one chart.
+ * The board.
  *
- * Everything that used to be a second card is now behind the bars: select a
- * contractor for its ranked problems, select a problem for the evidence. On
- * a desktop the whole thing is one screen with nothing to scroll — the
- * chart sizes itself to whatever height is left over, and each drill-down
- * level is a fixed box that caps its own list rather than growing.
+ * Three readers — the project director of each sub-region and the H&S team —
+ * open this to COMPARE CONTRACTORS, most recent quarter first. The layout is
+ * that sentence: a row of plain numbers, then one panel per sub-region, then
+ * everything else behind a click.
+ *
+ * It is deliberately NOT one viewport-height chart any more. That rule made
+ * thirteen contractors into enormous bars with everything else squeezed
+ * around them; the chart now owns its panel and the page scrolls like a page.
  */
 export function DashboardClient() {
-  const { subRegions, contractors, audits } = useEhss();
-
-  const [subRegionId, setSubRegionId] = useState("all");
-  const [timeframe, setTimeframe] = useState<TimeframeId>("last4");
+  const { contractors, subRegions, audits, hydrated } = useEhss();
   const [includeInactive, setIncludeInactive] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [problem, setProblem] = useState<ProblemRow | null>(null);
-  /** Level 3 — the recorded evidence, opened from the level-2 overview. */
-  const [showEvidence, setShowEvidence] = useState(false);
-
-  const inScope = useMemo(
-    () =>
-      contractors.filter(
-        (c) =>
-          (subRegionId === "all" || c.subRegionId === subRegionId) &&
-          (includeInactive || c.active),
-      ),
-    [contractors, subRegionId, includeInactive],
-  );
-  const scopeIds = useMemo(() => new Set(inScope.map((c) => c.id)), [inScope]);
-
-  const scopedAudits = useMemo(
-    () => audits.filter((a) => scopeIds.has(a.contractorId)),
-    [audits, scopeIds],
-  );
+  const [quarter, setQuarter] = useState<string | null>(null);
+  const [selected, setSelected] = useState<BoardRow | null>(null);
+  const [area, setArea] = useState<AreaStanding | null>(null);
 
   const summaries = useMemo(
-    () => summarizeAll(scopedAudits, contractors, subRegions),
-    [scopedAudits, contractors, subRegions],
+    () => summarizeAll(audits, contractors, subRegions),
+    [audits, contractors, subRegions],
+  );
+  const scoped = useMemo(
+    () =>
+      includeInactive
+        ? summaries
+        : summaries.filter((s) => s.contractorActive),
+    [summaries, includeInactive],
   );
 
-  const stats = useMemo(
-    () => contractorStats(summaries, timeframe),
-    [summaries, timeframe],
+  const quarters = useMemo(() => quartersOnRecord(scoped), [scoped]);
+  const shown = quarter ?? latestQuarter(scoped);
+
+  const panels = useMemo(
+    () => boardBySubRegion(scoped, shown, subRegions),
+    [scoped, shown, subRegions],
   );
+  const kpi = useMemo(() => programmeKpis(scoped, shown), [scoped, shown]);
 
-  const selected = stats.find((s) => s.contractorId === selectedId) ?? null;
-
-  /** The selected contractor's reviews and their source audits. */
-  const selectedWindow = useMemo(() => {
-    if (!selected) return { summaries: [], audits: [] };
-    const ids = new Set(selected.audits.map((a) => a.id));
+  /** Everything the drill-down needs for the selected contractor. */
+  const detail = useMemo(() => {
+    if (!selected) return null;
+    const reviews = finalized(scoped)
+      .filter((s) => s.contractorId === selected.contractorId)
+      .sort((a, b) => a.quarter.localeCompare(b.quarter));
+    const own = audits.filter((a) => a.contractorId === selected.contractorId);
     return {
-      summaries: selected.audits,
-      audits: scopedAudits.filter((a) => ids.has(a.id)),
+      reviews,
+      sections: sectionStanding(reviews),
+      areas: stickyAreas(reviews),
+      causes: issueBreakdown(collectObservations(own, contractors)),
+      subRegionName: reviews[0]?.subRegionName ?? "",
     };
-  }, [selected, scopedAudits]);
+  }, [selected, scoped, audits, contractors]);
 
-  const problems = useMemo(
-    () =>
-      selected
-        ? contractorProblems(selectedWindow.summaries, selectedWindow.audits, 6)
-        : [],
-    [selected, selectedWindow],
-  );
+  /** Programme mean for the open area, so the detail has something to sit
+   * against rather than a bare number. */
+  const areaContext = useMemo(() => {
+    if (!area) return { programme: null as number | null, questions: [], evidence: [] as EvidenceRow[] };
+    const programmeAreas = stickyAreas(scoped);
+    const questions = FLAT.filter(
+      (f) => (f.subSection ?? f.section) === area.code,
+    ).map((f) => f.question);
+    const rows = selected
+      ? collectObservations(
+          audits.filter((a) => a.contractorId === selected.contractorId),
+          contractors,
+        ).filter((r) => (r.subSectionTitle ?? `Section ${r.sectionCode}`) === area.title)
+      : [];
+    const evidence: EvidenceRow[] = rows.map((r) => ({
+      quarter: r.quarter,
+      code: r.questionCode,
+      text: r.questionText,
+      score: null,
+      answer: r.answer,
+      issues: r.issues,
+      weight: null,
+    }));
+    return {
+      programme: programmeAreas.find((a) => a.code === area.code)?.score ?? null,
+      questions,
+      evidence,
+    };
+  }, [area, scoped, selected, audits, contractors]);
 
-  /** What is stuck and what moved for this contractor — the positive half
-   * of the story, which an audit report usually drops. */
-  const movement = useMemo(
-    () =>
-      findingMovement(
-        selected
-          ? findingHistories(selectedWindow.summaries, selectedWindow.audits)
-          : [],
-      ),
-    [selected, selectedWindow],
-  );
-
-  const evidence = useMemo(
-    () =>
-      problem
-        ? problemEvidence(
-            problem,
-            selectedWindow.summaries,
-            selectedWindow.audits,
-            8,
-          )
-        : [],
-    [problem, selectedWindow],
-  );
-
-  /** The same problem measured across every contractor in scope — a gap
-   * everyone shares is a programme problem, not a contractor one. */
-  /** The controls inside a checklist area, for the level-2 overview. A
-   * hazard or a single question has none, and gets its trend instead. */
-  /**
-   * The controls inside a checklist area, with how many contractors fail
-   * each. A question nobody has answered has nothing to report — "0/0" with
-   * an empty bar is worse than no row — so when no contractor is measured on
-   * any of them the list is empty, and level 2 promotes the quarter bars to
-   * the main visual instead of drawing them twice.
-   */
-  const areaQuestions = useMemo(() => {
-    if (!problem || problem.kind !== "area") return [];
-    const stats = checklistQuestionStats(
-      summaries,
-      scopedAudits,
-      problem.code,
-    );
-    return stats.some((q) => q.contractors > 0) ? stats.slice(0, 6) : [];
-  }, [problem, summaries, scopedAudits]);
-
-  const causes = useMemo(() => causeMix(evidence), [evidence]);
-
-  const peer = useMemo(
-    () => (problem ? problemPeer(problem, summaries, scopedAudits) : null),
-    [problem, summaries, scopedAudits],
-  );
-
-  /** Problem counts per contractor, for the bar tooltips. */
-  const problemCounts = useMemo(() => {
-    const out = new Map<string, number>();
-    for (const s of stats) {
-      const ids = new Set(s.audits.map((a) => a.id));
-      out.set(
-        s.contractorId,
-        contractorProblems(
-          s.audits,
-          scopedAudits.filter((a) => ids.has(a.id)),
-          99,
-        ).length,
-      );
-    }
-    return out;
-  }, [stats, scopedAudits]);
-
-  const currentQuarter = quarterOf(new Date());
-  const activeInScope = inScope.filter((c) => c.active);
-  const reviewedThisQuarter = new Set(
-    audits
-      .filter((a) => a.quarter === currentQuarter && a.status !== "draft")
-      .map((a) => a.contractorId),
-  );
-  const outstanding = activeInScope.filter(
-    (c) => !reviewedThisQuarter.has(c.id),
-  ).length;
-
-  const scored = stats.filter((s) => s.avgScore !== null);
-  const programAvg =
-    scored.length > 0
-      ? Math.round(
-          (scored.reduce((sum, s) => sum + s.avgScore!, 0) / scored.length) * 10,
-        ) / 10
-      : null;
-
-  const closePanel = () => {
-    setSelectedId(null);
-    setProblem(null);
-    setShowEvidence(false);
+  const closeAll = () => {
+    setSelected(null);
+    setArea(null);
   };
 
-  return (
-    <div className="board">
-      <div className="board-bar">
-        <label className="board-field">
-          <span>Sub-region</span>
-          <select
-            value={subRegionId}
-            onChange={(e) => {
-              setSubRegionId(e.target.value);
-              closePanel();
-            }}
-          >
-            <option value="all">All sub-regions</option>
-            {subRegions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="board-field">
-          <span>Timeframe</span>
-          <select
-            value={timeframe}
-            onChange={(e) => {
-              setTimeframe(e.target.value as TimeframeId);
-              closePanel();
-            }}
-          >
-            {TIMEFRAMES.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="board-check">
-          <input
-            type="checkbox"
-            checked={includeInactive}
-            onChange={(e) => {
-              setIncludeInactive(e.target.checked);
-              closePanel();
-            }}
-          />
-          Include inactive
-        </label>
+  if (!hydrated && summaries.length === 0) {
+    return <div className="bd" />;
+  }
 
-        <div className="board-readout">
-          <span>
-            <strong>{programAvg === null ? "—" : `${programAvg.toFixed(1)}%`}</strong>
-            programme average
-          </span>
-          <span>
-            <strong>{stats.length}</strong>
-            contractors
-          </span>
-          <span className={outstanding > 0 ? "is-warn" : undefined}>
-            <strong>{outstanding}</strong>
-            {quarterLabel(currentQuarter)} reviews outstanding
-          </span>
+  return (
+    <div className="bd">
+      <div className="bd-head">
+        <div className="bd-title">
+          <h1>Contractor performance</h1>
+          <p>{shown ? quarterLabel(shown) : "No reviews on record"}</p>
+        </div>
+        <div className="bd-controls">
+          <label className="bd-select">
+            <span>Quarter</span>
+            <select
+              value={shown ?? ""}
+              onChange={(e) => setQuarter(e.target.value)}
+            >
+              {quarters.map((q) => (
+                <option key={q} value={q}>
+                  {quarterLabel(q)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="bd-toggle">
+            <input
+              type="checkbox"
+              checked={includeInactive}
+              onChange={(e) => setIncludeInactive(e.target.checked)}
+            />
+            <span>Include inactive</span>
+          </label>
         </div>
       </div>
 
-      <div className="board-chart">
-        <ContractorBarChart
-          data={stats.map((s) => ({
-            id: s.contractorId,
-            label: contractorLabel({
-              name: s.contractorName,
-              code: s.contractorCode,
-            }),
-            value: s.avgScore,
-            reviews: s.audits.length,
-            rating: s.rating,
-            delta: s.delta,
-            problems: problemCounts.get(s.contractorId) ?? 0,
-          }))}
-          selectedId={selectedId}
-          onSelect={(id) => {
-            setSelectedId(id);
-            setProblem(null);
-            setShowEvidence(false);
-          }}
-        />
-      </div>
+      <Kpis kpi={kpi} />
 
-      <div className="board-key">
-        {RATING_KEY.map((k) => (
-          <span key={k.label}>
-            <i style={{ background: k.varName }} />
-            {k.label}
-          </span>
+      <div className="bd-panels">
+        {panels.map((panel) => (
+          <SubRegionPanel
+            key={panel.subRegionId}
+            panel={panel}
+            selectedId={selected?.contractorId ?? null}
+            onSelect={(row) => {
+              setSelected(row);
+              setArea(null);
+            }}
+          />
         ))}
-        <span className="board-hint">Select a bar for its problems</span>
       </div>
 
-      {selected && (
+      {selected && detail && (
         <FloatingPanel
-          title={
-            problem
-              ? problem.label
-              : contractorLabel({
-                  name: selected.contractorName,
-                  code: selected.contractorCode,
-                })
-          }
+          title={area ? area.title : selected.label}
           subtitle={
-            problem
-              ? `${contractorLabel({
-                  name: selected.contractorName,
-                  code: selected.contractorCode,
-                })}${showEvidence ? " · what the auditors recorded" : ""}`
-              : `${selected.subRegionName} · ${timeframeById(timeframe).label} · ${selected.audits.length} review${selected.audits.length === 1 ? "" : "s"}`
+            area
+              ? `${selected.label} · ${detail.subRegionName}`
+              : `${detail.subRegionName} · ${shown ? quarterLabel(shown) : ""}`
           }
-          onBack={
-            showEvidence
-              ? () => setShowEvidence(false)
-              : problem
-                ? () => setProblem(null)
-                : undefined
-          }
-          onClose={closePanel}
+          onBack={area ? () => setArea(null) : undefined}
+          onClose={closeAll}
         >
-          {problem ? (
-            showEvidence ? (
-              <ProblemPanel problem={problem} evidence={evidence} peer={peer} />
-            ) : (
-              <ProblemOverview
-                problem={problem}
-                peer={peer}
-                causes={causes}
-                questions={areaQuestions}
-                onOpenEvidence={() => setShowEvidence(true)}
-                hasEvidence={evidence.length > 0}
-              />
-            )
+          {area ? (
+            <AreaView
+              area={area}
+              contractorLabel={selected.label}
+              programmeScore={areaContext.programme}
+              questions={areaContext.questions}
+              evidence={areaContext.evidence}
+            />
           ) : (
-            <ContractorPanel
-              stats={selected}
-              problems={problems}
-              movement={movement}
-              onOpenProblem={(p) => {
-                setProblem(p);
-                setShowEvidence(false);
-              }}
+            <ContractorView
+              label={selected.label}
+              subRegionName={detail.subRegionName}
+              reviews={detail.reviews}
+              sections={detail.sections}
+              areas={detail.areas}
+              causes={detail.causes}
+              onOpenArea={setArea}
             />
           )}
         </FloatingPanel>

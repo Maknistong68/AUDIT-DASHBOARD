@@ -221,23 +221,30 @@ Two invariants shape everything:
   State starts as the baseline so SSR matches the first client render —
   a page looking up a possibly user-created record must wait for `hydrated`
   before deciding it is missing.
-- **The dashboard is ONE chart.** `/` is a league-table bar chart that fills
-  the viewport, and everything else is reached by drilling into it: select a
-  bar for that contractor's ranked problems (`ContractorPanel`), select a
-  problem for the evidence behind it (`ProblemPanel`). Programme-wide
-  analysis lives on the page it belongs to — findings analysis (SHEW
-  heat-map, CRC hazards, observation trends) on `/findings`, trajectories on
-  `/contractors`. Do not add a second card to `/`; if something deserves
-  dashboard space, it replaces the chart or it goes on another page.
-- **Nothing on `/` scrolls above 860px, structurally.** `.shell:has(.board)`
-  is exactly `100dvh` with `overflow: hidden`, the chart row is
-  `minmax(0, 1fr)`, and `ContractorBarChart` draws at its container's
-  measured height (`useChartBox`) rather than at a height derived from its
-  data. The drill-down panels are a fixed box whose list rows share the
-  space (`flex: 1 1 0` with a max), and the lists are capped in
-  `summaries.ts` — six problems, eight pieces of evidence — so they fit by
-  construction rather than by overflow. Below 860px the page scrolls
-  normally; sideways it must never scroll at any width from 320px up.
+- **The board is a KPI row over two sub-region panels.** `/` opens on the
+  LATEST quarter and answers one question: how do the contractors compare.
+  Four plain numbers across the top (programme average, below target,
+  weakest area, recurring gaps), then one panel per sub-region, each a
+  horizontal bar list of its own contractors worst-first against the 90%
+  target. Faceted rather than filtered because the organisation IS two
+  sub-regions with a director each: a filter makes each of them click to see
+  their own patch.
+  **It used to be "ONE chart" pinned to `100dvh`, and that rule was the bug.**
+  Thirteen contractors in a viewport-tall chart can only be enormous, with
+  everything else squeezed around them — the owner's words were "a bar chart
+  that is so huge, and the rest is a little bit unproportioned" (2026-10-14).
+  The lock is gone, the chart owns its panel, and the page scrolls like a
+  page. Do not reintroduce a viewport-height dashboard.
+- **Three drill-down levels, and only the last one has words.**
+  `ContractorView` is level one: the headline (score, band, change,
+  sparkline), WHERE the gap is (section A/B/C under short names —
+  Management, On site, Planning & leadership), WHY it is there (the seven
+  categories), and whether it is STICKING. `AreaView` is level two: the
+  detail, the questions the area asks, what the auditor recorded. A piece
+  with nothing behind it is absent, so "why" is not drawn when no causes are
+  on record, and "is it sticking" needs two reviews — with one, every gap
+  would read as "new", which says more about how much history we hold than
+  about the contractor.
 - `contractorProblems()` / `problemEvidence()` / `problemPeer()` in
   `summaries.ts` are the drill-down model: a "problem" is a checklist area,
   a critical-risk hazard or a question, ranked by gap to target amplified
@@ -256,6 +263,13 @@ Two invariants shape everything:
 - Level 2 shows the quarter bars in the rail only when the main column has
   controls to list. A hazard or a single question has none, so the bars move
   across and become the main visual rather than being drawn twice.
+- **Area-level recurrence is what the recorded data supports.**
+  `stickyAreas()` is the owner's definition applied where it has real numbers
+  behind it: an area below target in this review AND the one before it. The
+  question-level machinery below still exists and is what runs once reviews
+  carry answers, but the imported quarters hold area points only, so
+  "this question came back" would have nothing behind it while "this area was
+  weak again" has two real figures.
 - **Recurrence** (`findingHistories()` and friends): the same question
   tracked answer-by-answer across a contractor's quarters. Two rules decide
   everything and are pinned in `recurrence.test.ts` — a finding is

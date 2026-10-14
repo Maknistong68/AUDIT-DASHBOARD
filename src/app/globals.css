@@ -356,28 +356,6 @@ th.num {
   color: #fff;
 }
 
-.admin-nav {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.admin-nav a {
-  text-decoration: none;
-  color: var(--ink-2);
-  padding: 7px 14px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  background: var(--mat-2);
-  border: 1px solid var(--mat-line);
-  transition: background-color 160ms var(--ease), color 160ms var(--ease);
-}
-
-.admin-nav a:hover {
-  background: var(--accent-wash);
-  color: var(--ink-1);
-}
-
 /* ---- Cards & layout ---- */
 
 .card {
@@ -1250,16 +1228,7 @@ td.cell-weak {
   background: var(--muted);
 }
 
-.key-accent { background: var(--accent); }
-.key-muted { background: var(--muted); opacity: 0.55; }
 .key-good { background: var(--status-good); }
-
-.tooltip-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 4px;
-}
 
 .tooltip-row .val {
   font-weight: 650;
@@ -1364,32 +1333,6 @@ td.cell-weak {
 
 .panel-floating-body {
   padding: 18px 22px 24px;
-}
-
-/* Rating key under the league table */
-.rating-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 14px;
-  padding: 10px 14px;
-  border-radius: var(--r-3);
-  background: var(--mat-2);
-  font-size: 11.5px;
-  color: var(--ink-2);
-}
-
-.rating-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.rating-key i {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--r-pill);
-  display: inline-block;
 }
 
 .band-swatch {
@@ -2003,7 +1946,6 @@ table.crc-entry input[type="number"] {
     padding: 16px 14px;
   }
 
-
   .spark-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
@@ -2258,170 +2200,6 @@ table.crc-entry input[type="number"] {
   }
 }
 
-/* ==================================================================
-   THE BOARD — the dashboard as one screen
-   ------------------------------------------------------------------
-   The dashboard is a single chart that fills the viewport. Nothing on
-   this page scrolls on a desktop, which is a structural guarantee
-   rather than a hope: the shell is exactly one viewport tall, the
-   chart row is `minmax(0, 1fr)` so it takes whatever is left over,
-   and the chart draws itself at the height its container reports.
-   Add a card here and something has to give — that is the point.
-
-   Below 860px the phone takes over and the page scrolls normally,
-   because a 14-row chart plus a drill-down does not belong in
-   650px of portrait glass.
-   ================================================================== */
-
-.shell:has(.board) {
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 14px;
-  overflow: hidden;
-}
-
-.shell:has(.board) > main {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.board {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 10px;
-}
-
-/* ---- One filter row, with the programme readout on the same line ---- */
-
-.board-bar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  padding: 8px 14px;
-  border-radius: var(--r-3);
-  background: var(--mat-1);
-  border: 1px solid var(--mat-line);
-  box-shadow: var(--shadow-1);
-}
-
-.board-field {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-  font-size: 12px;
-  font-weight: 550;
-  color: var(--ink-2);
-  margin: 0;
-}
-
-.board-field select {
-  font-size: 12.5px;
-  padding: 5px 26px 5px 10px;
-  border-radius: var(--r-2);
-}
-
-.board-check {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--ink-2);
-  white-space: nowrap;
-}
-
-/* Pushed right: the three numbers worth knowing before you read the bars. */
-.board-readout {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  font-size: 11.5px;
-  color: var(--muted);
-}
-
-.board-readout span {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  white-space: nowrap;
-}
-
-.board-readout strong {
-  font-size: 15px;
-  font-weight: 650;
-  color: var(--ink-1);
-  letter-spacing: -0.01em;
-}
-
-.board-readout .is-warn strong {
-  color: var(--status-serious);
-}
-
-/* ---- The chart: takes every pixel the other two rows leave ---- */
-
-.board-chart {
-  min-height: 0;
-  padding: 10px 16px 6px;
-  border-radius: var(--r-4);
-  background: var(--mat-1);
-  border: 1px solid var(--mat-line);
-  box-shadow: var(--shadow-1);
-  display: flex;
-}
-
-.chart-fill {
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-
-.board-key {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 16px;
-  padding: 8px 14px;
-  border-radius: var(--r-3);
-  background: var(--mat-2);
-  font-size: 11px;
-  color: var(--ink-2);
-}
-
-.board-key span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.board-key i {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex: none;
-}
-
-.board-hint {
-  margin-left: auto;
-  color: var(--muted);
-  font-style: italic;
-}
-
-/* ==================================================================
-   DRILL-DOWN — two levels, each a fixed box
-   ------------------------------------------------------------------
-   Same principle as the board: the panel is a fixed height and the
-   list rows SHARE it (`flex: 1` on every row), so six problems fit
-   exactly and there is nothing to scroll. The list is capped in the
-   data layer, not trimmed by overflow.
-   ================================================================== */
-
 .dd {
   height: 100%;
   min-height: 0;
@@ -2430,153 +2208,12 @@ table.crc-entry input[type="number"] {
   gap: 20px;
 }
 
-.dd-rail {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding-right: 20px;
-  border-right: 1px solid var(--mat-line);
-}
-
-.dd-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dd-score {
-  font-size: 40px;
-  font-weight: 680;
-  line-height: 1;
-  letter-spacing: -0.035em;
-  /* Proportional figures: tabular digits read loose at display sizes. */
-  font-variant-numeric: proportional-nums;
-}
-
-.dd-rating {
-  font-size: 12.5px;
-  color: var(--ink-2);
-  font-weight: 550;
-}
-
-.dd-delta {
-  font-size: 12px;
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-.dd-plot {
-  flex: 1;
-  min-height: 90px;
-  display: block;
-}
-
-.dd-plot svg {
-  display: block;
-}
-
-.dd-rail-note {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--ink-2);
-}
-
-.dd-disc {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.dd-disc li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px 40px;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  flex: 0 1 auto;
-  max-height: 22px;
-}
-
-.dd-disc-name {
-  color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dd-disc-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--mat-sunken);
-  overflow: hidden;
-}
-
-.dd-disc-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-}
-
-.dd-disc-val {
-  text-align: right;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-1);
-}
-
-/* Movement strip: what moved since the last review, good news first. The
-   positive half is the half an audit report usually drops. */
-.dd-move {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  flex: none;
-}
-
-.dd-move li {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: var(--r-2);
-  background: var(--mat-2);
-  font-size: 10.5px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.dd-move strong {
-  font-size: 14px;
-  font-weight: 680;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-
 .dd-move .is-good strong {
   color: var(--status-good);
 }
 
 .dd-move .is-bad strong {
   color: var(--status-critical);
-}
-
-/* ---- The problem list ---- */
-
-.dd-main {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 
 .dd-h {
@@ -2600,96 +2237,6 @@ table.crc-entry input[type="number"] {
   color: var(--muted);
 }
 
-.dd-problems {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-/* Rows share the panel so the list always fits — but capped, so three
-   findings do not stretch into three banners. */
-.dd-problems li {
-  flex: 1 1 0;
-  min-height: 0;
-  max-height: 78px;
-}
-
-.dd-problems button {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  grid-template-columns: 4px minmax(0, 1fr) auto 14px;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 12px 6px 0;
-  background: var(--mat-2);
-  border: 1px solid transparent;
-  border-radius: var(--r-2);
-  text-align: left;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  overflow: hidden;
-  transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
-}
-
-.dd-problems button:hover {
-  background: var(--mat-hover);
-  border-color: var(--mat-line);
-}
-
-.dd-problems button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-/* The severity mark is the row's left edge, full height. */
-.dd-p-mark {
-  width: 4px;
-  height: 100%;
-  border-radius: var(--r-2) 0 0 var(--r-2);
-}
-
-.dd-p-body {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
-}
-
-.dd-p-label {
-  font-size: 13px;
-  font-weight: 600;
-  /* Two lines of question text plus the meta line have to clear the row's
-     share of the panel; a looser leading here clips the meta. */
-  line-height: 1.26;
-  color: var(--ink-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-/* Recurrence flag, inline before the label so it reads as part of it. */
-.dd-p-flag {
-  display: inline-block;
-  font-size: 10px;
-  font-weight: 650;
-  padding: 1px 6px;
-  border-radius: var(--r-1);
-  margin-right: 6px;
-  vertical-align: 1px;
-  white-space: nowrap;
-}
-
 .dd-p-flag.is-stuck {
   background: color-mix(in srgb, var(--status-warning) 26%, transparent);
   color: var(--ink-1);
@@ -2700,83 +2247,10 @@ table.crc-entry input[type="number"] {
   color: var(--status-critical);
 }
 
-.dd-p-meta {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dd-p-num {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-  flex: none;
-}
-
-.dd-p-num strong {
-  font-size: 15px;
-  font-weight: 680;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-
-.dd-p-num em {
-  font-style: normal;
-  font-size: 10.5px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
 .dd-p-go {
   color: var(--muted);
   font-size: 17px;
   line-height: 1;
-}
-
-/* ---- Level 2: the evidence ---- */
-
-.dd-evidence,
-.dd-series {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.dd-evidence li,
-.dd-series li {
-  flex: 1 1 0;
-  min-height: 0;
-  display: grid;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  background: var(--mat-2);
-  border-radius: var(--r-2);
-  overflow: hidden;
-}
-
-.dd-evidence li {
-  grid-template-columns: 58px 56px minmax(0, 1fr);
-  max-height: 72px;
-}
-
-.dd-series li {
-  max-height: 56px;
-}
-
-.dd-e-q {
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .dd-e-answer {
@@ -2796,162 +2270,6 @@ table.crc-entry input[type="number"] {
 
 .dd-e-answer.is-partial {
   background: color-mix(in srgb, var(--status-warning) 22%, transparent);
-  color: var(--ink-1);
-}
-
-.dd-e-body {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.dd-e-text {
-  font-size: 12.5px;
-  color: var(--ink-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.dd-e-meta {
-  font-size: 10.5px;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dd-series li {
-  grid-template-columns: 64px minmax(0, 1fr) 54px;
-}
-
-.dd-series-q {
-  font-size: 12px;
-  color: var(--ink-2);
-  font-weight: 550;
-  white-space: nowrap;
-}
-
-.dd-series-bar {
-  position: relative;
-  height: 10px;
-  border-radius: 5px;
-  background: var(--mat-sunken);
-  overflow: hidden;
-}
-
-.dd-series-bar i {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 5px;
-}
-
-/* The 90% target, drawn over the fill. */
-.dd-series-bar b {
-  position: absolute;
-  top: -1px;
-  bottom: -1px;
-  width: 2px;
-  background: var(--status-good);
-}
-
-.dd-series-val {
-  text-align: right;
-  font-size: 12.5px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Benchmark and kind-of-gap, stacked at the foot of the level-2 rail. */
-.dd-peer {
-  margin-top: auto;
-}
-
-.dd-peer h4,
-.dd-mix h4 {
-  margin: 0 0 6px;
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.dd-peer-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.dd-peer-val {
-  font-size: 19px;
-  font-weight: 680;
-  letter-spacing: -0.02em;
-  color: var(--ink-1);
-}
-
-.dd-peer-delta {
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* The kind-of-gap breakdown in the level-2 rail. */
-.dd-mix {
-  margin-top: 16px;
-}
-
-.dd-mix ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dd-mix li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px 16px;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--ink-2);
-}
-
-.dd-mix-label {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dd-mix-label strong {
-  color: var(--ink-1);
-}
-
-.dd-mix-bar {
-  height: 6px;
-  border-radius: 3px;
-  background: var(--mat-sunken);
-  overflow: hidden;
-}
-
-.dd-mix-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--accent);
-}
-
-.dd-mix-n {
-  text-align: right;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
   color: var(--ink-1);
 }
 
@@ -3015,60 +2333,7 @@ table.crc-entry input[type="number"] {
   transform: scale(0.9);
 }
 
-/* ==================================================================
-   Phone: the board scrolls, because portrait glass cannot hold it.
-   ================================================================== */
-
 @media (max-width: 860px) {
-  .shell:has(.board) {
-    height: auto;
-    display: block;
-    overflow: visible;
-    padding-bottom: 96px; /* clears the fixed tab bar */
-  }
-
-  .shell:has(.board) > main {
-    display: block;
-  }
-
-  .board {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .board-chart {
-    /* Tall enough that 11 rows stay legible; the page scrolls to it. */
-    height: max(420px, 62dvh);
-    padding: 10px 10px 6px;
-  }
-
-  /* The three readouts are nowrap on a desktop line; on a phone they must
-     be allowed to wrap, or the bar becomes the widest thing on the page and
-     drags the whole board sideways. */
-  .board-readout {
-    margin-left: 0;
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 4px 16px;
-  }
-
-  .board-readout span {
-    white-space: normal;
-  }
-
-  .board-field {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-
-  .board-field select {
-    min-width: 0;
-    flex: 1;
-  }
-
-  .board-hint,
   .chart-tooltip {
     display: none;
   }
@@ -3091,41 +2356,6 @@ table.crc-entry input[type="number"] {
     height: auto;
   }
 
-  .dd-rail {
-    border-right: 0;
-    border-bottom: 1px solid var(--mat-line);
-    padding-right: 0;
-    padding-bottom: 14px;
-  }
-
-  .dd-disc {
-    margin-top: 0;
-  }
-
-  /* Rows size to their content once the page is allowed to scroll. */
-  .dd-problems li,
-  .dd-evidence li,
-  .dd-series li {
-    flex: none;
-    max-height: none;
-  }
-
-  .dd-disc li {
-    max-height: none;
-  }
-
-  .dd-disc {
-    flex: none;
-    justify-content: flex-start;
-  }
-
-  .dd-mix {
-    margin-top: 0;
-  }
-
-  .dd-problems button {
-    min-height: 62px;
-  }
 }
 
 /* ---- Findings across quarters: the toggle and its flags ---- */
@@ -3795,320 +3025,6 @@ table.matrix td.matrix-cell {
   width: 56px;
 }
 
-/* ---- Level 1: problem rows are a bar and a trend, not a sentence ---- */
-
-.dd-problems button {
-  grid-template-columns: 4px minmax(0, 1fr) 46px 56px 12px;
-  gap: 10px;
-}
-
-.dd-p-body {
-  gap: 6px;
-}
-
-.dd-p-label {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  font-size: 13px;
-}
-
-.dd-p-num strong {
-  font-size: 16px;
-}
-
-/* ==================================================================
-   Level 2 — one problem, shown
-   ================================================================== */
-
-.pv {
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: 268px minmax(0, 1fr);
-  gap: 22px;
-}
-
-.pv-rail {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-right: 22px;
-  border-right: 1px solid var(--mat-line);
-}
-
-.pv-hero {
-  flex: none;
-}
-
-.pv-score {
-  font-size: 42px;
-  font-weight: 680;
-  line-height: 1;
-  letter-spacing: -0.035em;
-  font-variant-numeric: proportional-nums;
-}
-
-.pv-sub {
-  font-size: 12px;
-  color: var(--ink-2);
-  margin-top: 4px;
-}
-
-/* Quarter columns: the shape of the trend, readable without a legend. */
-.pv-quarters {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-  flex: 1;
-  min-height: 86px;
-}
-
-.pv-q {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  height: 100%;
-}
-
-.pv-q-bar {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  border-radius: 4px;
-  background: var(--mat-sunken);
-  display: flex;
-  align-items: flex-end;
-  overflow: visible;
-}
-
-.pv-q-bar i {
-  display: block;
-  width: 100%;
-  border-radius: 4px;
-}
-
-.pv-q-bar b {
-  position: absolute;
-  left: -2px;
-  right: -2px;
-  height: 2px;
-  background: var(--status-good);
-  opacity: 0.8;
-}
-
-.pv-q-n {
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--ink-1);
-  font-variant-numeric: tabular-nums;
-}
-
-.pv-q-l {
-  font-size: 10px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.pv-peer {
-  flex: none;
-}
-
-.pv-peer-head {
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 7px;
-}
-
-.pv-peer-row {
-  display: grid;
-  grid-template-columns: 86px minmax(0, 1fr) 44px;
-  align-items: center;
-  gap: 9px;
-  font-size: 11px;
-  color: var(--ink-2);
-  margin-bottom: 6px;
-}
-
-.pv-peer-row strong {
-  text-align: right;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--ink-1);
-  font-variant-numeric: tabular-nums;
-}
-
-.pv-peer-count {
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-.pv-peer-count strong {
-  font-size: 20px;
-  font-weight: 680;
-  color: var(--ink-1);
-  letter-spacing: -0.02em;
-}
-
-/* ---- Right column ---- */
-
-.pv-main {
-  min-width: 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.pv-block {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pv-grow {
-  flex: 1;
-}
-
-.pv-causes,
-.pv-questions {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  min-height: 0;
-}
-
-.pv-causes li {
-  display: grid;
-  grid-template-columns: 136px minmax(0, 1fr) 30px;
-  align-items: center;
-  gap: 10px;
-  font-size: 11.5px;
-}
-
-.pv-cause-label {
-  color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pv-cause-bar,
-.pv-q-fail {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--mat-sunken);
-  overflow: hidden;
-}
-
-.pv-cause-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-  background: var(--accent);
-}
-
-.pv-q-fail i {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-}
-
-.pv-cause-n,
-.pv-questions .pv-q-n {
-  text-align: right;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-1);
-  font-size: 11.5px;
-}
-
-.pv-questions li {
-  display: grid;
-  /* The control's name earns the space: a director cannot read "B9.3". */
-  grid-template-columns: 50px minmax(0, 1fr) 104px 46px;
-  align-items: center;
-  gap: 10px;
-  flex: 1 1 0;
-  max-height: 36px;
-}
-
-.pv-q-text {
-  font-size: 11.5px;
-  color: var(--ink-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pv-q-code {
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--ink-1);
-  white-space: nowrap;
-}
-
- /* Quarter bars promoted to the main column, where they get real height. */
-.pv-big-quarters {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.pv-big-quarters .pv-quarters {
-  flex: 1;
-  gap: 14px;
-  min-height: 0;
-}
-
-.pv-big-quarters .pv-q-n {
-  font-size: 14px;
-}
-
-.pv-big-quarters .pv-q-l {
-  font-size: 11px;
-}
-
-/* The one way down to level 3, where the words live. */
-.pv-more {
-  flex: none;
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--mat-line);
-  background: var(--mat-2);
-  color: var(--ink-2);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 550;
-  cursor: pointer;
-  transition: background-color 150ms var(--ease), color 150ms var(--ease);
-}
-
-.pv-more:hover {
-  background: var(--mat-hover);
-  color: var(--ink-1);
-}
-
-.pv-more:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 /* The panel box also sizes the level-2 layout. */
 .panel-backdrop:has(.pv) {
   align-items: center;
@@ -4139,40 +3055,6 @@ table.matrix td.matrix-cell {
     align-items: flex-start;
     padding: 4vh 12px 24px;
     overflow-y: auto;
-  }
-
-  .pv {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
-    height: auto;
-  }
-
-  .pv-rail {
-    border-right: 0;
-    border-bottom: 1px solid var(--mat-line);
-    padding-right: 0;
-    padding-bottom: 14px;
-  }
-
-  .pv-quarters {
-    min-height: 110px;
-  }
-
-  .pv-questions li {
-    flex: none;
-    max-height: none;
-    min-height: 30px;
-    grid-template-columns: 50px minmax(0, 1fr) 46px;
-    grid-template-areas: "code text text" "bar bar n";
-    gap: 4px 10px;
-  }
-  .pv-q-code { grid-area: code; }
-  .pv-q-text { grid-area: text; }
-  .pv-q-fail { grid-area: bar; }
-  .pv-questions .pv-q-n { grid-area: n; }
-
-  .dd-problems button {
-    grid-template-columns: 4px minmax(0, 1fr) 44px 12px;
   }
 
   .dd-problems .rspark {
@@ -4430,4 +3312,716 @@ table.matrix td.matrix-cell {
   .entry-live {
     font-size: 15px;
   }
+}
+
+/* ===========================================================================
+   THE BOARD — what a director opens
+   ---------------------------------------------------------------------------
+   Three readers (a project director per sub-region, and the H&S team) with
+   one job: compare contractors, latest quarter first. The layout is that
+   sentence — plain numbers, then one panel per sub-region, then everything
+   else behind a click.
+
+   It is NOT one viewport-height chart. That rule turned thirteen contractors
+   into enormous bars with everything else squeezed around them. Marks here
+   are thin, ends are rounded, rules are hairlines, and the page scrolls like
+   a page.
+   =========================================================================== */
+
+.bd {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+
+.bd-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.bd-title h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+}
+
+.bd-title p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.bd-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.bd-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.bd-select select {
+  appearance: none;
+  background: var(--mat-2) var(--chevron-url) no-repeat right 10px center;
+  background-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  padding: 8px 30px 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-1);
+  cursor: pointer;
+}
+
+.bd-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* ---- the four numbers the board leads with ---- */
+
+.bd-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bd-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--mat-1);
+  box-shadow: var(--shadow-1);
+  min-width: 0;
+}
+
+.bd-kpi-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.bd-kpi-value {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-1);
+}
+
+.bd-kpi-of {
+  font-size: 15px;
+  font-weight: 500;
+  font-style: normal;
+  color: var(--muted);
+}
+
+.bd-kpi-note {
+  font-size: 12.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bd-kpi-note em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+/* ---- one panel per sub-region ---- */
+
+.bd-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.bd-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--mat-1);
+  box-shadow: var(--shadow-1);
+  padding: 16px 18px 10px;
+  min-width: 0;
+}
+
+.bd-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.bd-panel-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+}
+
+.bd-panel-avg {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.bd-panel-avg em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bd-panel-none {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.bd-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.bd-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 128px) minmax(0, 1fr) 52px 54px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.bd-row:hover {
+  background: var(--mat-hover);
+}
+
+.bd-row[aria-pressed="true"] {
+  background: var(--accent-wash);
+}
+
+.bd-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.bd-row-name {
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The mark: thin, rounded end, with the 90% target as a hairline tick on the
+   row itself rather than a rule drawn across the whole panel. */
+.bd-row-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mat-sunken);
+}
+
+.bd-row-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  transition: width 200ms ease;
+}
+
+.bd-row-track b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--baseline);
+}
+
+.bd-row-score {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-1);
+}
+
+.bd-row-delta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--muted);
+}
+
+.bd-row-delta.is-up { color: var(--success-text); }
+.bd-row-delta.is-down { color: var(--status-critical); }
+
+@media (max-width: 1099px) {
+  .bd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .bd-panels { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 620px) {
+  .bd-title h1 { font-size: 22px; }
+  .bd-kpi { padding: 13px 14px; }
+  .bd-kpi-value { font-size: 25px; }
+  .bd-row {
+    grid-template-columns: minmax(0, 1fr) 48px 50px;
+    grid-template-areas: "name score delta" "track track track";
+    row-gap: 7px;
+  }
+  .bd-row-name { grid-area: name; }
+  .bd-row-track { grid-area: track; }
+  .bd-row-score { grid-area: score; }
+  .bd-row-delta { grid-area: delta; }
+  .bd-controls { width: 100%; justify-content: space-between; }
+}
+
+/* ---------------------------------------------------------------------------
+   DRILL ONE — why is this contractor behind
+   Four pieces: the headline, where, why, and whether it is sticking. Shapes
+   and numbers; the words are one level further down.
+   --------------------------------------------------------------------------- */
+
+.dv {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dv-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--mat-line);
+}
+
+.dv-hero-score {
+  display: block;
+  font-size: 44px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.dv-hero-band {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-2);
+}
+
+.dv-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.dv-move {
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.dv-move.is-up { color: var(--success-text); }
+.dv-move.is-down { color: var(--status-critical); }
+
+.dv-hero-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dv-block { min-width: 0; }
+
+.dv-h {
+  margin: 0 0 9px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.dv-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.dv-bars li {
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) minmax(0, 1fr) 46px;
+  align-items: center;
+  gap: 10px;
+}
+
+.dv-bar-name {
+  font-size: 13px;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-bar-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mat-sunken);
+}
+
+.dv-bar-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+}
+
+.dv-bar-track b {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--baseline);
+}
+
+.dv-bar-val {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-1);
+}
+
+.dv-split {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dv-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  background: var(--mat-2);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.dv-chip strong {
+  font-size: 17px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-1);
+}
+
+.dv-chip.is-bad strong { color: var(--status-critical); }
+.dv-chip.is-warn strong { color: var(--status-serious); }
+.dv-chip.is-good strong { color: var(--success-text); }
+
+.dv-areas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dv-areas button {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto 46px 12px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 8px;
+  margin: 0 -8px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: none;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.dv-areas button:hover { background: var(--mat-hover); }
+
+.dv-areas button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dv-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dv-area-name {
+  font-size: 13px;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dv-tag {
+  padding: 2px 8px;
+  border-radius: var(--r-1);
+  background: rgba(208, 59, 59, 0.1);
+  color: var(--status-critical);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dv-area-val {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--ink-1);
+}
+
+.dv-go { color: var(--muted); font-size: 15px; }
+
+.dv-foot {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------------------
+   DRILL TWO — the detail behind one area
+   The only level where words belong: by here a reader has stopped scanning
+   and started reading.
+   --------------------------------------------------------------------------- */
+
+.av {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.av-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--mat-line);
+}
+
+.av-score {
+  font-size: 40px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.av-gap { font-size: 13px; color: var(--ink-2); }
+.av-state { font-size: 12.5px; color: var(--muted); }
+
+.av-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.av-facts div { min-width: 0; }
+
+.av-facts dt {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.av-facts dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.av-h {
+  margin: 0 0 9px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.av-evidence,
+.av-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.av-evidence li {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+}
+
+.av-ev-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 5px;
+}
+
+.av-ev-head strong {
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink-1);
+}
+
+.av-ev-head em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.av-ans {
+  padding: 2px 8px;
+  border-radius: var(--r-1);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.av-ans.is-no {
+  background: rgba(208, 59, 59, 0.1);
+  color: var(--status-critical);
+}
+
+.av-ans.is-partial {
+  background: rgba(236, 131, 90, 0.14);
+  color: var(--status-serious);
+}
+
+.av-evidence p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.av-causes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.av-causes i {
+  font-style: normal;
+  padding: 2px 9px;
+  border-radius: var(--r-1);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.av-questions { gap: 9px; }
+
+.av-questions li {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+
+.av-q-code {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.av-q-code em {
+  font-style: normal;
+  margin-left: 5px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.av-q-text {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+@media (max-width: 620px) {
+  .dv-hero-score { font-size: 36px; }
+  .av-score { font-size: 32px; }
+  .av-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dv-bars li { grid-template-columns: minmax(80px, 110px) minmax(0, 1fr) 42px; }
+  .dv-areas button { grid-template-columns: 8px minmax(0, 1fr) 44px 12px; }
+  .dv-tag { display: none; }
 }
