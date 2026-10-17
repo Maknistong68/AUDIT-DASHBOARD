@@ -36,6 +36,7 @@ import {
   recentReviews,
   sectionMoves,
   sectionStanding,
+  scoredDisciplines,
   stickyAreas,
   summarizeAll,
   type AreaStanding,
@@ -86,6 +87,10 @@ export function DashboardClient() {
   const kpi = useMemo(() => programmeKpis(scoped, shown), [scoped, shown]);
   const trend = useMemo(() => programmeTrend(scoped), [scoped]);
   const moves = useMemo(() => sectionMoves(scoped, shown), [scoped, shown]);
+  /** What the headline figure is an average OF. With one discipline on
+   * record the scorecard weights collapse to it, and a board headed "EHSS
+   * performance" would be ranking Health & Safety without saying so. */
+  const basis = useMemo(() => scoredDisciplines(scoped, shown), [scoped, shown]);
   const feed = useMemo(
     () => recentReviews(scoped.filter((s) => s.quarter === shown), 5),
     [scoped, shown],
@@ -171,7 +176,18 @@ export function DashboardClient() {
       <header className="bn-head">
         <div className="bn-head-id">
           <h1>EHSS performance</h1>
-          <p>Quarterly contractor audits across {subRegions.length} sub-regions</p>
+          <p>
+            Quarterly contractor audits across {subRegions.length} sub-regions
+            {basis.singleDiscipline && (
+              <>
+                {" · "}
+                <b className="bn-basis">
+                  {basis.names[0]} only — {Math.round((1 - basis.weight) * 100)}%
+                  of the scorecard is not yet scored
+                </b>
+              </>
+            )}
+          </p>
         </div>
         <div className="bn-head-tools">
           <div className="bn-seg" role="group" aria-label="Quarter">
@@ -207,7 +223,7 @@ export function DashboardClient() {
       <div className="bn-grid">
         <Card
           title="Programme trend"
-          note={`Average of every review, quarter by quarter · each faint line is one of ${trend.contractors.length} contractors`}
+          note={`Each faint line is one of ${trend.contractors.length} contractors`}
           wide
           className="bn-trend"
           action={<GoLink href="/contractors" label="Open contractor trajectories" />}

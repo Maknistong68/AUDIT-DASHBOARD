@@ -184,6 +184,21 @@ Two invariants shape everything:
     Do not write code that reconciles to those figures; there is nothing
     consistent to reconcile to. The points are sound (all 40 section sums
     add up exactly) and are what the app scores.
+  - **The whole chain is verified end to end, in one command.**
+    `scripts/audit-chain.py` walks source record -> dataset -> independent
+    longhand arithmetic -> **the rendered screen**, and exits non-zero naming
+    the cell when any link disagrees. The fourth link is the one no unit test
+    covers: `scripts/scrape-audit-pages.mjs` reads every audit page out of
+    the running app, so "the dashboard is right" stops meaning "the dashboard
+    agrees with itself". Last run 2026-10-17: 558 point cells and 361
+    rendered figures, 0 disagreements. Run it with `--screen` and the app on
+    :3000; Playwright is resolved at runtime from `PLAYWRIGHT_NODE_PATH` and
+    must NOT become a dependency or be symlinked into `node_modules`.
+    Prove it still bites after changing it: alter one point value and watch
+    it fail. A check that cannot fail is not a check.
+    `docs/DATA-ASSURANCE.md` is the director-facing write-up of that audit —
+    where each number comes from, what was verified, and what is still
+    weak.
   - **The calculation is cross-checked, not trusted.** `calculation.test.ts`
     re-derives every audit's areas, sections and total straight from the
     import record in `data/`, with the arithmetic written out longhand in the
@@ -253,12 +268,37 @@ Two invariants shape everything:
   that is so huge, and the rest is a little bit unproportioned" (2026-10-14).
   The lock is gone and the page scrolls like a page. Do not reintroduce a
   viewport-height dashboard.
-- **The two board charts.** `ProgrammeTrendChart` is the quarter-by-quarter
-  mean with every contractor's own path drawn faintly behind it — the fan is
-  the spread the average sits in, not a categorical series, so it is one
-  recessive ink and no colour claims an identity. Its y axis is FITTED to
-  the data and snapped to a round step: pinned to 0–100, two quarters of
-  real scores occupy a third of the plot and every movement flattens.
+- **The board reports the SCORECARD figure (`overall`), everywhere.** It
+  used to be split: the columns, watchlist, sub-region averages and KPI row
+  read `AuditSummary.total` (the H&S checklist total) while the trend read
+  `overall`. They are the same number while H&S is the only discipline
+  scored, which is why it read as correct — record one Environment score,
+  which the editable audit page now permits, and the board would have
+  disagreed with its own trend line about the same contractor in the same
+  quarter. `board.test.ts` pins it on a summary carrying a second
+  discipline, because a test on the real data cannot tell the two apart.
+- **The board says which disciplines the headline covers.**
+  `weightedOverall` renormalizes over whatever is scored, which is right and
+  is also how a board misleads: with H&S alone the weights collapse onto it
+  and a contractor's "overall" IS their H&S score, under a heading that says
+  EHSS. `scoredDisciplines()` is how a view knows, and the subtitle says
+  "Health & Safety only — 60% of the scorecard is not yet scored" until a
+  second discipline is recorded. Don't remove it; remove the condition when
+  the other four arrive.
+- **The two board charts.** `ProgrammeTrendChart` plots TWO means over the
+  fan of every contractor's own path. **Like for like** (accent, with the
+  wash) is the contractors audited in every quarter on record — the only
+  line whose movement is the programme moving. **All reviews** (`--series-2`)
+  is whoever was audited that quarter. They are not the same story: between
+  Q4 2025 and Q1 2026 the all-reviews mean falls 5.85 points but only 2.14
+  of that is the programme; 3.71 is the five contractors who joined, who
+  average 58.4. Drawing only the second showed a decline nearly three times
+  the real one, and disagreed with the KPI delta, which has always been
+  like-for-like. Two series, so the legend is not optional — it is rendered
+  from the same values that drew the lines. The fan is one recessive ink and
+  claims no identity. The y axis is FITTED to the data and snapped to a
+  round step: pinned to 0–100, two quarters of real scores occupy a third of
+  the plot and every movement flattens.
   `ScoreColumns` is the quarter's contractors, worst on the left, bars from
   zero, each printing its own score inside the bar. In both, the accent
   marks the one thing the board is currently about (the selected
@@ -451,6 +491,13 @@ Two invariants shape everything:
   surface gaps need the composite the glass resolves to (`#20232a`). That is
   also the surface the palette is validated against; change the glass and
   you re-validate.
+- The trend card is the one place TWO series are drawn, in `--accent` and
+  `--series-2` (`#49b8f5`). Measured on `#20232a`: ΔE 29.8 protan, 19.4
+  tritan, 31.3 normal — far above the 8/15 floors — and both clear 3:1
+  against the surface. The dark lightness band (0.48–0.67) is the one check
+  they fail, and deliberately: the lime is the owner's reference colour, it
+  is 12.5:1, both lines carry a legend entry, and identity never rests on
+  colour alone. Record a new exception here rather than quietly widening it.
 - **`--accent` is lime (`#ccf45b`) and it is spoken for.** It marks the ONE
   thing a view is about and nothing else — never a decoration, never a
   second series. Text never sits on it in white (1.1:1); `--on-accent` is

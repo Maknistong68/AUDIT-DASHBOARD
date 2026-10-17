@@ -7,6 +7,7 @@ import {
   programmeTrend,
   quartersOnRecord,
   recentReviews,
+  scoredDisciplines,
   sectionMoves,
   sectionStanding,
   stickyAreas,
@@ -197,5 +198,82 @@ describe("the board's time axis", () => {
     for (const r of feed) expect(r.status).not.toBe("draft");
     const dates = feed.map((r) => r.auditDate);
     expect([...dates].sort().reverse()).toEqual(dates);
+  });
+});
+
+describe("the board reports what it claims to report", () => {
+  it("ranks on the scorecard figure, not the H&S checklist total", () => {
+    // They are the same number while H&S is the only discipline scored, so
+    // this is pinned on a summary with a SECOND discipline recorded —
+    // otherwise the test passes whichever field the board reads.
+    const [first, ...rest] = all;
+    const withEnv: typeof all = [
+      {
+        ...first!,
+        disciplineScores: { ...first!.disciplineScores, env: 100 },
+        overall: 100, // not the checklist total
+      },
+      ...rest,
+    ];
+    const panels = boardBySubRegion(withEnv, first!.quarter, subRegions);
+    const row = panels
+      .flatMap((p) => p.rows)
+      .find((r) => r.contractorId === first!.contractorId)!;
+    expect(row.score).toBe(100);
+    expect(row.score).not.toBe(first!.total);
+
+    const kpi = programmeKpis(withEnv, first!.quarter);
+    const inQ = withEnv.filter((s) => s.quarter === first!.quarter);
+    const mean =
+      inQ.reduce((sum, s) => sum + s.overall!, 0) / inQ.length;
+    expect(kpi.average).toBeCloseTo(Math.round(mean * 100) / 100, 6);
+  });
+
+  it("separates like-for-like movement from a change in who was audited", () => {
+    const trend = programmeTrend(all);
+    const everyQuarter = trend.contractors.filter((c) =>
+      c.points.every((p) => p.score !== null),
+    );
+    expect(trend.likeForLikeIds).toEqual(
+      everyQuarter.map((c) => c.contractorId),
+    );
+    // Only some contractors are in both quarters, so the two means differ.
+    expect(trend.likeForLikeIds.length).toBeLessThan(trend.contractors.length);
+
+    const move = (pts: typeof trend.programme) =>
+      pts[pts.length - 1]!.score! - pts[0]!.score!;
+    const allMove = move(trend.programme);
+    const lflMove = move(trend.likeForLike);
+    expect(allMove).not.toBeCloseTo(lflMove, 1);
+
+    // The like-for-like movement is what the KPI delta reports.
+    const kpi = programmeKpis(all, latest);
+    expect(kpi.delta).toBeCloseTo(lflMove, 1);
+  });
+
+  it("says which disciplines the headline figure covers", () => {
+    // `summarizeAudit` fills disciplineScores.hs from the checklist, so H&S
+    // is scored on every recorded audit and the other four are not. The
+    // weights then renormalize over 0.40 alone, which is exactly why the
+    // board has to say so: the "overall" figure IS the H&S score.
+    const basis = scoredDisciplines(all, latest);
+    expect(basis.ids).toEqual(["hs"]);
+    expect(basis.names).toEqual(["Health & Safety"]);
+    expect(basis.weight).toBe(0.4);
+    expect(basis.singleDiscipline).toBe(true);
+
+    for (const s of all) {
+      if (s.quarter !== latest || s.total === null) continue;
+      expect(s.overall).toBe(s.total);
+    }
+
+    const withEnv = all.map((s) => ({
+      ...s,
+      disciplineScores: { ...s.disciplineScores, env: 80 },
+    }));
+    const two = scoredDisciplines(withEnv, latest);
+    expect(two.ids).toEqual(["hs", "env"]);
+    expect(two.singleDiscipline).toBe(false);
+    expect(two.weight).toBe(0.5);
   });
 });

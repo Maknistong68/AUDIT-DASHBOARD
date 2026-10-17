@@ -4412,3 +4412,42 @@ table.matrix td.matrix-cell {
 /* The programme row is the one the sub-regions are read against. */
 .bn-goals .is-lead .bn-goal-track { background: var(--accent-track); }
 .bn-goals .is-lead b { color: var(--accent); }
+
+/* Two series on the trend card means a legend, always. */
+.trend-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-bottom: 6px;
+}
+
+.trend-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--ink-2);
+  min-width: 0;
+}
+
+.trend-key i {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.trend-key em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* What the headline figure is an average OF. Said plainly, in the ink the
+   rest of the subtitle wears — a caveat set in a warning colour reads as an
+   error, and this is not one. */
+.bn-basis {
+  font-weight: 600;
+  color: var(--ink-2);
+}

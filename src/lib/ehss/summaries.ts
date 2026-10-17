@@ -1859,10 +1859,16 @@ export function boardBySubRegion(
           name: s.contractorName,
           code: s.contractorCode,
           label: `${s.contractorName} (${s.contractorCode})`,
-          score: s.total,
+          // `overall`, not `total`: the board ranks on the SCORECARD figure.
+          // They are the same number while Health & Safety is the only
+          // discipline scored, which is why this read as correct for so
+          // long — record one Environment score and the board would have
+          // started disagreeing with the trend line about the same
+          // contractor in the same quarter.
+          score: s.overall,
           delta:
-            previous?.total != null && s.total != null
-              ? round(s.total - previous.total)
+            previous?.overall != null && s.overall != null
+              ? round(s.overall - previous.overall)
               : null,
           areasBelow: areas.filter((ss) => ss.score! < TARGET_SCORE).length,
           areasScored: areas.length,
@@ -1907,8 +1913,10 @@ export function programmeKpis(
 ): ProgrammeKpis {
   const scored = finalized(summaries);
   const inQuarter = quarter ? scored.filter((s) => s.quarter === quarter) : [];
+  // `overall` throughout, matching the board and the trend — see the note
+  // in `boardBySubRegion`.
   const values = inQuarter
-    .map((s) => s.total)
+    .map((s) => s.overall)
     .filter((v): v is number => v !== null);
 
   // Movement is measured over the contractors present in BOTH quarters, so a
@@ -1921,15 +1929,15 @@ export function programmeKpis(
   if (previousQ) {
     const before = new Map(
       scored
-        .filter((s) => s.quarter === previousQ && s.total !== null)
-        .map((s) => [s.contractorId, s.total!]),
+        .filter((s) => s.quarter === previousQ && s.overall !== null)
+        .map((s) => [s.contractorId, s.overall!]),
     );
     const pairs = inQuarter.filter(
-      (s) => s.total !== null && before.has(s.contractorId),
+      (s) => s.overall !== null && before.has(s.contractorId),
     );
     if (pairs.length > 0) {
       const moved = pairs.reduce(
-        (sum, s) => sum + (s.total! - before.get(s.contractorId)!),
+        (sum, s) => sum + (s.overall! - before.get(s.contractorId)!),
         0,
       );
       delta = round(moved / pairs.length);
@@ -2122,8 +2130,23 @@ export interface ContractorPath {
 
 export interface ProgrammeTrend {
   quarters: string[];
-  /** The programme mean, quarter by quarter. */
+  /** The mean of whoever was audited in each quarter. */
   programme: TrendPoint[];
+  /**
+   * The mean over the contractors audited in EVERY quarter on record — the
+   * only line whose movement is the programme moving.
+   *
+   * Without it the chart lies by omission. Eight contractors were audited
+   * in Q4 2025 and eleven in Q1 2026, only six in both; the all-reviews
+   * mean falls 5.85 points between them, but 3.71 of that is the five new
+   * contractors (mean 58.4) joining, not anyone getting worse. Like for
+   * like the programme moved 2.14 points, which is what `programmeKpis`
+   * has always reported — the KPI and the chart were telling a director
+   * two different stories about the same quarter.
+   */
+  likeForLike: TrendPoint[];
+  /** Who the like-for-like line covers. */
+  likeForLikeIds: string[];
   /** Every contractor's own path, drawn faintly behind the mean so the
    * spread is visible. Identity is not claimed by colour — they are one
    * recessive ink and the hover names them. */
@@ -2168,6 +2191,12 @@ export function programmeTrend(summaries: AuditSummary[]): ProgrammeTrend {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
+  // Audited in every quarter on record, and scored in each.
+  const likeForLikeIds = contractors
+    .filter((c) => c.points.every((p) => p.score !== null))
+    .map((c) => c.contractorId);
+  const comparable = scored.filter((s) => likeForLikeIds.includes(s.contractorId));
+
   const values = scored
     .map((s) => s.overall)
     .filter((v): v is number => v !== null);
@@ -2175,6 +2204,9 @@ export function programmeTrend(summaries: AuditSummary[]): ProgrammeTrend {
   return {
     quarters,
     programme: quarters.map((q) => at(scored, q)),
+    likeForLike:
+      likeForLikeIds.length === 0 ? [] : quarters.map((q) => at(comparable, q)),
+    likeForLikeIds,
     contractors,
     min: values.length === 0 ? 0 : Math.min(...values),
     max: values.length === 0 ? 100 : Math.max(...values),
@@ -2224,4 +2256,52 @@ export function recentReviews(
         b.quarter.localeCompare(a.quarter),
     )
     .slice(0, limit);
+}
+
+/**
+ * Which of the five scorecard disciplines actually carry a score in a
+ * quarter — and therefore what the "overall" figure on screen is an average
+ * OF.
+ *
+ * `weightedOverall` renormalizes over the disciplines that are scored, which
+ * is right (a partly-scored quarter should not be understated) and is also
+ * why a board can quietly mislead: with Health & Safety alone on record the
+ * weights collapse to 1.0 and the contractor's "overall" IS their H&S score,
+ * under a heading that says EHSS. A director reading a ranking is entitled
+ * to know it ranks one discipline out of five.
+ */
+export interface ScoredDisciplines {
+  ids: DisciplineId[];
+  names: string[];
+  /** Share of the scorecard's weight these disciplines carry, 0–1. */
+  weight: number;
+  /** True when the weighted figure is really a single discipline's score. */
+  singleDiscipline: boolean;
+}
+
+export function scoredDisciplines(
+  summaries: AuditSummary[],
+  quarter: string | null,
+): ScoredDisciplines {
+  const rows = finalized(summaries).filter(
+    (s) => quarter === null || s.quarter === quarter,
+  );
+  const ids = DISCIPLINES.filter((d) =>
+    rows.some((s) => {
+      const v = s.disciplineScores[d.id];
+      return v !== undefined && v !== null;
+    }),
+  ).map((d) => d.id);
+  return {
+    ids,
+    names: ids.map((id) => DISCIPLINES.find((d) => d.id === id)!.name),
+    weight:
+      Math.round(
+        DISCIPLINES.filter((d) => ids.includes(d.id)).reduce(
+          (sum, d) => sum + d.weight,
+          0,
+        ) * 100,
+      ) / 100,
+    singleDiscipline: ids.length === 1,
+  };
 }
