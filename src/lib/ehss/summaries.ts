@@ -2095,3 +2095,133 @@ export function sectionStanding(summaries: AuditSummary[]): SectionStanding[] {
       : [];
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * The board's time axis
+ *
+ * Everything above answers "how do the contractors compare THIS quarter".
+ * These answer "which way is the programme going", which is the one
+ * question a quarterly audit exists to settle and the only one the board
+ * could not ask before.
+ * ------------------------------------------------------------------ */
+
+export interface TrendPoint {
+  quarter: string;
+  /** Mean of the quarter's finalized reviews; null when nobody was audited. */
+  score: number | null;
+  reviews: number;
+}
+
+/** One contractor's path across the quarters on record. */
+export interface ContractorPath {
+  contractorId: string;
+  label: string;
+  subRegionId: string;
+  points: TrendPoint[];
+}
+
+export interface ProgrammeTrend {
+  quarters: string[];
+  /** The programme mean, quarter by quarter. */
+  programme: TrendPoint[];
+  /** Every contractor's own path, drawn faintly behind the mean so the
+   * spread is visible. Identity is not claimed by colour — they are one
+   * recessive ink and the hover names them. */
+  contractors: ContractorPath[];
+  /** Highest and lowest contractor score in any quarter, for the y domain.
+   * Taken from the data rather than fixed at 0–100: at 0–100 two quarters
+   * of real scores occupy a third of the plot and every movement flattens. */
+  min: number;
+  max: number;
+}
+
+export function programmeTrend(summaries: AuditSummary[]): ProgrammeTrend {
+  const scored = finalized(summaries);
+  const quarters = [...new Set(scored.map((s) => s.quarter))].sort();
+
+  const at = (rows: AuditSummary[], quarter: string): TrendPoint => {
+    const inQ = rows.filter((s) => s.quarter === quarter && s.overall !== null);
+    return {
+      quarter,
+      score:
+        inQ.length === 0
+          ? null
+          : round(inQ.reduce((sum, s) => sum + s.overall!, 0) / inQ.length),
+      reviews: inQ.length,
+    };
+  };
+
+  const byContractor = new Map<string, AuditSummary[]>();
+  for (const s of scored) {
+    byContractor.set(s.contractorId, [
+      ...(byContractor.get(s.contractorId) ?? []),
+      s,
+    ]);
+  }
+
+  const contractors: ContractorPath[] = [...byContractor.entries()]
+    .map(([contractorId, rows]) => ({
+      contractorId,
+      label: `${rows[0]!.contractorName} (${rows[0]!.contractorCode})`,
+      subRegionId: rows[0]!.subRegionId,
+      points: quarters.map((q) => at(rows, q)),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const values = scored
+    .map((s) => s.overall)
+    .filter((v): v is number => v !== null);
+
+  return {
+    quarters,
+    programme: quarters.map((q) => at(scored, q)),
+    contractors,
+    min: values.length === 0 ? 0 : Math.min(...values),
+    max: values.length === 0 ? 100 : Math.max(...values),
+  };
+}
+
+/** Section A/B/C this quarter, with the movement against the quarter before.
+ * The board's three headline chips: where the programme stands, and which
+ * way each third of the checklist is going. */
+export interface SectionMove extends SectionStanding {
+  delta: number | null;
+}
+
+export function sectionMoves(
+  summaries: AuditSummary[],
+  quarter: string | null,
+): SectionMove[] {
+  if (!quarter) return [];
+  const scored = finalized(summaries);
+  const quarters = [...new Set(scored.map((s) => s.quarter))].sort();
+  const i = quarters.indexOf(quarter);
+  const before = i > 0 ? quarters[i - 1]! : null;
+
+  const now = sectionStanding(scored.filter((s) => s.quarter === quarter));
+  const then = before
+    ? sectionStanding(scored.filter((s) => s.quarter === before))
+    : [];
+  return now.map((s) => {
+    const was = then.find((x) => x.code === s.code)?.score ?? null;
+    return {
+      ...s,
+      delta: s.score === null || was === null ? null : round(s.score - was),
+    };
+  });
+}
+
+/** The newest finalized reviews, newest first. The board's activity feed:
+ * what has been audited lately, and how it went. */
+export function recentReviews(
+  summaries: AuditSummary[],
+  limit = 6,
+): AuditSummary[] {
+  return [...finalized(summaries)]
+    .sort(
+      (a, b) =>
+        b.auditDate.localeCompare(a.auditDate) ||
+        b.quarter.localeCompare(a.quarter),
+    )
+    .slice(0, limit);
+}

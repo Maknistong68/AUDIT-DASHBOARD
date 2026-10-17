@@ -236,20 +236,36 @@ Two invariants shape everything:
   State starts as the baseline so SSR matches the first client render —
   a page looking up a possibly user-created record must wait for `hydrated`
   before deciding it is missing.
-- **The board is a KPI row over two sub-region panels.** `/` opens on the
-  LATEST quarter and answers one question: how do the contractors compare.
-  Four plain numbers across the top (programme average, below target,
-  weakest area, recurring gaps), then one panel per sub-region, each a
-  horizontal bar list of its own contractors worst-first against the 90%
-  target. Faceted rather than filtered because the organisation IS two
-  sub-regions with a director each: a filter makes each of them click to see
-  their own patch.
+- **The board is a BENTO of tiles over one quarter** (`/`, `DashboardClient`
+  + `components/board/Bento.tsx`). Built to a reference the owner supplied
+  (2026-10-17) and matched deliberately: a twelve-column grid, each tile its
+  own rounded glass surface with one job and one scale. Top row — the
+  programme trend, this quarter's contractors as columns, the latest
+  reviews. Below — below target, weakest area, against target, the
+  watchlist, recurring gaps, reviews, start a review. The spans are written
+  out per tile (`.bn-trend`, `.bn-league`, …) rather than left to auto-flow,
+  so a tile added later cannot silently reshuffle the row above it.
+  Every tile that carries a corner arrow goes somewhere real; an arrow that
+  opens nothing is the worst affordance on a dashboard.
   **It used to be "ONE chart" pinned to `100dvh`, and that rule was the bug.**
   Thirteen contractors in a viewport-tall chart can only be enormous, with
   everything else squeezed around them — the owner's words were "a bar chart
   that is so huge, and the rest is a little bit unproportioned" (2026-10-14).
-  The lock is gone, the chart owns its panel, and the page scrolls like a
-  page. Do not reintroduce a viewport-height dashboard.
+  The lock is gone and the page scrolls like a page. Do not reintroduce a
+  viewport-height dashboard.
+- **The two board charts.** `ProgrammeTrendChart` is the quarter-by-quarter
+  mean with every contractor's own path drawn faintly behind it — the fan is
+  the spread the average sits in, not a categorical series, so it is one
+  recessive ink and no colour claims an identity. Its y axis is FITTED to
+  the data and snapped to a round step: pinned to 0–100, two quarters of
+  real scores occupy a third of the plot and every movement flattens.
+  `ScoreColumns` is the quarter's contractors, worst on the left, bars from
+  zero, each printing its own score inside the bar. In both, the accent
+  marks the one thing the board is currently about (the selected
+  contractor, or the weakest) — colour follows the entity, never the rank,
+  so changing the selection moves one mark and repaints nothing else.
+  `programmeTrend` / `sectionMoves` / `recentReviews` in `summaries.ts` feed
+  them, pinned in `board.test.ts`.
 - **Three drill-down levels, and only the last one has words.**
   `ContractorView` is level one: the headline (score, band, change,
   sparkline), WHERE the gap is (section A/B/C under short names —
@@ -420,14 +436,36 @@ Two invariants shape everything:
   selector list against the previous version
   (`grep -oE "^\.[a-zA-Z][-a-zA-Z0-9_]*" ... | sort -u | comm`) and open
   every page that used them.
-- Design tokens live in `app/globals.css` (light + dark), in two layers that
-  must not be mixed: **semantic** tokens (`--ink-*`, `--accent`, `--band-*`,
+- **The app is DARK, at every system setting.** One palette, not two: the
+  look the owner asked for is dark with a lime accent, and a light variant
+  of it would be a different product wearing the same layout. The
+  `prefers-color-scheme` override that used to carry the dark steps is gone
+  and `color-scheme: dark` is set so native controls follow. If a light
+  theme is ever wanted back it is a new palette and a re-validation, not an
+  un-comment.
+- Design tokens live in `app/globals.css`, in two layers that must not be
+  mixed: **semantic** tokens (`--ink-*`, `--accent`, `--band-*`,
   `--series-*`) carry meaning and are the validated palette; **material**
   tokens (`--mat-*`, `--shadow-*`, `--r-*`) carry depth only. `--surface-1`
   stays an opaque colour — SVG has no `backdrop-filter`, so chart rings and
-  surface gaps need the composite the glass resolves to (light `#f8fafd`,
-  dark `#171a21`). That is also the surface the palette was validated
-  against; change the glass and you re-validate.
+  surface gaps need the composite the glass resolves to (`#20232a`). That is
+  also the surface the palette is validated against; change the glass and
+  you re-validate.
+- **`--accent` is lime (`#ccf45b`) and it is spoken for.** It marks the ONE
+  thing a view is about and nothing else — never a decoration, never a
+  second series. Text never sits on it in white (1.1:1); `--on-accent` is
+  the ink that goes on an accent fill. The accent is 12.5:1 on the card
+  surface and the five rating bands run 5.2–10.4:1 on it.
+  The bands are a STATUS scale taken from the client's own scorecard legend,
+  so neither the categorical nor the ordinal validator in the dataviz skill
+  is the right test for them — they are not an identity palette and not a
+  one-hue ramp. They always ship with the printed value and a labelled
+  badge, and contrast against the surface is the check that applies. Do not
+  "fix" them by running them through the categorical validator.
+- The ambient wash (`body::before`) is an olive field, blurred, fixed. It is
+  decoration and never a data channel. Its blobs are positioned inward
+  because the layer overscans the viewport — centred at the edges they fall
+  off-screen and the page reads as flat black.
 - Responsive tiers: >1099px full desktop · ≤1099px tighter nav, 2×2 KPIs ·
   ≤860px the pill nav hands over to the fixed bottom tab bar (`NavBar.tsx`,
   which also carries the phone-only admin Reference shortcut) · ≤620px phone

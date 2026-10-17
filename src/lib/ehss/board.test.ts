@@ -4,7 +4,10 @@ import {
   boardBySubRegion,
   latestQuarter,
   programmeKpis,
+  programmeTrend,
   quartersOnRecord,
+  recentReviews,
+  sectionMoves,
   sectionStanding,
   stickyAreas,
   summarizeAll,
@@ -133,5 +136,66 @@ describe("where the gap is — section A, B or C", () => {
       expect(s.score).toBeGreaterThan(0);
       expect(s.score).toBeLessThanOrEqual(100);
     }
+  });
+});
+
+describe("the board's time axis", () => {
+  const trend = programmeTrend(all);
+
+  it("walks the quarters forwards, newest last", () => {
+    expect(trend.quarters).toEqual(["2025-Q4", "2026-Q1"]);
+    expect(trend.programme.map((p) => p.quarter)).toEqual(trend.quarters);
+  });
+
+  it("averages every finalized review in each quarter", () => {
+    for (const point of trend.programme) {
+      const rows = all.filter(
+        (s) => s.quarter === point.quarter && s.status !== "draft" && s.overall !== null,
+      );
+      expect(point.reviews).toBe(rows.length);
+      const mean = rows.reduce((sum, s) => sum + s.overall!, 0) / rows.length;
+      expect(point.score).toBeCloseTo(Math.round(mean * 100) / 100, 6);
+    }
+  });
+
+  it("gives every contractor a point per quarter, null where unaudited", () => {
+    expect(trend.contractors).toHaveLength(
+      new Set(all.map((s) => s.contractorId)).size,
+    );
+    for (const c of trend.contractors) {
+      expect(c.points.map((p) => p.quarter)).toEqual(trend.quarters);
+      // A contractor audited once has exactly one scored point.
+      const scored = c.points.filter((p) => p.score !== null).length;
+      expect(scored).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports a y domain taken from the data, not 0–100", () => {
+    const scores = all
+      .filter((s) => s.status !== "draft")
+      .map((s) => s.overall)
+      .filter((v): v is number => v !== null);
+    expect(trend.min).toBe(Math.min(...scores));
+    expect(trend.max).toBe(Math.max(...scores));
+    expect(trend.min).toBeGreaterThan(0);
+  });
+
+  it("moves each section against the quarter before, and leaves the first null", () => {
+    const now = sectionMoves(all, "2026-Q1");
+    expect(now.map((s) => s.code)).toEqual(["A", "B", "C"]);
+    for (const s of now) expect(s.delta).not.toBeNull();
+
+    const first = sectionMoves(all, "2025-Q4");
+    for (const s of first) expect(s.delta).toBeNull();
+
+    expect(sectionMoves(all, null)).toEqual([]);
+  });
+
+  it("lists the newest reviews first and never a draft", () => {
+    const feed = recentReviews(all, 5);
+    expect(feed).toHaveLength(5);
+    for (const r of feed) expect(r.status).not.toBe("draft");
+    const dates = feed.map((r) => r.auditDate);
+    expect([...dates].sort().reverse()).toEqual(dates);
   });
 });

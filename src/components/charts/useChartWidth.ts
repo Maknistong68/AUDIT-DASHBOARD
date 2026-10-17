@@ -26,7 +26,10 @@ export function useChartWidth(
     if (!el || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver((entries) => {
       const measured = entries[0]?.contentRect.width ?? 0;
-      if (measured > 0) setWidth(Math.max(min, Math.round(measured)));
+      // FLOOR, not round: a container measured at 291.6px rounds up to 292
+      // and the SVG is then wider than the box that holds it, which at
+      // 320px is the whole page scrolling sideways.
+      if (measured > 0) setWidth(Math.max(min, Math.floor(measured)));
     });
     observer.observe(el);
     return () => observer.disconnect();

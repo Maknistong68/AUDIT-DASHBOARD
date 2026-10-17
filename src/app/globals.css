@@ -1,5 +1,10 @@
 /* ===========================================================================
-   Design system — "frosted glass" material, iOS-flavoured.
+   Design system — dark bento, lime accent.
+
+   One palette, not two. The app renders dark at every system setting: the
+   look the owner asked for IS dark (2026-10-17), and a light variant of it
+   would be a different product wearing the same layout. `color-scheme` is
+   set so native controls follow.
 
    Two layers of colour live here and they must not be confused:
 
@@ -13,76 +18,86 @@
    rings and surface gaps need a real colour. It is set to the composite the
    glass actually resolves to over the page background, which is also the
    surface the palette was validated against:
-     light #f8fafd · dark #171a21
+     #20232a, the composite the card glass resolves to over the page.
    =========================================================================== */
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
   /* ---- Page & ink ---- */
-  --page: #eaeef5;
-  --page-deep: #dde4ef;
-  --surface-1: #f8fafd;      /* opaque composite of the glass — charts use this */
-  --ink-1: #0b0e14;
-  --ink-2: #454a55;
-  --muted: #656b7a;          /* >=4.5:1 on every glass composite, tinted tiles included */
-  --grid: #d9dee8;
-  --baseline: #b9c1d0;
-  --border: rgba(11, 14, 20, 0.09);
+  --page: #0f1116;
+  --page-deep: #08090e;
+  --surface-1: #20232a;      /* opaque composite of the glass — charts use this */
+  --ink-1: #f6f7f4;
+  --ink-2: #c9cdd6;
+  --muted: #a3aab8;          /* 6.6:1 on the card composite */
+  --grid: #2b2f38;
+  --baseline: #3d424e;
+  --border: rgba(255, 255, 255, 0.1);
 
-  --accent: #2a78d6;        /* categorical slot 1 / sequential hue */
-  --accent-strong: #1c5cab; /* sequential 550 */
-  --accent-track: #cde2fb;  /* sequential 100: meter/bar track */
-  --accent-wash: rgba(42, 120, 214, 0.1);
+  /* The accent is a single hue and carries no identity of its own: it marks
+     the ONE thing a view is about — the selected bar, the programme line,
+     the contractor that needs attention. 12.5:1 on the card surface, and
+     dark ink on top of it rather than white, which would sit at 1.1:1. */
+  --accent: #ccf45b;
+  --accent-strong: #b5e23d;
+  --accent-track: rgba(204, 244, 91, 0.16);
+  --accent-wash: rgba(204, 244, 91, 0.1);
+  --on-accent: #131708;
 
-  --status-good: #0ca30c;
-  --status-warning: #fab219;
-  --status-serious: #ec835a;
-  --status-critical: #d03b3b;
-  --success-text: #006300;
+  --status-good: #22b85c;
+  --status-warning: #f5c518;
+  --status-serious: #f08a4b;
+  --status-critical: #ff5c5c;
+  --success-text: #8fe06a;
 
-  /* Categorical series, fixed order — validated light & dark (dataviz) */
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-  --series-4: #eda100;
+  /* Categorical series, fixed order — validated against #20232a (dataviz) */
+  --series-1: #ccf45b;
+  --series-2: #49b8f5;
+  --series-3: #f08a4b;
+  --series-4: #b48cf0;
 
   /* Rating bands — the project's traffic-light scale (green → red), taken
      from the EHSS scorecard legend. Ordered status, not categorical
      identity: position, the printed value, the key and the badge label all
      carry the meaning, so colour is never the only channel. Steps are
      darkened just enough to stay visible on the light surface — the
-     reference yellow sits at 1.05:1, which renders as a blank gap. */
-  --band-compliant: #00a64f;  /* 90–100  (ref #00B050) */
-  --band-mostly: #7fbf3f;     /* 80–89   (ref #92D050) */
-  --band-moderate: #d9b400;   /* 70–79   (ref #FFFF00) */
-  --band-minimal: #e88a00;    /* 60–69   (ref #FFC000) */
-  --band-non: #e62e2e;        /* below 60 (ref #FF0000) */
+     dark surface lets them run close to the scorecard's own values.
+     Measured against #20232a: 6.05, 8.51, 10.41, 8.60, 5.20 : 1. This is a
+     STATUS scale, not a categorical palette and not a one-hue ramp, so the
+     categorical and ordinal validators are both the wrong test for it — it
+     ships with the printed value and a labelled badge every time it is
+     used, and contrast against the surface is the check that applies. */
+  --band-compliant: #22b85c;  /* 90–100  (ref #00B050) */
+  --band-mostly: #92d050;     /* 80–89   (ref #92D050) */
+  --band-moderate: #f5d000;   /* 70–79   (ref #FFFF00) */
+  --band-minimal: #ffb020;    /* 60–69   (ref #FFC000) */
+  --band-non: #ff5c5c;        /* below 60 (ref #FF0000) */
 
   /* ---- Material: translucent depth, never meaning ---- */
   --glass-blur: 20px;
   --glass-sat: 180%;
-  --mat-1: rgba(255, 255, 255, 0.72);   /* cards, tiles */
-  --mat-2: rgba(255, 255, 255, 0.5);    /* nested panels, controls */
-  --mat-3: rgba(255, 255, 255, 0.92);   /* raised thumbs, tooltips */
+  --mat-1: rgba(32, 35, 42, 0.72);      /* cards, tiles */
+  --mat-2: rgba(255, 255, 255, 0.065);  /* nested panels, controls */
+  --mat-3: rgba(40, 44, 54, 0.96);      /* raised thumbs, tooltips */
   /* Bars and sheets sit OVER scrolling content, so they are barely
      translucent — at card opacity the text underneath reads through them
      and the surface stops looking like a surface. */
-  --mat-bar: rgba(252, 253, 255, 0.94);
-  --mat-sheet: rgba(252, 253, 255, 0.95);
+  --mat-bar: rgba(20, 22, 28, 0.9);
+  --mat-sheet: rgba(22, 24, 31, 0.96);
   /* The whole url() lives in the token, because a var() inside a quoted
      data URI is never substituted. */
-  --chevron-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23656b7a' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.8 6 6.4l5-4.6'/%3E%3C/svg%3E");
-  --mat-sunken: rgba(11, 14, 20, 0.05); /* inset tracks */
-  --mat-edge: rgba(255, 255, 255, 0.85); /* specular top edge */
-  --mat-line: rgba(11, 14, 20, 0.08);    /* hairline */
-  --mat-hover: rgba(255, 255, 255, 0.6);
-  --scrim: rgba(24, 30, 42, 0.38);
+  --chevron-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%23a3aab8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.8 6 6.4l5-4.6'/%3E%3C/svg%3E");
+  --mat-sunken: rgba(0, 0, 0, 0.3);     /* inset tracks */
+  --mat-edge: rgba(255, 255, 255, 0.07); /* specular top edge */
+  --mat-line: rgba(255, 255, 255, 0.08); /* hairline */
+  --mat-hover: rgba(255, 255, 255, 0.07);
+  --scrim: rgba(0, 0, 0, 0.6);
 
-  --shadow-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 10px 26px -12px rgba(16, 24, 40, 0.18);
-  --shadow-2: 0 2px 6px rgba(16, 24, 40, 0.07), 0 22px 48px -18px rgba(16, 24, 40, 0.28);
-  --shadow-3: 0 8px 18px rgba(16, 24, 40, 0.1), 0 44px 90px -24px rgba(16, 24, 40, 0.4);
-  --shadow-press: 0 1px 2px rgba(16, 24, 40, 0.12);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 26px -12px rgba(0, 0, 0, 0.6);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.45), 0 22px 48px -18px rgba(0, 0, 0, 0.72);
+  --shadow-3: 0 8px 18px rgba(0, 0, 0, 0.5), 0 44px 90px -24px rgba(0, 0, 0, 0.85);
+  --shadow-press: 0 1px 2px rgba(0, 0, 0, 0.6);
 
   /* ---- Radius scale: generous, iOS-like, nested concentrically ---- */
   --r-1: 10px;   /* chips, dots, swatches */
@@ -104,56 +119,9 @@
   );
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --page: #080a0f;
-    --page-deep: #04050a;
-    --surface-1: #171a21;
-    --ink-1: #ffffff;
-    --ink-2: #c3c7d1;
-    --muted: #8d94a3;
-    --grid: #282c36;
-    --baseline: #3a3f4b;
-    --border: rgba(255, 255, 255, 0.12);
-
-    --accent: #3987e5;
-    --accent-strong: #86b6ef;
-    --accent-track: #184f95;
-    --accent-wash: rgba(57, 135, 229, 0.14);
-
-    --success-text: #0ca30c;
-
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-
-    /* Dark surface lets the reference colours run brighter */
-    --band-compliant: #22b85c;
-    --band-mostly: #92d050;
-    --band-moderate: #f5d000;
-    --band-minimal: #ffb020;
-    --band-non: #ff5c5c;
-
-    --mat-1: rgba(32, 37, 48, 0.66);
-    --mat-2: rgba(255, 255, 255, 0.05);
-    --mat-3: rgba(38, 43, 55, 0.94);
-    --mat-bar: rgba(22, 25, 33, 0.93);
-    --mat-sheet: rgba(24, 27, 35, 0.95);
-    --chevron-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238d94a3' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.8 6 6.4l5-4.6'/%3E%3C/svg%3E");
-    --mat-sunken: rgba(0, 0, 0, 0.3);
-    --mat-edge: rgba(255, 255, 255, 0.16);
-    --mat-line: rgba(255, 255, 255, 0.09);
-    --mat-hover: rgba(255, 255, 255, 0.08);
-    --scrim: rgba(0, 0, 0, 0.58);
-
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 26px -12px rgba(0, 0, 0, 0.7);
-    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.5), 0 22px 48px -18px rgba(0, 0, 0, 0.8);
-    --shadow-3: 0 8px 18px rgba(0, 0, 0, 0.5), 0 44px 90px -24px rgba(0, 0, 0, 0.9);
-    --shadow-press: 0 1px 2px rgba(0, 0, 0, 0.6);
-  }
-}
+/* No light variant: the palette above IS the palette, at every system
+   setting. A `prefers-color-scheme: light` override used to live here and
+   was removed deliberately — see the file header. */
 
 * {
   box-sizing: border-box;
@@ -184,15 +152,21 @@ body {
 body::before {
   content: "";
   position: fixed;
-  inset: -10vmax;
+  inset: -4vmax;
   z-index: -1;
   pointer-events: none;
+  /* Positions are pulled inward because the layer overscans the viewport —
+     at the edges the blobs centre off-screen and only their tails show,
+     which is what made the first attempt read as flat black. */
   background:
-    radial-gradient(42vmax 34vmax at 6% -10%, color-mix(in srgb, var(--accent) 58%, transparent), transparent 64%),
-    radial-gradient(38vmax 30vmax at 98% -2%, color-mix(in srgb, var(--series-3) 46%, transparent), transparent 64%),
-    radial-gradient(34vmax 28vmax at 78% 46%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 66%),
-    radial-gradient(44vmax 36vmax at 34% 104%, color-mix(in srgb, var(--series-2) 34%, transparent), transparent 66%),
+    radial-gradient(40vmax 32vmax at 14% 4%, rgba(188, 206, 108, 0.52), transparent 62%),
+    radial-gradient(34vmax 28vmax at 86% 2%, rgba(136, 154, 76, 0.44), transparent 62%),
+    radial-gradient(48vmax 38vmax at 76% 42%, rgba(118, 126, 68, 0.5), transparent 66%),
+    radial-gradient(50vmax 40vmax at 22% 88%, rgba(98, 106, 62, 0.55), transparent 66%),
+    radial-gradient(40vmax 32vmax at 52% 62%, rgba(154, 138, 88, 0.38), transparent 64%),
+    radial-gradient(36vmax 30vmax at 98% 86%, rgba(120, 120, 72, 0.4), transparent 64%),
     linear-gradient(180deg, var(--page) 0%, var(--page-deep) 100%);
+  filter: blur(18px);
 }
 
 /* The bars float clear of the screen edge; without this, content scrolling
@@ -311,7 +285,7 @@ th.num {
 /* Current section: a filled pill, the way a tab bar marks its tab. */
 .topbar nav a[aria-current="page"] {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 600;
   box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--accent) 60%, transparent);
 }
@@ -353,7 +327,7 @@ th.num {
 .admin-shortcut[aria-current="page"] {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* ---- Cards & layout ---- */
@@ -772,9 +746,9 @@ button.ghost {
 
 button.primary {
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, white), var(--accent));
-  color: #fff;
+  color: var(--on-accent);
   border: 1px solid color-mix(in srgb, var(--accent-strong) 70%, transparent);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.14),
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35),
     0 8px 20px -8px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
@@ -922,7 +896,7 @@ button.ghost:hover { background: var(--mat-hover); }
 
 .result-toggle button[aria-pressed="true"] {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.24);
 }
 
@@ -1473,11 +1447,11 @@ table.heatmap th[scope="row"] {
   min-width: 56px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) .heat-cell {
-    background: var(--heat-dark);
-    color: var(--heat-ink-dark);
-  }
+/* The app renders dark unconditionally, so the heat cell takes its dark
+   step unconditionally too — it used to sit behind a media query. */
+.heat-cell {
+  background: var(--heat-dark);
+  color: var(--heat-ink-dark);
 }
 
 .heat-cell .is-hover {
@@ -2875,7 +2849,7 @@ table.matrix td.matrix-cell {
 .issue-picker button[aria-pressed="true"] {
   background: var(--accent);
   border-color: transparent;
-  color: #fff;
+  color: var(--on-accent);
   font-weight: 560;
 }
 
@@ -3400,309 +3374,6 @@ table.matrix td.matrix-cell {
   }
 }
 
-/* ===========================================================================
-   THE BOARD — what a director opens
-   ---------------------------------------------------------------------------
-   Three readers (a project director per sub-region, and the H&S team) with
-   one job: compare contractors, latest quarter first. The layout is that
-   sentence — plain numbers, then one panel per sub-region, then everything
-   else behind a click.
-
-   It is NOT one viewport-height chart. That rule turned thirteen contractors
-   into enormous bars with everything else squeezed around them. Marks here
-   are thin, ends are rounded, rules are hairlines, and the page scrolls like
-   a page.
-   =========================================================================== */
-
-.bd {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-bottom: 8px;
-}
-
-.bd-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.bd-title h1 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  color: var(--ink-1);
-}
-
-.bd-title p {
-  margin: 2px 0 0;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-.bd-controls {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.bd-select {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.bd-select select {
-  appearance: none;
-  background: var(--mat-2) var(--chevron-url) no-repeat right 10px center;
-  background-size: 11px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-2);
-  padding: 8px 30px 8px 12px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--ink-1);
-  cursor: pointer;
-}
-
-.bd-toggle {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-/* ---- the four numbers the board leads with ---- */
-
-.bd-kpis {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.bd-kpi {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 16px 18px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-3);
-  background: var(--mat-1);
-  box-shadow: var(--shadow-1);
-  min-width: 0;
-}
-
-.bd-kpi-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.bd-kpi-value {
-  font-size: 30px;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-1);
-}
-
-.bd-kpi-of {
-  font-size: 15px;
-  font-weight: 500;
-  font-style: normal;
-  color: var(--muted);
-}
-
-.bd-kpi-note {
-  font-size: 12.5px;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.bd-kpi-note em {
-  font-style: normal;
-  color: var(--muted);
-}
-
-/* ---- one panel per sub-region ---- */
-
-.bd-panels {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  align-items: start;
-}
-
-.bd-panel {
-  border: 1px solid var(--border);
-  border-radius: var(--r-3);
-  background: var(--mat-1);
-  box-shadow: var(--shadow-1);
-  padding: 16px 18px 10px;
-  min-width: 0;
-}
-
-.bd-panel-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.bd-panel-head h2 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: var(--ink-1);
-}
-
-.bd-panel-avg {
-  font-size: 14px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-2);
-}
-
-.bd-panel-avg em {
-  font-style: normal;
-  font-weight: 400;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.bd-panel-none {
-  margin: 4px 0 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.bd-rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.bd-row {
-  display: grid;
-  grid-template-columns: minmax(84px, 128px) minmax(0, 1fr) 52px 54px;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 7px 8px;
-  margin: 0 -8px;
-  border: 0;
-  border-radius: var(--r-2);
-  background: none;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-  transition: background 120ms ease;
-}
-
-.bd-row:hover {
-  background: var(--mat-hover);
-}
-
-.bd-row[aria-pressed="true"] {
-  background: var(--accent-wash);
-}
-
-.bd-row:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.bd-row-name {
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--ink-1);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The mark: thin, rounded end, with the 90% target as a hairline tick on the
-   row itself rather than a rule drawn across the whole panel. */
-.bd-row-track {
-  position: relative;
-  display: block;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--mat-sunken);
-}
-
-.bd-row-track i {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 4px;
-  transition: width 200ms ease;
-}
-
-.bd-row-track b {
-  position: absolute;
-  top: -3px;
-  bottom: -3px;
-  width: 1.5px;
-  border-radius: 1px;
-  background: var(--baseline);
-}
-
-.bd-row-score {
-  font-size: 13px;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--ink-1);
-}
-
-.bd-row-delta {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-  color: var(--muted);
-}
-
-.bd-row-delta.is-up { color: var(--success-text); }
-.bd-row-delta.is-down { color: var(--status-critical); }
-
-@media (max-width: 1099px) {
-  .bd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 900px) {
-  .bd-panels { grid-template-columns: minmax(0, 1fr); }
-}
-
-@media (max-width: 620px) {
-  .bd-title h1 { font-size: 22px; }
-  .bd-kpi { padding: 13px 14px; }
-  .bd-kpi-value { font-size: 25px; }
-  .bd-row {
-    grid-template-columns: minmax(0, 1fr) 48px 50px;
-    grid-template-areas: "name score delta" "track track track";
-    row-gap: 7px;
-  }
-  .bd-row-name { grid-area: name; }
-  .bd-row-track { grid-area: track; }
-  .bd-row-score { grid-area: score; }
-  .bd-row-delta { grid-area: delta; }
-  .bd-controls { width: 100%; justify-content: space-between; }
-}
 
 /* ---------------------------------------------------------------------------
    DRILL ONE — why is this contractor behind
@@ -4111,3 +3782,633 @@ table.matrix td.matrix-cell {
   .dv-areas button { grid-template-columns: 8px minmax(0, 1fr) 44px 12px; }
   .dv-tag { display: none; }
 }
+
+/* ===========================================================================
+   The board — a bento of tiles over one quarter.
+
+   Each tile is its own surface with its own scale and one job. The grid is
+   twelve columns because the three-across top row and the four-across lower
+   rows both have to land on the same rhythm; the spans are written out per
+   tile rather than left to auto-flow, so a tile added later cannot silently
+   reshuffle the row above it.
+   =========================================================================== */
+
+.bn {
+  padding-bottom: 8px;
+}
+
+.bn-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 20px;
+  flex-wrap: wrap;
+  margin: 4px 0 18px;
+}
+
+.bn-head-id h1 {
+  margin: 0;
+  font-size: clamp(26px, 3.4vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+
+.bn-head-id p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.bn-head-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Segmented quarter control: a sunken track with one raised, inverted pill.
+   Inverted rather than accent-filled — the accent is spoken for, it marks
+   the contractor the board is about. */
+.bn-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  border: 1px solid var(--mat-line);
+}
+
+.bn-seg button {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 7px 14px;
+  min-height: 34px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.bn-seg button:hover { color: var(--ink-1); }
+
+.bn-seg button[aria-pressed="true"] {
+  background: var(--ink-1);
+  color: var(--page);
+  font-weight: 620;
+}
+
+.bn-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  padding: 7px 14px;
+  min-height: 34px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bn-avg {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px 6px 16px;
+  min-height: 40px;
+  border-radius: var(--r-pill);
+  background: var(--mat-1);
+  border: 1px solid var(--mat-line);
+  box-shadow: inset 0 1px 0 var(--mat-edge);
+}
+
+.bn-avg span {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.bn-avg strong {
+  font-size: 17px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- The grid ---- */
+
+.bn-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.bn-trend   { grid-column: span 5; }
+.bn-league  { grid-column: span 3; }
+.bn-reviews { grid-column: span 4; }
+.bn-s1, .bn-s2 { grid-column: span 3; }
+.bn-target, .bn-watchc { grid-column: span 3; grid-row: span 2; }
+.bn-s3, .bn-s4, .bn-action { grid-column: span 2; }
+
+/* ---- The tile itself ---- */
+
+.bn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 16px 18px;
+  border-radius: var(--r-4);
+  background: var(--mat-1);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid var(--mat-line);
+  box-shadow: var(--shadow-1), inset 0 1px 0 var(--mat-edge);
+}
+
+.bn-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bn-card-head h2 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+}
+
+.bn-card-head p {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* ---- Movement chip ---- */
+
+.bn-delta {
+  font-size: 10.5px;
+  font-weight: 620;
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.bn-delta.is-up {
+  color: var(--status-good);
+  background: color-mix(in srgb, var(--status-good) 18%, transparent);
+}
+
+.bn-delta.is-down {
+  color: var(--status-critical);
+  background: color-mix(in srgb, var(--status-critical) 18%, transparent);
+}
+
+.bn-delta.is-flat {
+  color: var(--muted);
+  background: var(--mat-2);
+}
+
+/* ---- Section chips over the trend ---- */
+
+.bn-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bn-chip {
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 9px 11px 10px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+}
+
+.bn-chip-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bn-chip-val {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 5px;
+  min-width: 0;
+}
+
+.bn-chip-top i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.bn-chip-top b {
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.25;
+  color: var(--ink-2);
+}
+
+.bn-chip strong {
+  font-size: 19px;
+  font-weight: 670;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Stat tile ---- */
+
+.bn-stat { justify-content: space-between; }
+
+.bn-stat-value {
+  display: block;
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.bn-of {
+  font-size: 15px;
+  font-weight: 500;
+  font-style: normal;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+}
+
+.bn-stat-note {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* ---- This-quarter hero over the columns ---- */
+
+.bn-league-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.bn-league-hero strong {
+  font-size: clamp(24px, 2.8vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bn-league .chart-wrap { margin-top: auto; }
+
+/* ---- Latest reviews ---- */
+
+.bn-feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bn-feed button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 9px;
+  border: 0;
+  background: transparent;
+  border-radius: var(--r-3);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease);
+}
+
+.bn-feed button:hover { background: var(--mat-hover); }
+
+.bn-feed-mark {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mat-2);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: 0.01em;
+}
+
+.bn-feed-id {
+  flex: 1;
+  min-width: 0;
+  display: block;
+}
+
+.bn-feed-id b {
+  display: block;
+  font-size: 13px;
+  font-weight: 580;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bn-feed-id em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bn-feed-score {
+  flex: none;
+  text-align: right;
+}
+
+.bn-feed-score b {
+  display: block;
+  font-size: 14px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The band name, never the colour alone. */
+.bn-tag {
+  display: inline-block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 620;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+  background: var(--mat-2);
+  color: var(--muted);
+}
+
+.bn-tag.band-compliant { color: var(--band-compliant); }
+.bn-tag.band-mostly    { color: var(--band-mostly); }
+.bn-tag.band-moderate  { color: var(--band-moderate); }
+.bn-tag.band-minimal   { color: var(--band-minimal); }
+.bn-tag.band-non       { color: var(--band-non); }
+
+/* ---- Against target ---- */
+
+.bn-goals {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bn-goal-track {
+  display: block;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  overflow: hidden;
+}
+
+.bn-goal-track i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+}
+
+.bn-goal-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 7px;
+  min-width: 0;
+}
+
+.bn-goal-foot b {
+  font-size: 12.5px;
+  font-weight: 580;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bn-goal-foot em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bn-goal-foot strong {
+  font-size: 15px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.bn-goals-foot {
+  margin-top: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- Watchlist ---- */
+
+.bn-watch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bn-watch button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms var(--ease);
+}
+
+.bn-watch button:hover { background: var(--mat-hover); }
+
+.bn-watch b {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bn-watch em {
+  grid-column: 1;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.bn-watch strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The worst one is raised onto the accent, so a glance lands on it. */
+.bn-watch .is-lead button {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+.bn-watch .is-lead button:hover { background: var(--accent-strong); }
+.bn-watch .is-lead em { color: color-mix(in srgb, var(--on-accent) 68%, transparent); }
+
+/* ---- Start a review ---- */
+
+.bn-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 92px;
+  padding: 16px;
+  border-radius: var(--r-4);
+  border: 1px dashed color-mix(in srgb, var(--ink-2) 34%, transparent);
+  background: var(--mat-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 560;
+  text-decoration: none;
+  text-align: center;
+  transition: background-color 150ms var(--ease), color 150ms var(--ease),
+    border-color 150ms var(--ease);
+}
+
+.bn-action span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--mat-sunken);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.bn-action:hover {
+  background: var(--mat-hover);
+  color: var(--ink-1);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+/* ---- Chart wrappers inside tiles ---- */
+
+.trend-wrap, .cols-wrap { position: relative; }
+
+/* The unmarked columns are a data mark, not a panel tint, so they get their
+   own step — at panel opacity thirteen of them vanish into the card. */
+.cols-wrap { --col-fill: rgba(255, 255, 255, 0.12); }
+
+.cols-wrap .col-g { cursor: pointer; }
+.cols-wrap .col-g:focus-visible { outline: none; }
+.cols-wrap .col-g:focus-visible rect:nth-of-type(2) {
+  stroke: var(--ink-1);
+  stroke-width: 2;
+}
+
+/* ---- Tiers ----
+   The top row's three tiles are the first thing to give: at tablet width
+   the trend takes the full row and the other two share the next one. */
+
+@media (max-width: 1240px) {
+  .bn-trend { grid-column: span 12; }
+  .bn-league { grid-column: span 5; }
+  .bn-reviews { grid-column: span 7; }
+  .bn-target, .bn-watchc { grid-column: span 6; grid-row: auto; }
+  .bn-s3, .bn-s4, .bn-action { grid-column: span 4; }
+}
+
+@media (max-width: 860px) {
+  .bn-league, .bn-reviews { grid-column: span 12; }
+  .bn-s1, .bn-s2 { grid-column: span 6; }
+  .bn-s3, .bn-s4 { grid-column: span 6; }
+  .bn-action { grid-column: span 12; }
+}
+
+@media (max-width: 620px) {
+  .bn-grid { gap: 11px; }
+  .bn-head { margin-bottom: 14px; }
+  .bn-head-tools { width: 100%; }
+  .bn-seg { flex: 1; }
+  .bn-seg button { flex: 1; padding: 7px 10px; }
+  .bn-avg { flex: 1; justify-content: space-between; }
+  .bn-target, .bn-watchc { grid-column: span 12; }
+  .bn-card { padding: 14px 13px 16px; }
+}
+
+/* The tile's corner arrow. */
+.bn-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  color: var(--ink-2);
+  transition: background-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.bn-go:hover {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+/* The programme row is the one the sub-regions are read against. */
+.bn-goals .is-lead .bn-goal-track { background: var(--accent-track); }
+.bn-goals .is-lead b { color: var(--accent); }

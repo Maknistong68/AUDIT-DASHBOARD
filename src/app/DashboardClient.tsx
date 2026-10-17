@@ -1,15 +1,29 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { FloatingPanel } from "@/components/FloatingPanel";
-import { Kpis } from "@/components/board/Kpis";
-import { SubRegionPanel } from "@/components/board/SubRegionPanel";
 import { ContractorView } from "@/components/board/ContractorView";
 import { AreaView } from "@/components/board/AreaView";
+import {
+  Card,
+  Delta,
+  GoLink,
+  ReviewFeed,
+  SectionChips,
+  StatTile,
+  TargetGoals,
+  Watchlist,
+} from "@/components/board/Bento";
+import { ProgrammeTrendChart } from "@/components/charts/ProgrammeTrendChart";
+import { ScoreColumns } from "@/components/charts/ScoreColumns";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import { flattenChecklist } from "@/lib/ehss/scoring";
 import { useEhss } from "@/lib/ehss/store";
 import { quarterLabel } from "@/lib/ehss/model";
+import { bandColor } from "@/lib/ehss/bands";
+import { TARGET_SCORE } from "@/lib/ehss/disciplines";
+import { formatScore } from "@/lib/format";
 import {
   boardBySubRegion,
   collectObservations,
@@ -17,7 +31,10 @@ import {
   issueBreakdown,
   latestQuarter,
   programmeKpis,
+  programmeTrend,
   quartersOnRecord,
+  recentReviews,
+  sectionMoves,
   sectionStanding,
   stickyAreas,
   summarizeAll,
@@ -29,16 +46,19 @@ import {
 const FLAT = flattenChecklist(CHECKLIST);
 
 /**
- * The board.
+ * The board — a bento of tiles over one quarter.
  *
- * Three readers — the project director of each sub-region and the H&S team —
- * open this to COMPARE CONTRACTORS, most recent quarter first. The layout is
- * that sentence: a row of plain numbers, then one panel per sub-region, then
- * everything else behind a click.
+ * Three readers open it: the project director of each sub-region and the
+ * H&S team, and they open it to COMPARE CONTRACTORS, most recent quarter
+ * first. So the quarter is a control at the top and everything below it
+ * answers one question each: which way the programme is going, how the
+ * contractors stack up in it, what has been audited lately, and who needs
+ * the next conversation. Anything deeper is a click away rather than on the
+ * page — the drill-down panels below are unchanged.
  *
- * It is deliberately NOT one viewport-height chart any more. That rule made
- * thirteen contractors into enormous bars with everything else squeezed
- * around them; the chart now owns its panel and the page scrolls like a page.
+ * Every tile is its own surface and its own scale. It is NOT one
+ * viewport-height chart: that rule made thirteen contractors into enormous
+ * bars with everything else squeezed around them.
  */
 export function DashboardClient() {
   const { contractors, subRegions, audits, hydrated } = useEhss();
@@ -52,10 +72,7 @@ export function DashboardClient() {
     [audits, contractors, subRegions],
   );
   const scoped = useMemo(
-    () =>
-      includeInactive
-        ? summaries
-        : summaries.filter((s) => s.contractorActive),
+    () => (includeInactive ? summaries : summaries.filter((s) => s.contractorActive)),
     [summaries, includeInactive],
   );
 
@@ -67,6 +84,31 @@ export function DashboardClient() {
     [scoped, shown, subRegions],
   );
   const kpi = useMemo(() => programmeKpis(scoped, shown), [scoped, shown]);
+  const trend = useMemo(() => programmeTrend(scoped), [scoped]);
+  const moves = useMemo(() => sectionMoves(scoped, shown), [scoped, shown]);
+  const feed = useMemo(
+    () => recentReviews(scoped.filter((s) => s.quarter === shown), 5),
+    [scoped, shown],
+  );
+
+  /** Every contractor in the quarter, worst first — the columns, and the
+   * first three of them are the watchlist. */
+  const league = useMemo(
+    () =>
+      panels
+        .flatMap((p) => p.rows)
+        .sort((a, b) => (a.score ?? 101) - (b.score ?? 101)),
+    [panels],
+  );
+
+  const pick = (row: BoardRow) => {
+    setSelected(row);
+    setArea(null);
+  };
+  const pickById = (contractorId: string) => {
+    const row = league.find((r) => r.contractorId === contractorId);
+    if (row) pick(row);
+  };
 
   /** Everything the drill-down needs for the selected contractor. */
   const detail = useMemo(() => {
@@ -87,11 +129,12 @@ export function DashboardClient() {
   /** Programme mean for the open area, so the detail has something to sit
    * against rather than a bare number. */
   const areaContext = useMemo(() => {
-    if (!area) return { programme: null as number | null, questions: [], evidence: [] as EvidenceRow[] };
+    if (!area)
+      return { programme: null as number | null, questions: [], evidence: [] as EvidenceRow[] };
     const programmeAreas = stickyAreas(scoped);
-    const questions = FLAT.filter(
-      (f) => (f.subSection ?? f.section) === area.code,
-    ).map((f) => f.question);
+    const questions = FLAT.filter((f) => (f.subSection ?? f.section) === area.code).map(
+      (f) => f.question,
+    );
     const rows = selected
       ? collectObservations(
           audits.filter((a) => a.contractorId === selected.contractorId),
@@ -120,55 +163,135 @@ export function DashboardClient() {
   };
 
   if (!hydrated && summaries.length === 0) {
-    return <div className="bd" />;
+    return <div className="bn" />;
   }
 
   return (
-    <div className="bd">
-      <div className="bd-head">
-        <div className="bd-title">
-          <h1>Contractor performance</h1>
-          <p>{shown ? quarterLabel(shown) : "No reviews on record"}</p>
+    <div className="bn">
+      <header className="bn-head">
+        <div className="bn-head-id">
+          <h1>EHSS performance</h1>
+          <p>Quarterly contractor audits across {subRegions.length} sub-regions</p>
         </div>
-        <div className="bd-controls">
-          <label className="bd-select">
-            <span>Quarter</span>
-            <select
-              value={shown ?? ""}
-              onChange={(e) => setQuarter(e.target.value)}
-            >
-              {quarters.map((q) => (
-                <option key={q} value={q}>
-                  {quarterLabel(q)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="bd-toggle">
+        <div className="bn-head-tools">
+          <div className="bn-seg" role="group" aria-label="Quarter">
+            {quarters.map((q) => (
+              <button
+                key={q}
+                type="button"
+                aria-pressed={q === shown}
+                onClick={() => setQuarter(q)}
+              >
+                {quarterLabel(q)}
+              </button>
+            ))}
+          </div>
+          <label className="bn-toggle">
             <input
               type="checkbox"
               checked={includeInactive}
               onChange={(e) => setIncludeInactive(e.target.checked)}
             />
-            <span>Include inactive</span>
+            <span>Inactive</span>
           </label>
+          <div className="bn-avg">
+            <span>Programme</span>
+            <strong style={{ color: bandColor(kpi.average) }}>
+              {formatScore(kpi.average)}
+            </strong>
+            <Delta value={kpi.delta} />
+          </div>
         </div>
-      </div>
+      </header>
 
-      <Kpis kpi={kpi} />
+      <div className="bn-grid">
+        <Card
+          title="Programme trend"
+          note={`Average of every review, quarter by quarter · each faint line is one of ${trend.contractors.length} contractors`}
+          wide
+          className="bn-trend"
+          action={<GoLink href="/contractors" label="Open contractor trajectories" />}
+        >
+          <SectionChips moves={moves} />
+          <ProgrammeTrendChart trend={trend} />
+        </Card>
 
-      <div className="bd-panels">
-        {panels.map((panel) => (
-          <SubRegionPanel
-            key={panel.subRegionId}
-            panel={panel}
+        <Card
+          title="This quarter"
+          note={`${league.length} contractor${league.length === 1 ? "" : "s"}, weakest first`}
+          className="bn-league"
+        >
+          <div className="bn-league-hero">
+            <strong>{formatScore(kpi.average)}</strong>
+            <Delta value={kpi.delta} />
+          </div>
+          <ScoreColumns
+            rows={league}
             selectedId={selected?.contractorId ?? null}
-            onSelect={(row) => {
-              setSelected(row);
-              setArea(null);
-            }}
+            onSelect={pick}
           />
-        ))}
+        </Card>
+
+        <Card
+          title="Latest reviews"
+          note={`${finalized(scoped).length} on record`}
+          className="bn-reviews"
+          action={<GoLink href="/audits" label="Open all reviews" />}
+        >
+          <ReviewFeed reviews={feed} onSelect={pickById} />
+        </Card>
+
+        <StatTile
+          className="bn-s1"
+          label="Below target"
+          value={
+            <>
+              {kpi.belowTarget}
+              <em className="bn-of"> of {kpi.contractors}</em>
+            </>
+          }
+          note={`contractors under ${TARGET_SCORE}%`}
+        />
+
+        <StatTile
+          className="bn-s2"
+          label="Weakest area"
+          value={kpi.weakestArea ? formatScore(kpi.weakestArea.score) : "—"}
+          tone={bandColor(kpi.weakestArea?.score ?? null)}
+          note={kpi.weakestArea?.title ?? "—"}
+        />
+
+        <Card title="Against target" note={`Sub-regions vs ${TARGET_SCORE}%`} className="bn-target">
+          <TargetGoals panels={panels} programme={kpi.average} />
+        </Card>
+
+        <Card
+          title="Watchlist"
+          note="Weakest three this quarter"
+          className="bn-watchc"
+          action={<GoLink href="/findings" label="Open findings analysis" />}
+        >
+          <Watchlist rows={league.slice(0, 3)} onSelect={pick} />
+        </Card>
+
+        <StatTile
+          className="bn-s3"
+          label="Recurring gaps"
+          value={kpi.recurringAreas}
+          note="areas weak two audits running"
+        />
+
+        <StatTile
+          className="bn-s4"
+          label="Reviews"
+          value={league.length}
+          note={shown ? `finalized in ${quarterLabel(shown)}` : "no quarter on record"}
+        />
+
+        <Link className="bn-action" href="/audits">
+          <span aria-hidden>+</span>
+          Start a review
+        </Link>
       </div>
 
       {selected && detail && (
