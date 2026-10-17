@@ -60,7 +60,13 @@ for (const id of ids) {
   await page.goto(`${BASE}/audits/${id}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(300);
   out[id] = {
-    hs: await page.locator(".discipline-grid input[readonly]").first().inputValue(),
+    // The Health & Safety figure, read off its scorecard tab. It used to sit
+    // in a read-only field in a five-discipline grid; that grid became the
+    // tab strip when each discipline got its own audit screen.
+    hs: await page
+      .locator('.dsc-tabs button[aria-selected="true"] strong')
+      .first()
+      .innerText(),
     sections: await page.locator(".section-head .section-score").allInnerTexts(),
     areas: await page.evaluate(() =>
       Object.fromEntries(

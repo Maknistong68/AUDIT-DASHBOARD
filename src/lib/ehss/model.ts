@@ -142,6 +142,17 @@ export interface EhssAudit {
    */
   criticalRisks: import("./critical-risks").CriticalRiskScores;
   /**
+   * Answers for every checklist OTHER than Health & Safety, keyed by scope
+   * id — `"env"`, `"sec"`, `"ww"`, or `"crc:<hazard>"` for each of the
+   * fourteen Critical Risk hazard checklists. See ./scopes.
+   *
+   * H&S stays in `responses` above rather than moving in here: that field
+   * is what every existing view, the recurrence machinery and every record
+   * already saved in a browser use, and relocating it would orphan all of
+   * them to make one shape prettier.
+   */
+  scopedResponses?: Record<string, Record<string, EhssResponse>>;
+  /**
    * Area points from an audit recorded before this app existed, keyed by
    * checklist area ("A", "B6", "C2"). Historical audits were kept as a
    * narrative per question with no machine-readable answer, so the area

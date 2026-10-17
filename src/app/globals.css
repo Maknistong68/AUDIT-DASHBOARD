@@ -1596,9 +1596,8 @@ table.heatmap th[scope="row"] {
   font-variant-numeric: tabular-nums;
 }
 
-/* CRC focus-audit entry: out-of-scope hazards recede but stay readable.
-   The recorded-areas table reuses the rule for an area the sheet left out. */
-table.crc-entry tr.is-out td,
+/* A row the audit left out recedes but stays readable — an area the sheet
+   did not record, or a hazard outside the contractor's scope of work. */
 table.data tr.is-out td {
   opacity: 0.55;
 }
@@ -1617,11 +1616,6 @@ table.data tr.is-out td {
   font-style: normal;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: right;
-}
-
-table.crc-entry input[type="number"] {
-  width: 96px;
   text-align: right;
 }
 
@@ -4450,4 +4444,193 @@ table.matrix td.matrix-cell {
 .bn-basis {
   font-weight: 600;
   color: var(--ink-2);
+}
+
+/* ===========================================================================
+   The audit page — five disciplines, five audits
+
+   The scorecard is a tab strip, not a grid of five number fields: a
+   discipline is a place you go to run its audit, not a box you type a
+   figure into. Critical Risk is fourteen of those audits inside one tab.
+   =========================================================================== */
+
+.dsc-tabs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dsc-tabs button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 13px 13px;
+  border-radius: var(--r-3);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease), border-color 150ms var(--ease);
+}
+
+.dsc-tabs button:hover { background: var(--mat-hover); }
+
+.dsc-tabs button[aria-selected="true"] {
+  background: var(--accent-wash);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.dsc-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.dsc-name em {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dsc-tabs strong {
+  font-size: 20px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Where the figure came from. Said on every tab, because "72.3% somebody
+   answered for" and "72.3% somebody typed" are different claims. */
+.dsc-src {
+  font-size: 10.5px;
+  font-weight: 560;
+  color: var(--muted);
+}
+
+.dsc-src.is-checklist, .dsc-src.is-hazards { color: var(--accent-strong); }
+.dsc-src.is-none { opacity: 0.75; }
+
+/* ---- Critical Risk: fourteen hazards, each its own checklist ---- */
+
+.risk-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.risk-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+}
+
+.risk-list .is-out .risk-row { background: transparent; }
+
+.risk-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-name b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 580;
+}
+
+.risk-name em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* `input.`, not `.`: the base field rule is `input[type="number"]`, which
+   outranks a bare class and stretches this to the full row. */
+input.risk-input {
+  width: 92px;
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-score {
+  flex: none;
+  width: 92px;
+  text-align: right;
+}
+
+.risk-score b {
+  display: block;
+  font-size: 15px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-score em {
+  font-style: normal;
+  font-size: 10px;
+  color: var(--accent-strong);
+}
+
+.risk-out {
+  flex: none;
+  width: 92px;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.risk-open {
+  flex: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 560;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.risk-open:hover { background: var(--mat-hover); color: var(--ink-1); }
+
+/* ---- A checklist nested inside a panel ---- */
+
+.cl-form {
+  margin: 8px 0 14px;
+  padding: 12px 14px 4px;
+  border-radius: var(--r-3);
+  background: var(--mat-sunken);
+}
+
+.cl-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 860px) {
+  .dsc-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 620px) {
+  .dsc-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .risk-row { flex-wrap: wrap; }
+  .risk-name { flex: 1 1 60%; }
 }

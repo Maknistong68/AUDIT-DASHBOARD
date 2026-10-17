@@ -141,6 +141,14 @@ interface StoreValue {
   /** The 15 checklist areas as raw points. Passing an area with
    * `possible <= 0` drops it, which is how an area is un-recorded. */
   saveAreaScores: (auditId: string, areas: RecordedAreaScores) => void;
+  /** Answers for a checklist other than Health & Safety — Environment,
+   * Security, Worker Welfare, or one of the fourteen CRC hazards. H&S goes
+   * through `saveResponses`; see ./scopes for why the two are apart. */
+  saveScopedResponses: (
+    auditId: string,
+    scopeId: string,
+    responses: Record<string, EhssResponse>,
+  ) => void;
   /** Date, inspection number and quarter. Contractor is deliberately not
    * editable: an audit moved to another contractor is a different audit,
    * and would silently rewrite two contractors' trends. */
@@ -242,6 +250,34 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     [update, currentAudit],
   );
 
+  const saveScopedResponses = useCallback(
+    (
+      auditId: string,
+      scopeId: string,
+      responses: Record<string, EhssResponse>,
+    ) =>
+      update((prev) => {
+        const audit = currentAudit(auditId, prev);
+        if (!audit) return prev;
+        const scoped = { ...(audit.scopedResponses ?? {}) };
+        // An emptied scope drops its key rather than keeping {}, so "no
+        // answers" and "answered nothing" cannot drift apart in storage.
+        if (Object.keys(responses).length === 0) delete scoped[scopeId];
+        else scoped[scopeId] = responses;
+        return {
+          ...prev,
+          audits: {
+            ...prev.audits,
+            [auditId]: {
+              ...audit,
+              scopedResponses: Object.keys(scoped).length > 0 ? scoped : undefined,
+            },
+          },
+        };
+      }),
+    [update, currentAudit],
+  );
+
   const saveAuditMeta = useCallback(
     (
       auditId: string,
@@ -329,6 +365,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       createAudit,
       saveResponses,
       saveAreaScores,
+      saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,
       saveCriticalRisks,
@@ -344,6 +381,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       createAudit,
       saveResponses,
       saveAreaScores,
+      saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,
       saveCriticalRisks,

@@ -32,8 +32,15 @@ import {
   type CriticalRiskId,
   type CriticalRiskScores,
 } from "@/lib/ehss/critical-risks";
-import { DOMAIN_BY_ID } from "@/lib/ehss/domains";
 import { EhssAuditForm } from "./EhssAuditForm";
+import {
+  CriticalRiskPanel,
+  DisciplineScorePanel,
+  Scorecard,
+  type Source,
+} from "./DisciplinePanels";
+import { scopeProgress } from "@/lib/ehss/scopes";
+import type { Responses } from "@/components/audit/QuestionRow";
 import type { UserRole } from "@/lib/types";
 
 const STATUSES: EhssAuditStatus[] = ["draft", "submitted", "approved"];
@@ -171,275 +178,6 @@ function AuditMetaPanel({
 
 /** Scores for the four disciplines without their own checklist, plus the
  * Health & Safety score the 81-question checklist produces. */
-function DisciplinePanel({
-  scores,
-  checklistScore,
-  hsSource,
-  crcAuditScore,
-  canEdit,
-  onSave,
-}: {
-  scores: DisciplineScores;
-  checklistScore: number | null;
-  /** Where the Health & Safety figure came from — the 81-question checklist,
-   * or the area points of a review imported from a sheet. Naming it matters:
-   * the two are the same formula at different grains, and a reader asked to
-   * act on the number is entitled to know which one they are looking at. */
-  hsSource: "checklist" | "areas";
-  crcAuditScore: number | null;
-  canEdit: boolean;
-  onSave: (scores: DisciplineScores) => void;
-}) {
-  const [draft, setDraft] = useState<DisciplineScores>(scores);
-  const [saved, setSaved] = useState(false);
-
-  const effective: DisciplineScores = {
-    ...draft,
-    hs: draft.hs ?? checklistScore ?? undefined,
-    crc: draft.crc ?? crcAuditScore ?? undefined,
-  };
-  const overall = weightedOverall(effective);
-
-  const set = (id: DisciplineId, raw: string) => {
-    const value = raw === "" ? undefined : Number(raw);
-    setSaved(false);
-    setDraft((prev) => ({
-      ...prev,
-      [id]: value === undefined || Number.isNaN(value) ? undefined : value,
-    }));
-  };
-
-  return (
-    <div className="discipline-panel">
-      <div className="drilldown-head">
-        <div>
-          <h3 className="panel-title" style={{ margin: 0 }}>
-            Discipline scores
-          </h3>
-          <p className="sub" style={{ margin: "2px 0 0" }}>
-            Health &amp; Safety comes from{" "}
-            {hsSource === "areas"
-              ? "the recorded area scores below"
-              : "the checklist below"}{" "}
-            and Critical Risk Control from the hazard scores; the other three
-            are recorded from their own audits.
-          </p>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div className="panel-score" style={{ fontSize: 28 }}>
-            {formatScore(overall)}
-          </div>
-          <RatingBadge rating={ratingFor(overall)} />
-        </div>
-      </div>
-      <div className="discipline-grid">
-        {DISCIPLINES.map((d) => (
-          <label className="field" key={d.id}>
-            <span>
-              {d.name}{" "}
-              <span style={{ color: "var(--muted)", fontWeight: 400 }}>
-                {Math.round(d.weight * 100)}%
-              </span>
-            </span>
-            {d.detailed ? (
-              <input
-                type="text"
-                readOnly
-                value={
-                  effective.hs === undefined
-                    ? "not scored yet"
-                    : `${effective.hs.toFixed(1)}% (${
-                        hsSource === "areas" ? "recorded areas" : "checklist"
-                      })`
-                }
-              />
-            ) : d.id === "crc" && crcAuditScore !== null && draft.crc === undefined ? (
-              <input
-                type="text"
-                readOnly
-                value={`${crcAuditScore.toFixed(1)}% (hazard scores)`}
-              />
-            ) : (
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={0.1}
-                disabled={!canEdit}
-                value={draft[d.id] ?? ""}
-                placeholder="—"
-                onChange={(e) => set(d.id, e.target.value)}
-              />
-            )}
-          </label>
-        ))}
-      </div>
-      {canEdit && (
-        <p>
-          <button
-            className="ghost"
-            type="button"
-            onClick={() => {
-              onSave(draft);
-              setSaved(true);
-            }}
-          >
-            {saved ? "Saved" : "Save discipline scores"}
-          </button>
-        </p>
-      )}
-    </div>
-  );
-}
-
-/**
- * The Critical Risk Control focus audit: one score per hazardous-work item.
- * A hazard is only scored when the contractor's scope of work involves it —
- * "in scope" is an explicit checkbox rather than an empty field, so a hazard
- * the contractor genuinely does not do can never be confused with one the
- * auditor forgot.
- */
-function CriticalRiskPanel({
-  risks,
-  canEdit,
-  onSave,
-}: {
-  risks: CriticalRiskScores;
-  canEdit: boolean;
-  onSave: (risks: CriticalRiskScores) => void;
-}) {
-  const [draft, setDraft] = useState<CriticalRiskScores>(risks);
-  const [saved, setSaved] = useState(false);
-
-  const inScope = CRITICAL_RISKS.filter((r) => draft[r.id] !== undefined);
-  const derived = crcScore(draft);
-  // Nothing scored and nothing editable: the entry grid would be fourteen
-  // rows of "not in scope", which reads as a scoping decision rather than
-  // an audit that was never run.
-  const unscored = inScope.length === 0 && !canEdit;
-
-  const setScore = (id: CriticalRiskId, raw: string) => {
-    const value = raw === "" ? 0 : Number(raw);
-    setSaved(false);
-    setDraft((prev) => ({
-      ...prev,
-      [id]: Number.isNaN(value) ? 0 : Math.max(0, Math.min(100, value)),
-    }));
-  };
-
-  const toggle = (id: CriticalRiskId, on: boolean) => {
-    setSaved(false);
-    setDraft((prev) => {
-      const next = { ...prev };
-      if (on) next[id] = prev[id] ?? 0;
-      else delete next[id];
-      return next;
-    });
-  };
-
-  if (unscored) {
-    return (
-      <div className="discipline-panel">
-        <h3 className="panel-title" style={{ margin: 0 }}>
-          Critical Risk Control — focus audit
-        </h3>
-        <p className="sub" style={{ margin: "4px 0 0" }}>
-          Not run for this review.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="discipline-panel">
-      <div className="drilldown-head">
-        <div>
-          <h3 className="panel-title" style={{ margin: 0 }}>
-            Critical Risk Control — focus audit
-          </h3>
-          <p className="sub" style={{ margin: "2px 0 0" }}>
-            Score only the hazardous work this contractor actually does.{" "}
-            {inScope.length} of {CRITICAL_RISKS.length} hazard
-            {inScope.length === 1 ? "" : "s"} in scope; the rest are excluded
-            from the average rather than scored zero.
-          </p>
-        </div>
-        <div style={{ textAlign: "right" }}>
-          <div className="panel-score" style={{ fontSize: 28 }}>
-            {formatScore(derived)}
-          </div>
-          <RatingBadge rating={ratingFor(derived)} />
-        </div>
-      </div>
-      <div className="table-scroll">
-        <table className="data crc-entry">
-          <thead>
-            <tr>
-              <th style={{ width: 80 }}>In scope</th>
-              <th>Hazardous work</th>
-              <th style={{ width: 90 }}>Pillar</th>
-              <th style={{ width: 110 }} className="num">
-                Score
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {CRITICAL_RISKS.map((risk) => {
-              const scoped = draft[risk.id] !== undefined;
-              return (
-                <tr key={risk.id} className={scoped ? undefined : "is-out"}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={scoped}
-                      disabled={!canEdit}
-                      aria-label={`${risk.label} in scope`}
-                      onChange={(e) => toggle(risk.id, e.target.checked)}
-                    />
-                  </td>
-                  <td>{risk.label}</td>
-                  <td style={{ color: "var(--muted)" }}>
-                    {DOMAIN_BY_ID[risk.domain].label}
-                  </td>
-                  <td className="num">
-                    {scoped ? (
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.1}
-                        disabled={!canEdit}
-                        value={draft[risk.id] ?? ""}
-                        onChange={(e) => setScore(risk.id, e.target.value)}
-                      />
-                    ) : (
-                      <span style={{ color: "var(--muted)" }}>not in scope</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      {canEdit && (
-        <p>
-          <button
-            className="ghost"
-            type="button"
-            onClick={() => {
-              onSave(draft);
-              setSaved(true);
-            }}
-          >
-            {saved ? "Saved" : "Save critical-risk scores"}
-          </button>
-        </p>
-      )}
-    </div>
-  );
-}
-
 export function AuditDetailClient({
   auditId,
   role,
@@ -458,9 +196,15 @@ export function AuditDetailClient({
     saveAuditMeta,
     saveDisciplineScores,
     saveCriticalRisks,
+    saveScopedResponses,
     setAuditStatus,
     deleteAudit,
   } = useEhss();
+
+  /** Which discipline's audit is open. Health & Safety first: it is the one
+   * with a checklist, it carries 40% of the scorecard, and it is where an
+   * auditor starts. */
+  const [tab, setTab] = useState<DisciplineId>("hs");
 
   /**
    * An approved review is editable, but not by accident. The gate used to be
@@ -515,6 +259,32 @@ export function AuditDetailClient({
   const hsSource: "checklist" | "areas" =
     areaKeys.length > 0 && !answeredAny ? "areas" : "checklist";
 
+  /**
+   * The five figures the scorecard shows, and where each one came from.
+   * A recorded number wins — it is a transcription of an audit that
+   * happened — and the detailed source stands in when there is none. Saying
+   * WHICH is not decoration: "72.3% from a checklist somebody answered" and
+   * "72.3% somebody typed" are different claims about the same number.
+   */
+  const shownScores: DisciplineScores = {
+    ...audit.disciplineScores,
+    hs: audit.disciplineScores.hs ?? checklistScore ?? undefined,
+    crc: audit.disciplineScores.crc ?? crcAuditScore ?? undefined,
+  };
+  const sources = Object.fromEntries(
+    DISCIPLINES.map((d) => {
+      if (audit.disciplineScores[d.id] !== undefined) return [d.id, "recorded"];
+      if (d.id === "hs") {
+        return [d.id, checklistScore === null ? "none" : hsSource];
+      }
+      if (d.id === "crc") {
+        return [d.id, crcAuditScore === null ? "none" : "hazards"];
+      }
+      const own = scopeProgress(audit, d.id);
+      return [d.id, own.complete ? "checklist" : "none"];
+    }),
+  ) as Record<DisciplineId, Source>;
+
   return (
     <div className="stack">
       <section className="card">
@@ -559,77 +329,100 @@ export function AuditDetailClient({
           onStatus={(status) => setAuditStatus(audit.id, status)}
         />
 
-        <DisciplinePanel
-          key={`${panelKey}-disciplines`}
-          scores={audit.disciplineScores}
-          checklistScore={checklistScore}
-          hsSource={hsSource}
-          crcAuditScore={crcAuditScore}
-          canEdit={canEdit}
-          onSave={(scores) => saveDisciplineScores(audit.id, scores)}
+        <Scorecard
+          scores={shownScores}
+          sources={sources}
+          overall={weightedOverall(shownScores)}
+          active={tab}
+          onSelect={setTab}
         />
 
-        <CriticalRiskPanel
-          key={`${panelKey}-crc`}
-          risks={audit.criticalRisks}
-          canEdit={canEdit}
-          onSave={(risks) => saveCriticalRisks(audit.id, risks)}
-        />
+        {tab === "crc" && (
+          <CriticalRiskPanel
+            key={`${panelKey}-crc`}
+            audit={audit}
+            canEdit={canEdit}
+            onSaveRisks={(risks) => saveCriticalRisks(audit.id, risks)}
+            onSaveResponses={(scopeId: string, responses: Responses) =>
+              saveScopedResponses(audit.id, scopeId, responses)
+            }
+          />
+        )}
 
-        {/* No score beside this heading: the sticky toolbar directly below
-            carries the live figure, and the same number drawn twice a
-            hand's width apart invites the reader to look for the
-            difference. */}
-        <div style={{ marginTop: 18 }}>
-          <h3 className="panel-title" style={{ margin: 0 }}>
-            Health &amp; Safety checklist
-          </h3>
-          <p className="sub" style={{ margin: "2px 0 0" }}>
-            All {QUESTION_COUNT} questions in their 15 areas. An area scores
-            from the points recorded against it until every one of its
-            questions is answered, and from the answers after that.
-          </p>
-        </div>
-
-        <EhssAuditForm
-          key={`${panelKey}-${unlocked}`}
-          initialResponses={audit.responses}
-          initialAreas={audit.areaScores ?? {}}
-          canEdit={canEdit}
-          status={audit.status}
-          isAdmin={isAdmin}
-          onSave={(
-            responses: Record<string, EhssResponse>,
-            areas: RecordedAreaScores,
-          ) => {
-            saveResponses(audit.id, responses);
-            saveAreaScores(audit.id, areas);
-          }}
-          onSubmit={(
-            responses: Record<string, EhssResponse>,
-            areas: RecordedAreaScores,
-          ) => {
-            saveResponses(audit.id, responses);
-            saveAreaScores(audit.id, areas);
-            // The completed checklist becomes the Health & Safety score,
-            // scored the same way the page shows it: per area, from
-            // whichever of the two sources that area is on record at.
-            const total = scoreAreasAndAnswers(CHECKLIST, areas, responses)
-              .total;
-            if (total !== null) {
+        {tab !== "hs" && tab !== "crc" && (
+          <DisciplineScorePanel
+            key={`${panelKey}-${tab}`}
+            discipline={tab}
+            audit={audit}
+            recorded={audit.disciplineScores[tab]}
+            canEdit={canEdit}
+            onSaveScore={(value) =>
               saveDisciplineScores(audit.id, {
                 ...audit.disciplineScores,
-                hs: total,
-              });
+                [tab]: value,
+              })
             }
-            setAuditStatus(audit.id, "submitted");
-          }}
-          onApprove={() => setAuditStatus(audit.id, "approved")}
-          onDelete={() => {
-            deleteAudit(audit.id);
-            router.push("/audits");
-          }}
-        />
+            onSaveResponses={(scopeId: string, responses: Responses) =>
+              saveScopedResponses(audit.id, scopeId, responses)
+            }
+          />
+        )}
+
+        {tab === "hs" && (
+          <>
+          <div style={{ marginTop: 18 }}>
+            <h3 className="panel-title" style={{ margin: 0 }}>
+              Health &amp; Safety checklist
+            </h3>
+            <p className="sub" style={{ margin: "2px 0 0" }}>
+              All {QUESTION_COUNT} questions in their 15 areas. An area scores
+              from the points recorded against it until every one of its
+              questions is answered, and from the answers after that.
+            </p>
+          </div>
+
+          <EhssAuditForm
+            key={`${panelKey}-${unlocked}`}
+            initialResponses={audit.responses}
+            initialAreas={audit.areaScores ?? {}}
+            canEdit={canEdit}
+            status={audit.status}
+            isAdmin={isAdmin}
+            onSave={(
+              responses: Record<string, EhssResponse>,
+              areas: RecordedAreaScores,
+            ) => {
+              saveResponses(audit.id, responses);
+              saveAreaScores(audit.id, areas);
+            }}
+            onSubmit={(
+              responses: Record<string, EhssResponse>,
+              areas: RecordedAreaScores,
+            ) => {
+              saveResponses(audit.id, responses);
+              saveAreaScores(audit.id, areas);
+              // The completed checklist becomes the Health & Safety score,
+              // scored the same way the page shows it: per area, from
+              // whichever of the two sources that area is on record at.
+              const total = scoreAreasAndAnswers(CHECKLIST, areas, responses)
+                .total;
+              if (total !== null) {
+                saveDisciplineScores(audit.id, {
+                  ...audit.disciplineScores,
+                  hs: total,
+                });
+              }
+              setAuditStatus(audit.id, "submitted");
+            }}
+            onApprove={() => setAuditStatus(audit.id, "approved")}
+            onDelete={() => {
+              deleteAudit(audit.id);
+              router.push("/audits");
+            }}
+          />
+          </>
+        )}
+
       </section>
     </div>
   );

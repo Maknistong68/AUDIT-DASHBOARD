@@ -23,14 +23,24 @@ An **EHSS quarterly audit scoring and trend platform** for Oxagon
 contractors, modeled on the *Excellence EHSS Quarterly Performance Review*
 workbook and the master contractor scorecard.
 
-**Five audits are being developed**, one per scorecard discipline: H&S,
-Critical Risk Control, Environment, Security and Worker Welfare. Only H&S
-has its full checklist so far (81 questions) and CRC has its 14-hazard
-register; the other three carry a recorded score until their checklists
-arrive. Anything built for H&S should be written so the other four can use
-it — the issue taxonomy, the recurrence model and the analytics are all
-discipline-agnostic by design, and new work should stay that way rather
-than hard-coding the H&S checklist.
+**Five audits, and EIGHTEEN checklists.** One audit per scorecard
+discipline — H&S, Critical Risk Control, Environment, Security, Worker
+Welfare — and Critical Risk is itself a focus inspection made of
+**fourteen separate hazard checklists**, one per entry in the CRC register,
+combined into the discipline score (owner, 2026-10-17). So the unit the app
+models is the CHECKLIST, not the discipline and not the question:
+`src/lib/ehss/scopes.ts` is the registry of all eighteen.
+
+Only H&S has content (81 questions). The other seventeen are declared with
+`sections: []` and the discipline or hazard they score carries a recorded
+number until someone supplies the real questions. **Do not invent them** —
+a checklist nobody wrote is worse than a blank one, because a blank one is
+obviously blank. Adding Environment should be adding its sections to
+`scopes.ts` and nothing else: the roll-up above a scope and the
+question/answer/cause machinery below it are already written and already
+tested. Anything built for H&S should stay that way — the issue taxonomy,
+the recurrence model and the analytics are all discipline-agnostic by
+design.
 
 Two invariants shape everything:
 
@@ -360,6 +370,39 @@ Two invariants shape everything:
   Drawing each quarter independently made nearly every finding look reopened
   the next quarter and the recurrence view read as noise. Keep it sticky —
   the recurrence tests read as meaningless otherwise.
+- **The audit page is five audits behind a tab strip** (`DisciplinePanels.tsx`).
+  The scorecard at the top is the tab strip, not a grid of five number
+  fields: a discipline is a place you go to run its audit, not a box you
+  type a figure into. Each tab carries its weight, its score and WHERE that
+  score came from — checklist, area points, hazards, or typed — because
+  "72.3% somebody answered for" and "72.3% somebody typed" are different
+  claims about the same number. H&S opens first; it has the checklist and
+  40% of the scorecard.
+  - **Critical Risk** is the fourteen hazards, each with its own checklist
+    and its own in-scope decision. A hazard outside the contractor's scope
+    of work is ABSENT from the mean, never a zero — scoring a firm with no
+    marine works on Working on or Near Water would be a lie about the
+    contractor rather than a fact about the work. A hazard's score comes
+    from its checklist once that checklist is COMPLETE and from the
+    recorded figure until then, which is the same all-or-nothing precedence
+    the H&S form uses between its answers and its area points, for the same
+    reason. `riskScore()` carries it; `crcScore()` is still the only
+    definition of the discipline score.
+  - **Environment / Security / Worker Welfare** show the recorded score,
+    which is the real screen and not a placeholder — those audits happen
+    and their numbers exist. Their checklist appears under it the moment
+    `scopes.ts` carries their sections.
+  - `components/audit/QuestionRow.tsx` holds the question row AND the answer
+    reducers (what an answer does to the causes beside it). Shared on
+    purpose: eighteen checklists must record the same kind of answer, and a
+    second copy of that markup is how two of them end up disagreeing about
+    what "Partial" means. `ChecklistForm.tsx` is the generic form every
+    scope except H&S uses — H&S keeps its own screen because it alone
+    carries imported area points, which is the complicated part of it.
+  - Answers live in `audit.responses` for H&S and `audit.scopedResponses`
+    keyed by scope id for everything else. H&S did NOT move: that field is
+    what every view, the recurrence machinery and every record already saved
+    in a browser use.
 - **The audit page shows the whole checklist and every field is editable.**
   It used to show a read-only fifteen-row table for an imported review and
   the 81-question form only for a draft, so a mis-keyed point from a
