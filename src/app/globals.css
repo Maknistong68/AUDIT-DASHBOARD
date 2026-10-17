@@ -5112,3 +5112,28 @@ input.risk-input {
   color: var(--muted);
   white-space: nowrap;
 }
+
+/* The editable contractor register. */
+.reg-edit {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px;
+  margin: 12px 0;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+}
+
+.reg-edit .field { margin-bottom: 0; }
+.reg-edit input, .reg-edit select { max-width: 190px; }
+
+.reg-problem {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 11px;
+  color: var(--status-warning);
+  max-width: 190px;
+}

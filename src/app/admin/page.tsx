@@ -1,9 +1,11 @@
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import { RATING_BANDS } from "@/lib/ehss/model";
 import { ISSUE_CATEGORIES } from "@/lib/ehss/issues";
-import { contractors, subRegions } from "@/lib/ehss/recorded";
+import { subRegions } from "@/lib/ehss/recorded";
 import { readDemoProfile } from "@/lib/session/profile";
 import { LocalEditsPanel } from "@/components/LocalEditsPanel";
+import { ContractorRegister } from "@/components/admin/ContractorRegister";
+import { SettingsPanel } from "@/components/admin/SettingsPanel";
 import { ProvenanceNote } from "@/components/ProvenanceNote";
 
 export const dynamic = "force-dynamic";
@@ -28,9 +30,9 @@ export default async function AdminPage() {
   return (
     <div className="stack">
       <div className="notice">
-        Reference data behind the audits. Editing (question weights,
-        contractors, users) is enabled once the app is connected to a
-        database.
+        Reference data behind the audits. The contractor register is
+        editable below. Question weights, the target and user accounts come
+        with the database and an identity — see docs/FIX-PLAN.md.
       </div>
 
       <LocalEditsPanel />
@@ -66,31 +68,9 @@ export default async function AdminPage() {
       </section>
 
 
-      <section className="card">
-        <h2>Contractor register</h2>
-        <div className="table-scroll">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Contractor</th>
-                <th>Sub-region</th>
-              </tr>
-            </thead>
-            <tbody>
-              {contractors.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    <strong>{c.code}</strong>
-                  </td>
-                  <td>{c.name}</td>
-                  <td>{subRegions.find((s) => s.id === c.subRegionId)?.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <ContractorRegister />
+
+      <SettingsPanel />
 
       <section className="card">
         <h2>Checklist</h2>

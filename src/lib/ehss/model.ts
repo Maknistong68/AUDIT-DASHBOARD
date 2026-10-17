@@ -247,3 +247,37 @@ export function auditableQuarters(known: string[], today = new Date()): string[]
   )[0]!;
   return quartersBetween(earliest, latest).reverse();
 }
+
+/**
+ * Why a contractor field would be refused.
+ *
+ * Contractors are INITIALS plus the last three digits of the work order and
+ * nothing else — `SIBS (838)`, `AF (272)`. That is a compliance position,
+ * not a display choice: §4 of `docs/COMPLIANCE-KSA.md` lets this data live
+ * outside the Kingdom precisely because it identifies nobody and nothing,
+ * and a register that lets someone type a full company name or a whole work
+ * order quietly voids it.
+ *
+ * So the rule is enforced at the point of entry rather than left to the
+ * convention it used to be. Returns null when the value is acceptable.
+ */
+export function contractorFieldProblem(
+  field: "name" | "code",
+  value: string,
+): string | null {
+  const text = value.trim();
+  if (text.length === 0) return "required";
+  if (field === "code") {
+    return /^\d{3}$/.test(text)
+      ? null
+      : "the last three digits of the work order, and only those";
+  }
+  // A space first: it is the clearest signal that somebody typed a name,
+  // and "no spaces" tells them what to do where "too long" does not.
+  if (/\s/.test(text)) return "initials only — no spaces";
+  // Room for a short suffix like "OT2" or "D&B", but not for a company name.
+  if (text.length > 8) return "initials only — this is too long to be initials";
+  return /^[A-Za-z0-9&-]+$/.test(text)
+    ? null
+    : "letters, digits, & and - only";
+}

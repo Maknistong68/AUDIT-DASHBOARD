@@ -58,10 +58,26 @@ function merge(o: Overrides): {
   contractors: EhssContractor[];
   audits: EhssAudit[];
 } {
-  const contractors = baseContractors.map((c) =>
-    c.id in o.contractorActive
-      ? { ...c, active: o.contractorActive[c.id]! }
-      : c,
+  // Recorded contractors, with any edit layered on, then any added here.
+  // `contractorActive` predates the editable register and stays its own
+  // field: every browser already holding one would otherwise lose it.
+  const edited = baseContractors.map((c) => ({
+    ...c,
+    ...(o.contractors[c.id] ?? {}),
+    ...(c.id in o.contractorActive ? { active: o.contractorActive[c.id]! } : {}),
+  }));
+  const known = new Set(baseContractors.map((c) => c.id));
+  const added = Object.values(o.contractors)
+    .filter((c) => !known.has(c.id))
+    .map((c) => ({
+      id: c.id,
+      code: c.code ?? "000",
+      name: c.name ?? "—",
+      subRegionId: c.subRegionId ?? baseSubRegions[0]!.id,
+      active: c.active ?? true,
+    }));
+  const contractors = [...edited, ...added].sort(
+    (a, b) => a.name.localeCompare(b.name) || a.code.localeCompare(b.code),
   );
   const deleted = new Set(o.deletedAuditIds);
   const byId = new Map<string, EhssAudit>();
@@ -101,6 +117,13 @@ interface StoreValue {
   audits: EhssAudit[];
   actions: EhssAction[];
   setContractorActive: (contractorId: string, active: boolean) => void;
+  /**
+   * Add a contractor, or change one's initials, work-order digits or
+   * sub-region. Nothing here may widen beyond initials and three digits:
+   * that is a compliance position (COMPLIANCE-KSA §4), not a display
+   * choice, and `contractorFieldProblem` is where it is enforced.
+   */
+  saveContractor: (contractor: EhssContractor) => void;
   /** Raise an action against a finding. Id is generated here so a caller
    * cannot collide two. */
   raiseAction: (action: Omit<EhssAction, "id">) => string;
@@ -308,6 +331,51 @@ export function EhssStoreProvider({
         return { ...prev, actions };
       }),
     [update],
+  );
+
+  const saveContractor = useCallback(
+    (contractor: EhssContractor) =>
+      update(
+        (prev) => ({
+          ...prev,
+          contractors: { ...prev.contractors, [contractor.id]: contractor },
+        }),
+        (prev) => {
+          const was = prev.contractors[contractor.id];
+          const base = baseContractors.find((c) => c.id === contractor.id);
+          const before = { ...(base ?? {}), ...(was ?? {}) } as
+            | Partial<EhssContractor>
+            | undefined;
+          if (!before || Object.keys(before).length === 0) {
+            return [
+              {
+                actorRole: role!,
+                entity: "contractor" as const,
+                entityId: contractor.id,
+                field: "added",
+                from: null,
+                to: `${contractor.name} (${contractor.code})`,
+              },
+            ];
+          }
+          return (["name", "code", "subRegionId", "active"] as const).flatMap(
+            (field) =>
+              before[field] === contractor[field]
+                ? []
+                : [
+                    {
+                      actorRole: role!,
+                      entity: "contractor" as const,
+                      entityId: contractor.id,
+                      field,
+                      from: String(before[field] ?? ""),
+                      to: String(contractor[field]),
+                    },
+                  ],
+          );
+        },
+      ),
+    [update, role],
   );
 
   const createAudit = useCallback(
@@ -545,6 +613,7 @@ export function EhssStoreProvider({
       audits,
       actions: Object.values(overrides.actions),
       setContractorActive,
+      saveContractor,
       raiseAction,
       closeActionByHand,
       reopenAction,
@@ -570,6 +639,7 @@ export function EhssStoreProvider({
       audits,
       overrides.actions,
       setContractorActive,
+      saveContractor,
       raiseAction,
       closeActionByHand,
       reopenAction,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { auditableQuarters, quartersBetween } from "./model";
+import {
+  auditableQuarters,
+  contractorFieldProblem,
+  quartersBetween,
+} from "./model";
 import { audits, contractors, subRegions } from "./fixture";
 import { contractorLabel } from "./model";
 import { weightedOverall } from "./disciplines";
@@ -328,5 +332,35 @@ describe("quarter enumeration — a missed quarter must be visible as missed", (
     ]);
     expect(quartersBetween("2026-Q2", "2025-Q3")).toEqual([]);
     expect(quartersBetween("2026-Q1", "2026-Q1")).toEqual(["2026-Q1"]);
+  });
+});
+
+describe("the contractor register refuses what would void the §4 position", () => {
+  it("accepts initials and three digits", () => {
+    expect(contractorFieldProblem("name", "SIBS")).toBeNull();
+    expect(contractorFieldProblem("name", "OT2")).toBeNull();
+    expect(contractorFieldProblem("name", "D&B")).toBeNull();
+    expect(contractorFieldProblem("code", "838")).toBeNull();
+  });
+
+  it("refuses a full company name", () => {
+    // §4 of the compliance assessment lets this data live outside the
+    // Kingdom because it identifies nobody and nothing. A register that
+    // accepted this would quietly void that.
+    expect(contractorFieldProblem("name", "Saudi Industrial Builders")).toMatch(
+      /initials only/,
+    );
+    expect(contractorFieldProblem("name", "AL BIRIKI")).toMatch(/no spaces/);
+  });
+
+  it("refuses a whole work order, and anything that is not three digits", () => {
+    expect(contractorFieldProblem("code", "4800001134")).toMatch(/three digits/);
+    expect(contractorFieldProblem("code", "83")).toMatch(/three digits/);
+    expect(contractorFieldProblem("code", "ABC")).toMatch(/three digits/);
+  });
+
+  it("refuses empty", () => {
+    expect(contractorFieldProblem("name", "   ")).toBe("required");
+    expect(contractorFieldProblem("code", "")).toBe("required");
   });
 });

@@ -49,6 +49,9 @@ const filled: OverridesSnapshot = {
       to: "submitted",
     },
   ],
+  contractors: {
+    new1: { id: "new1", name: "NEW", code: "123", subRegionId: "sr1", active: true },
+  },
 };
 
 /**
@@ -129,6 +132,7 @@ describe("a snapshot can be older than the code reading it", () => {
     // The trail arrived after the first snapshots were written; a browser
     // holding one from before must not read as `undefined.length`.
     expect(normalize({ audits: {} }).events).toEqual([]);
+    expect(normalize({ audits: {} }).contractors).toEqual({});
   });
 
   it("counts what it holds, for the panel that offers to discard it", () => {

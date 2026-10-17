@@ -22,7 +22,7 @@
  */
 
 import type { EhssAction } from "../actions";
-import type { EhssAudit } from "../model";
+import type { EhssAudit, EhssContractor } from "../model";
 import type { TrailEvent } from "../trail";
 
 /** Everything layered on top of `recorded.ts`. */
@@ -37,6 +37,8 @@ export interface OverridesSnapshot {
   actions: Record<string, EhssAction>;
   /** Who changed what, when — by role. Append-only; see ../trail.ts. */
   events: TrailEvent[];
+  /** Contractors added here, and edits to recorded ones. Keyed by id. */
+  contractors: Record<string, Partial<EhssContractor> & { id: string }>;
 }
 
 export const EMPTY_OVERRIDES: OverridesSnapshot = {
@@ -45,6 +47,7 @@ export const EMPTY_OVERRIDES: OverridesSnapshot = {
   deletedAuditIds: [],
   actions: {},
   events: [],
+  contractors: {},
 };
 
 export interface StorageAdapter {
@@ -82,6 +85,7 @@ export function normalize(raw: unknown): OverridesSnapshot {
     deletedAuditIds: parsed.deletedAuditIds ?? [],
     actions: parsed.actions ?? {},
     events: parsed.events ?? [],
+    contractors: parsed.contractors ?? {},
   };
 }
 
