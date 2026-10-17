@@ -22,17 +22,27 @@ export function AreaView({
   programmeScore,
   questions,
   evidence,
+  actionSlot,
 }: {
   area: AreaStanding;
   contractorLabel: string;
   programmeScore: number | null;
   questions: ChecklistQuestion[];
   evidence: EvidenceRow[];
+  /**
+   * The actions against this area, and the control to raise one.
+   *
+   * Passed in rather than built here: this view is a read of the audit and
+   * knows nothing about the register, and the day the register moves to a
+   * database that should stay true.
+   */
+  actionSlot?: React.ReactNode;
 }) {
   const gap = area.score === null ? null : Math.max(0, TARGET_SCORE - area.score);
 
   return (
     <div className="av">
+      {actionSlot}
       <div className="av-hero">
         <span className="av-score" style={{ color: bandColor(area.score) }}>
           {formatScore(area.score)}

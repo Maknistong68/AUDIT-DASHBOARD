@@ -36,6 +36,7 @@ export function ContractorView({
   onCompare,
   compareAreas,
   onOpenArea,
+  actionSlot,
 }: {
   label: string;
   subRegionName: string;
@@ -58,6 +59,9 @@ export function ContractorView({
   /** The comparison contractor's areas, keyed by area code. */
   compareAreas: Record<string, number | null>;
   onOpenArea: (area: AreaStanding) => void;
+  /** The register for this contractor, built by the page — this view is a
+   * read of the audit and knows nothing about actions. */
+  actionSlot?: React.ReactNode;
 }) {
   const series = reviews
     .map((r) => r.total)
@@ -232,6 +236,8 @@ export function ContractorView({
           </ul>
         </section>
       )}
+
+      {actionSlot}
 
       {reviews.length > 0 && (
         <p className="dv-foot">

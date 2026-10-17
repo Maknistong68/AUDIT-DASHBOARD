@@ -37,6 +37,7 @@ import type {
 import type { DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
 import { readIssues } from "./issues";
+import type { EhssAction } from "./actions";
 
 /* Renamed from "ehss-demo-v1" when the generated demo dataset was replaced
  * by the real audits. The rename is deliberate: it orphans anything a
@@ -51,9 +52,17 @@ interface Overrides {
   audits: Record<string, EhssAudit>;
   /** Audits the user deleted (baseline ones included). */
   deletedAuditIds: string[];
+  /** Actions raised against findings. There is no baseline for these —
+   * every one was raised by somebody here. */
+  actions: Record<string, EhssAction>;
 }
 
-const EMPTY: Overrides = { contractorActive: {}, audits: {}, deletedAuditIds: [] };
+const EMPTY: Overrides = {
+  contractorActive: {},
+  audits: {},
+  deletedAuditIds: [],
+  actions: {},
+};
 
 /**
  * Reviews saved before issue categories replaced the single OB code carry
@@ -91,6 +100,7 @@ function readOverrides(): Overrides {
       contractorActive: parsed.contractorActive ?? {},
       audits: upgradeAudits(parsed.audits ?? {}),
       deletedAuditIds: parsed.deletedAuditIds ?? [],
+      actions: parsed.actions ?? {},
     };
   } catch {
     return EMPTY; // private mode, blocked storage, or corrupt payload
@@ -131,6 +141,7 @@ export interface NewAuditInput {
  * only — the panel that shows them needs a magnitude, not the records. */
 export interface LocalEditCounts {
   audits: number;
+  actions: number;
   deleted: number;
   contractors: number;
 }
@@ -141,7 +152,21 @@ interface StoreValue {
   subRegions: SubRegion[];
   contractors: EhssContractor[];
   audits: EhssAudit[];
+  actions: EhssAction[];
   setContractorActive: (contractorId: string, active: boolean) => void;
+  /** Raise an action against a finding. Id is generated here so a caller
+   * cannot collide two. */
+  raiseAction: (action: Omit<EhssAction, "id">) => string;
+  /** Close by hand — recorded as "without evidence", which is a different
+   * claim from closed by a review and must read differently. */
+  closeActionByHand: (
+    actionId: string,
+    closure: NonNullable<EhssAction["closedByHand"]>,
+  ) => void;
+  /** Undo a hand closure; derived closure cannot be undone because it is
+   * not a decision, it is a measurement. */
+  reopenAction: (actionId: string) => void;
+  deleteAction: (actionId: string) => void;
   createAudit: (input: NewAuditInput) => string;
   saveResponses: (
     auditId: string,
@@ -196,6 +221,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
   const localEdits = useMemo<LocalEditCounts>(
     () => ({
       audits: Object.keys(overrides.audits).length,
+      actions: Object.keys(overrides.actions).length,
       deleted: overrides.deletedAuditIds.length,
       contractors: Object.keys(overrides.contractorActive).length,
     }),
@@ -208,6 +234,57 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         contractorActive: { ...prev.contractorActive, [contractorId]: active },
       })),
+    [update],
+  );
+
+  const raiseAction = useCallback(
+    (input: Omit<EhssAction, "id">) => {
+      const id = `act-${input.contractorId}-${Date.now().toString(36)}-${Math.random()
+        .toString(36)
+        .slice(2, 7)}`;
+      update((prev) => ({
+        ...prev,
+        actions: { ...prev.actions, [id]: { ...input, id } },
+      }));
+      return id;
+    },
+    [update],
+  );
+
+  const closeActionByHand = useCallback(
+    (actionId: string, closure: NonNullable<EhssAction["closedByHand"]>) =>
+      update((prev) => {
+        const action = prev.actions[actionId];
+        if (!action) return prev;
+        return {
+          ...prev,
+          actions: {
+            ...prev.actions,
+            [actionId]: { ...action, closedByHand: closure },
+          },
+        };
+      }),
+    [update],
+  );
+
+  const reopenAction = useCallback(
+    (actionId: string) =>
+      update((prev) => {
+        const action = prev.actions[actionId];
+        if (!action) return prev;
+        const { closedByHand: _dropped, ...rest } = action;
+        return { ...prev, actions: { ...prev.actions, [actionId]: rest } };
+      }),
+    [update],
+  );
+
+  const deleteAction = useCallback(
+    (actionId: string) =>
+      update((prev) => {
+        const actions = { ...prev.actions };
+        delete actions[actionId];
+        return { ...prev, actions };
+      }),
     [update],
   );
 
@@ -380,7 +457,12 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       subRegions: baseSubRegions,
       contractors,
       audits,
+      actions: Object.values(overrides.actions),
       setContractorActive,
+      raiseAction,
+      closeActionByHand,
+      reopenAction,
+      deleteAction,
       createAudit,
       saveResponses,
       saveAreaScores,
@@ -397,7 +479,12 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
       localEdits,
       contractors,
       audits,
+      overrides.actions,
       setContractorActive,
+      raiseAction,
+      closeActionByHand,
+      reopenAction,
+      deleteAction,
       createAudit,
       saveResponses,
       saveAreaScores,

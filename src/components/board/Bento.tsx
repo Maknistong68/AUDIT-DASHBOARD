@@ -113,6 +113,7 @@ export function StatTile({
   tone,
   delta,
   className,
+  action,
 }: {
   label: string;
   value: ReactNode;
@@ -120,11 +121,13 @@ export function StatTile({
   tone?: string;
   delta?: number | null;
   className?: string;
+  action?: ReactNode;
 }) {
   return (
     <section className={`bn-card bn-stat${className ? ` ${className}` : ""}`}>
       <header className="bn-card-head">
         <h2>{label}</h2>
+        {action}
         {delta !== undefined && <Delta value={delta} />}
       </header>
       <strong className="bn-stat-value" style={tone ? { color: tone } : undefined}>

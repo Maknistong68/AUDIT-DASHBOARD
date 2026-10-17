@@ -27,7 +27,10 @@ export function LocalEditsPanel() {
   if (!hydrated) return null;
 
   const total =
-    localEdits.audits + localEdits.deleted + localEdits.contractors;
+    localEdits.audits +
+    localEdits.deleted +
+    localEdits.contractors +
+    localEdits.actions;
 
   return (
     <section className="card">
@@ -58,6 +61,13 @@ export function LocalEditsPanel() {
                 <strong>{localEdits.contractors}</strong> contractor
                 {localEdits.contractors === 1 ? "" : "s"} activated or
                 deactivated
+              </>
+            )}
+            {localEdits.actions > 0 && (
+              <>
+                {total > localEdits.actions && " · "}
+                <strong>{localEdits.actions}</strong> action
+                {localEdits.actions === 1 ? "" : "s"} raised
               </>
             )}
             . These are held in this browser and are visible to nobody else.

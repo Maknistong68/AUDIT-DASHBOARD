@@ -16,6 +16,8 @@ import {
   Watchlist,
 } from "@/components/board/Bento";
 import { ProvenanceNote } from "@/components/ProvenanceNote";
+import { ActionList, RaiseAction } from "@/components/board/Actions";
+import { tallyActions, type ManualCloseReason } from "@/lib/ehss/actions";
 import { ProgrammeTrendChart } from "@/components/charts/ProgrammeTrendChart";
 import { ScoreColumns } from "@/components/charts/ScoreColumns";
 import { CHECKLIST } from "@/lib/ehss/checklist";
@@ -65,7 +67,17 @@ const FLAT = flattenChecklist(CHECKLIST);
  * bars with everything else squeezed around them.
  */
 export function DashboardClient() {
-  const { contractors, subRegions, audits, hydrated } = useEhss();
+  const {
+    contractors,
+    subRegions,
+    audits,
+    actions,
+    hydrated,
+    raiseAction,
+    closeActionByHand,
+    reopenAction,
+    deleteAction,
+  } = useEhss();
   const [includeInactive, setIncludeInactive] = useState(false);
   /**
    * Whose patch. The organisation IS two sub-regions with a director each,
@@ -99,6 +111,7 @@ export function DashboardClient() {
   const [area, setArea] = useState<AreaStanding | null>(null);
   /** Who the open contractor is being read against. */
   const [compareId, setCompareId] = useState<string | null>(null);
+  const [raising, setRaising] = useState(false);
 
   const summaries = useMemo(
     () => summarizeAll(audits, contractors, subRegions),
@@ -192,6 +205,7 @@ export function DashboardClient() {
     setSelected(row);
     setArea(null);
     setCompareId(null);
+    setRaising(false);
   };
   const pickById = (contractorId: string) => {
     const row = league.find((r) => r.contractorId === contractorId);
@@ -245,10 +259,33 @@ export function DashboardClient() {
     };
   }, [area, scoped, selected, audits, contractors]);
 
+  /** The register, which every tile and panel below reads. */
+  const tally = useMemo(
+    () => tallyActions(actions, audits, shown ?? ""),
+    [actions, audits, shown],
+  );
+  const contractorActions = useMemo(
+    () =>
+      selected
+        ? actions.filter((a) => a.contractorId === selected.contractorId)
+        : [],
+    [actions, selected],
+  );
+  const areaActions = useMemo(
+    () =>
+      area
+        ? contractorActions.filter(
+            (a) => a.target.kind === "area" && a.target.code === area.code,
+          )
+        : [],
+    [contractorActions, area],
+  );
+
   const closeAll = () => {
     setSelected(null);
     setArea(null);
     setCompareId(null);
+    setRaising(false);
   };
 
   /** The comparison contractor's areas, on the same quarters as the open
@@ -417,6 +454,28 @@ export function DashboardClient() {
           note="areas weak two audits running"
         />
 
+        {/* The answer to "and what are we doing about it?", which the
+            board could not give at all. Overdue leads, because an action
+            nobody did is the only kind that matters at this altitude. */}
+        <StatTile
+          className="bn-s5"
+          label="Actions"
+          value={
+            <>
+              {tally.open + tally.overdue}
+              {tally.overdue > 0 && (
+                <em className="bn-of"> · {tally.overdue} overdue</em>
+              )}
+            </>
+          }
+          tone={tally.overdue > 0 ? "var(--status-critical)" : undefined}
+          note={
+            tally.open + tally.overdue + tally.closedByReview === 0
+              ? "none raised — open a contractor to raise one"
+              : `${tally.closedByReview} closed by a later review`
+          }
+        />
+
         {/* Coverage, not a review count. "11 reviews" says nothing about the
             two contractors nobody audited, and those two are exactly the
             ones nobody is thinking about. */}
@@ -437,12 +496,9 @@ export function DashboardClient() {
               : `not audited: ${coverage.missing.map((m) => m.label).join(", ")}`
           }
           tone={coverage.missing.length > 0 ? "var(--status-warning)" : undefined}
+          action={<GoLink href="/audits" label="Open the reviews list" />}
         />
 
-        <Link className="bn-action" href="/audits">
-          <span aria-hidden>+</span>
-          Start a review
-        </Link>
       </div>
 
       <ProvenanceNote compact />
@@ -465,6 +521,64 @@ export function DashboardClient() {
               programmeScore={areaContext.programme}
               questions={areaContext.questions}
               evidence={areaContext.evidence}
+              actionSlot={
+                <div className="act-slot">
+                  <ActionList
+                    actions={areaActions}
+                    reviews={audits}
+                    currentQuarter={shown ?? ""}
+                    onClose={(id, reason) =>
+                      closeActionByHand(id, {
+                        quarter: shown ?? "",
+                        reason,
+                      })
+                    }
+                    onReopen={reopenAction}
+                    onDelete={deleteAction}
+                  />
+                  {raising ? (
+                    <RaiseAction
+                      target={{
+                        kind: "area",
+                        code: area.code,
+                        label: area.title,
+                      }}
+                      quarter={shown ?? ""}
+                      suggestedCauses={detail.causes
+                        .slice(0, 2)
+                        .map((c) => c.code)}
+                      onRaise={({ causes, targetQuarter }) => {
+                        raiseAction({
+                          contractorId: selected.contractorId,
+                          target: {
+                            kind: "area",
+                            code: area.code,
+                            label: area.title,
+                          },
+                          raisedQuarter: shown ?? "",
+                          targetQuarter,
+                          causes,
+                        });
+                        setRaising(false);
+                      }}
+                      onCancel={() => setRaising(false)}
+                    />
+                  ) : (
+                    // Offered only where there is something to act on: an
+                    // area already at target does not need an action, and
+                    // a button that raises one would invite busywork.
+                    !area.met && (
+                      <button
+                        className="act-add"
+                        type="button"
+                        onClick={() => setRaising(true)}
+                      >
+                        + Raise an action
+                      </button>
+                    )
+                  )}
+                </div>
+              }
             />
           ) : (
             <ContractorView
@@ -481,6 +595,23 @@ export function DashboardClient() {
               onCompare={setCompareId}
               compareAreas={compareAreas}
               onOpenArea={setArea}
+              actionSlot={
+                contractorActions.length > 0 ? (
+                  <section className="dv-block">
+                    <h4 className="dv-h">Actions</h4>
+                    <ActionList
+                      actions={contractorActions}
+                      reviews={audits}
+                      currentQuarter={shown ?? ""}
+                      onClose={(id, reason) =>
+                        closeActionByHand(id, { quarter: shown ?? "", reason })
+                      }
+                      onReopen={reopenAction}
+                      onDelete={deleteAction}
+                    />
+                  </section>
+                ) : null
+              }
             />
           )}
         </FloatingPanel>
