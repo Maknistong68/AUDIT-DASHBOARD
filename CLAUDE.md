@@ -370,6 +370,63 @@ Two invariants shape everything:
   Drawing each quarter independently made nearly every finding look reopened
   the next quarter and the recurrence view read as noise. Keep it sticky —
   the recurrence tests read as meaningless otherwise.
+- **Actions answer "what are we doing about it"** (`actions.ts`,
+  `components/board/Actions.tsx`). Two rules decide everything and are
+  pinned in `actions.test.ts`:
+  - **An owner is a FUNCTION, never a person.** `issues.ts` already names
+    the owner of each of the seven causes, so an action derives its owner
+    from its causes. There is no assignee field and a test asserts there is
+    no field that could hold one — a name would make this personal data
+    under PDPL and void the §4 hosting determination. It is also the better
+    model: people move between quarters, roles do not.
+  - **Closure is DERIVED from the next review, not from a tick.** An action
+    closes when a LATER finalized review scores its target at or above
+    target, and that review is shown as the evidence. Nothing is stored as
+    "closed"; status is computed on read, so the register cannot show
+    closed for something the next review found open again. The review that
+    RAISED an action can never close it (or it would be born closed), a
+    draft can never close one (or the register could be cleared by opening
+    a form), a hand close reads as "closed without evidence", and a later
+    review's measurement OVERRIDES a hand close — measurement beats
+    assertion.
+- **Storage is behind a seam** (`lib/ehss/storage/`). One interface, a
+  browser adapter, a memory adapter, and a CONFORMANCE SUITE every
+  implementation must pass unchanged — adding Postgres means writing
+  `supabase.ts`, running that suite, and changing one line of `store.tsx`.
+  The suite pins what is silent when wrong: a snapshot older than the code
+  must default every field, `load()` must hand back a COPY (a caller that
+  mutates what it loaded would otherwise rewrite storage), and neither call
+  may throw (a blocked cookie jar degrades the app, it does not break the
+  render).
+  **The `shared` flag is the part that matters longest.** The auditor's
+  "saved in this browser only" and the admin's local-edits panel read that
+  flag rather than hard-coding the warning, so a shared adapter removes
+  them by itself. Don't reintroduce a hard-coded one.
+- **The trail records a ROLE, never a person** (`trail.ts`). Every mutation
+  goes through one `update()` in the store, which is what makes the trail
+  complete rather than sprinkled: a writer that forgot to log would have to
+  bypass the only way to change anything. The log callback gets the state
+  BEFORE the change, because "status: draft → submitted" needs the old
+  value. Attributing to a person needs an identity, an identity is personal
+  data, and that is gated on the DPO — migration 0005 leaves the column out
+  rather than null. The role is also CHECKED in the store now, so a hidden
+  button is not the only thing between a viewer and a record; it is still
+  not a security boundary.
+- **Programme settings are versioned by effective quarter** (`settings.ts`).
+  The trap is bigger than the feature: if "below target" read one global
+  number, raising the target from 90 to 95 would silently restate every
+  quarter already reported. A setting is a value WITH A QUARTER IT STARTS
+  IN; a change backdated into a reported quarter is refused. The mechanism
+  is built and pinned; the UI is NOT wired, because `TARGET_SCORE` is read
+  in 53 places and a target half the screen respects is worse than one
+  nobody can change. Migrating those call sites is the next step.
+- **`scripts/check-ui.mjs` is the UI regression gate.** Sideways scroll at
+  320px, console errors on mount, and PRINT CONTRAST — three regressions
+  that have actually happened here and that the build and the tests cannot
+  see. Print has its own palette at the token layer (`@media print`
+  redefines the semantic tokens); the screen palette is dark and the old
+  print block turned cards white while leaving the ink at `#f6f7f4`, so
+  everything printed white on white. Run it before pushing UI changes.
 - **The audit page is five audits behind a tab strip** (`DisciplinePanels.tsx`).
   The scorecard at the top is the tab strip, not a grid of five number
   fields: a discipline is a place you go to run its audit, not a box you

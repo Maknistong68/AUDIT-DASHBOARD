@@ -1,5 +1,10 @@
 # Fix plan — closing the three-role review
 
+> **Status, 2026-10-17: Phases 0–6 are built and pushed.** What remains is
+> listed under "Still open" at the end — the live database wiring,
+> authentication, the target-editing migration, in-app import, and the
+> seventeen checklists. Everything else in this plan is in the app.
+
 *Written 2026-10-17 against commit `068be07`. Covers every gap in the
 auditor / director / admin walkthrough: 60 questions, which collapse into
 **31 pieces of work in 7 phases**.*
@@ -236,3 +241,17 @@ the end).
 | **Phase 6.2 rewrites history.** Making the target a setting can silently restate every past quarter's "below target". | Version settings by effective quarter and pin it with a test before the UI exists. |
 | **Actions become a to-do list nobody updates.** | 3.4: closure is derived from the next review, not from a tick. The register cannot rot into green. |
 | **Phase 7 content never arrives.** | Nothing else blocks on it, and the app already says plainly which 60% of the scorecard is unscored. |
+
+
+---
+
+## Still open, and why
+
+| Item | Why it is not done |
+|---|---|
+| **Live Supabase wiring** | No credentials in this environment. The seam, the conformance suite and migrations 0001–0005 are in place; an adapter I could not run the suite against would be a claim, not a component. |
+| **Authentication** | Gated on the DPO answering whether an opaque subject id in an audit trail changes the §4 hosting determination. The role is now checked in the store, which is as far as this can honestly go without an identity. |
+| **Target and weight editing** | The versioning mechanism is built and pinned (`settings.ts`). `TARGET_SCORE` is read directly in 53 places and the ten that make a per-quarter JUDGEMENT — rather than draw a line — have to move to `targetFor(quarter)` first. A target half the screen respects is worse than one nobody can change. |
+| **In-app quarter import** | Needs file upload plus the Python verifier in the request path. The scripts work today from a terminal. |
+| **Role assignment** | Needs the identity above. |
+| **The seventeen checklists** | Content, not code. Each is one edit to `scopes.ts` plus a test pinning its question count — a day for all seventeen once the questions exist. |
