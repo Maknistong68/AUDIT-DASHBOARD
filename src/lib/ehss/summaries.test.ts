@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { auditableQuarters, quartersBetween } from "./model";
 import { audits, contractors, subRegions } from "./fixture";
 import { contractorLabel } from "./model";
 import { weightedOverall } from "./disciplines";
@@ -289,5 +290,43 @@ describe("SHEW domains", () => {
     // Sorted most findings first.
     const counts = breakdown.map((b) => b.count);
     expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+  });
+});
+
+describe("quarter enumeration — a missed quarter must be visible as missed", () => {
+  it("runs continuously and never skips a quarter nobody audited", () => {
+    // October 2026. Reviews exist for Q4 2025 and Q1 2026 only.
+    const today = new Date("2026-10-17T00:00:00Z");
+    const q = auditableQuarters(["2025-Q4", "2026-Q1"], today);
+    expect(q).toEqual([
+      "2026-Q4",
+      "2026-Q3",
+      "2026-Q2", // the one the old rule dropped entirely
+      "2026-Q1",
+      "2025-Q4",
+    ]);
+  });
+
+  it("never offers a future quarter", () => {
+    const today = new Date("2026-10-17T00:00:00Z");
+    expect(auditableQuarters(["2026-Q1"], today)[0]).toBe("2026-Q4");
+    expect(auditableQuarters([], today)).toEqual(["2026-Q4", "2026-Q3"]);
+  });
+
+  it("still reaches a record dated beyond today rather than hiding it", () => {
+    // A bad import or a clock-skewed record must stay openable.
+    const today = new Date("2026-10-17T00:00:00Z");
+    expect(auditableQuarters(["2027-Q2"], today)).toContain("2027-Q2");
+  });
+
+  it("walks a range inclusively and does not spin on a reversed one", () => {
+    expect(quartersBetween("2025-Q3", "2026-Q2")).toEqual([
+      "2025-Q3",
+      "2025-Q4",
+      "2026-Q1",
+      "2026-Q2",
+    ]);
+    expect(quartersBetween("2026-Q2", "2025-Q3")).toEqual([]);
+    expect(quartersBetween("2026-Q1", "2026-Q1")).toEqual(["2026-Q1"]);
   });
 });

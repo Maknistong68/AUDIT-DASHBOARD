@@ -127,8 +127,17 @@ export interface NewAuditInput {
   auditDate: string;
 }
 
+/** What this browser is holding on top of the recorded baseline. Counts
+ * only — the panel that shows them needs a magnitude, not the records. */
+export interface LocalEditCounts {
+  audits: number;
+  deleted: number;
+  contractors: number;
+}
+
 interface StoreValue {
   hydrated: boolean;
+  localEdits: LocalEditCounts;
   subRegions: SubRegion[];
   contractors: EhssContractor[];
   audits: EhssAudit[];
@@ -183,6 +192,15 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const { contractors, audits } = useMemo(() => merge(overrides), [overrides]);
+
+  const localEdits = useMemo<LocalEditCounts>(
+    () => ({
+      audits: Object.keys(overrides.audits).length,
+      deleted: overrides.deletedAuditIds.length,
+      contractors: Object.keys(overrides.contractorActive).length,
+    }),
+    [overrides],
+  );
 
   const setContractorActive = useCallback(
     (contractorId: string, active: boolean) =>
@@ -358,6 +376,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<StoreValue>(
     () => ({
       hydrated,
+      localEdits,
       subRegions: baseSubRegions,
       contractors,
       audits,
@@ -375,6 +394,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       hydrated,
+      localEdits,
       contractors,
       audits,
       setContractorActive,

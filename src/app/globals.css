@@ -2151,20 +2151,135 @@ table.data tr.is-out td {
   }
 }
 
+/* ===========================================================================
+   PRINT — a second palette, not a set of overrides.
+
+   The screen palette is dark: ink #f6f7f4 on a #20232a card. The old print
+   block turned the cards white and left the ink alone, so everything that
+   mattered printed WHITE ON WHITE — the hero score, every heading, every
+   table value. Measured: the lime accent sits at 1.26:1 on paper.
+
+   The fix belongs at the TOKEN layer, the same place the screen palette
+   lives, so every component follows without knowing print exists. Redefine
+   the semantic tokens for paper and the material tokens to nothing; add no
+   per-component rules beyond hiding what cannot be clicked on paper.
+
+   Values are the project's own validated light steps where they exist, and
+   measured against #ffffff where they are new:
+     ink #000 21:1 · ink-2 #333 12.6:1 · muted #555 7.5:1
+     accent #4e6b08 6.1:1 (the lime is unreadable on paper)
+     bands 4.0-5.9:1 · status 4.8-5.9:1
+   =========================================================================== */
 @media print {
+  :root {
+    color-scheme: light;
+
+    --page: #ffffff;
+    --page-deep: #ffffff;
+    --surface-1: #ffffff;
+    --ink-1: #000000;
+    --ink-2: #333333;
+    --muted: #555555;
+    --grid: #dddddd;
+    --baseline: #999999;
+    --border: rgba(0, 0, 0, 0.25);
+
+    --accent: #4e6b08;
+    --accent-strong: #3f5a06;
+    --accent-track: #e9f0d6;
+    --accent-wash: #f4f8ea;
+    --on-accent: #ffffff;
+
+    --status-good: #0a7a0a;
+    --status-warning: #8a6a00;
+    --status-serious: #b05a28;
+    --status-critical: #c41e1e;
+    --success-text: #0a7a0a;
+
+    --series-1: #4e6b08;
+    --series-2: #1b5f99;
+    --series-3: #b05a28;
+    --series-4: #5b3f9e;
+
+    --band-compliant: #007a39;
+    --band-mostly: #5a8c1e;
+    --band-moderate: #8a7200;
+    --band-minimal: #a85f00;
+    --band-non: #c41e1e;
+
+    /* Material carries depth, and paper has none. */
+    --mat-1: #ffffff;
+    --mat-2: #f4f4f4;
+    --mat-3: #ffffff;
+    --mat-bar: #ffffff;
+    --mat-sheet: #ffffff;
+    --mat-sunken: #eeeeee;
+    --mat-edge: transparent;
+    --mat-line: #d4d4d4;
+    --mat-hover: #ffffff;
+    --scrim: transparent;
+    --glass-blur: 0px;
+    --glass-sat: 100%;
+    --shadow-1: none;
+    --shadow-2: none;
+    --shadow-3: none;
+    --shadow-press: none;
+    --tile-wash: none;
+  }
+
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  /* The ambient field is decoration and costs a cartridge. */
   body::before,
+  body::after {
+    display: none !important;
+  }
+
+  /* Nothing you can click survives on paper. */
   .topbar,
   .tabbar,
-  .filter-row {
-    display: none;
+  .filter-row,
+  .admin-shortcut,
+  .bn-seg,
+  .bn-toggle,
+  .bn-action,
+  .bn-go,
+  .entry-filters,
+  .entry-jump,
+  .panel-close,
+  .panel-back,
+  button.primary,
+  button.ghost {
+    display: none !important;
   }
 
   .card,
+  .bn-card,
+  .discipline-panel,
   .stat-tile {
-    background: #fff;
+    background: #ffffff;
+    border: 1px solid var(--mat-line);
     box-shadow: none;
     backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     break-inside: avoid;
+  }
+
+  /* A tile whose job is to be a surface should not also be a page break. */
+  .bn-grid {
+    display: block;
+  }
+
+  .bn-grid > * {
+    margin-bottom: 10px;
+  }
+
+  a[href] {
+    text-decoration: none;
+    color: inherit;
   }
 }
 
@@ -4633,4 +4748,28 @@ input.risk-input {
   .dsc-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .risk-row { flex-wrap: wrap; }
   .risk-name { flex: 1 1 60%; }
+}
+
+/* Provenance: the short answer to "can I trust this", where it is asked. */
+.prov-line {
+  margin: 14px 0 0;
+  font-size: 12px;
+}
+
+.prov-line a {
+  color: var(--accent-strong);
+}
+
+.prov-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+
+.prov-list em {
+  font-style: normal;
+  color: var(--status-good);
+  font-weight: 560;
 }

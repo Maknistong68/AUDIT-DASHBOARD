@@ -15,6 +15,7 @@ import {
   TargetGoals,
   Watchlist,
 } from "@/components/board/Bento";
+import { ProvenanceNote } from "@/components/ProvenanceNote";
 import { ProgrammeTrendChart } from "@/components/charts/ProgrammeTrendChart";
 import { ScoreColumns } from "@/components/charts/ScoreColumns";
 import { CHECKLIST } from "@/lib/ehss/checklist";
@@ -309,6 +310,8 @@ export function DashboardClient() {
           Start a review
         </Link>
       </div>
+
+      <ProvenanceNote compact />
 
       {selected && detail && (
         <FloatingPanel

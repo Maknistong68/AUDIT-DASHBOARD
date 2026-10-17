@@ -11,9 +11,8 @@ import { scoreAreasAndAnswers } from "@/lib/ehss/scoring";
 import { scoreChecklist } from "@/lib/ehss/summaries";
 import {
   contractorLabel,
-  previousQuarter,
+  auditableQuarters,
   quarterLabel,
-  quarterOf,
   ratingFor,
   type EhssAudit,
   type EhssAuditStatus,
@@ -32,6 +31,7 @@ import {
   type CriticalRiskId,
   type CriticalRiskScores,
 } from "@/lib/ehss/critical-risks";
+import { ProvenanceNote } from "@/components/ProvenanceNote";
 import { EhssAuditForm } from "./EhssAuditForm";
 import {
   CriticalRiskPanel,
@@ -49,16 +49,6 @@ const QUESTION_COUNT = CHECKLIST.reduce(
   (n, sec) => n + sec.subSections.reduce((m, ss) => m + ss.questions.length, 0),
   0,
 );
-
-/** The quarters a review may be dated to: the ones on record, plus the
- * current and previous one — never the next. An audit for a quarter nobody
- * has audited is a draft dated in the future. */
-function quarterChoices(known: string[], own: string): string[] {
-  const current = quarterOf(new Date());
-  return [
-    ...new Set([...known, previousQuarter(current), current, own]),
-  ].sort((a, b) => b.localeCompare(a));
-}
 
 /**
  * The review's own details — when it was done, what it is numbered, which
@@ -225,9 +215,14 @@ export function AuditDetailClient({
    * edit would read as lost the moment the page was reloaded.
    */
   const panelKey = `${auditId}-${hydrated}`;
+  // One definition, shared with the reviews list — see auditableQuarters.
   const quarters = useMemo(
-    () => quarterChoices(audits.map((a) => a.quarter), audit?.quarter ?? ""),
-    [audits, audit?.quarter],
+    () =>
+      auditableQuarters([
+        ...audits.map((a) => a.quarter),
+        ...(audit ? [audit.quarter] : []),
+      ]),
+    [audits, audit],
   );
 
   if (!audit) {
@@ -423,6 +418,7 @@ export function AuditDetailClient({
           </>
         )}
 
+        <ProvenanceNote compact />
       </section>
     </div>
   );

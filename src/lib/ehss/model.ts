@@ -200,3 +200,50 @@ export function previousQuarter(quarter: string): string {
   const q = Number((qStr ?? "Q1").slice(1));
   return q === 1 ? `${year - 1}-Q4` : `${year}-Q${q - 1}`;
 }
+
+/** A quarter as a sortable integer: "2026-Q1" -> 8105. */
+function quarterOrdinal(quarter: string): number {
+  const [yearStr, qStr] = quarter.split("-");
+  return Number(yearStr) * 4 + Number((qStr ?? "Q1").slice(1)) - 1;
+}
+
+/** Every quarter from `from` to `to` inclusive, oldest first. */
+export function quartersBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  let cursor = from;
+  // Guard rather than trust: a reversed or malformed pair must not spin.
+  for (let i = 0; i <= 400 && quarterOrdinal(cursor) <= quarterOrdinal(to); i++) {
+    out.push(cursor);
+    cursor = nextQuarter(cursor);
+  }
+  return out;
+}
+
+/**
+ * The quarters a review may be dated to: a CONTINUOUS range from the
+ * earliest quarter on record (or the previous one, whichever is earlier) up
+ * to the current quarter. Never the next.
+ *
+ * Continuous is the point. This used to be "the ones on record, plus the
+ * current and the previous", which SKIPPED any quarter nobody audited — in
+ * October 2026 the list ran Q4 2025, Q1 2026, Q3 2026, Q4 2026 and Q2 2026
+ * did not exist at all. A quarter the programme missed has to be visible as
+ * missed, not absent; you cannot notice a gap that was never offered.
+ *
+ * No future quarter (owner's direction, 2026-10-14): an audit for a quarter
+ * nobody has audited is a draft dated after today. One definition, used by
+ * the reviews list and the audit page alike — two copies of a rule like this
+ * drift, and then a review can be opened for a quarter the list cannot show.
+ */
+export function auditableQuarters(known: string[], today = new Date()): string[] {
+  const current = quarterOf(today);
+  const earliest = [...known, previousQuarter(current)].sort(
+    (a, b) => quarterOrdinal(a) - quarterOrdinal(b),
+  )[0]!;
+  // A record dated beyond today (bad import, clock skew) still has to be
+  // reachable, or the review it belongs to cannot be opened.
+  const latest = [...known, current].sort(
+    (a, b) => quarterOrdinal(b) - quarterOrdinal(a),
+  )[0]!;
+  return quartersBetween(earliest, latest).reverse();
+}

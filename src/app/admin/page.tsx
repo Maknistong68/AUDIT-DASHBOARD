@@ -3,6 +3,8 @@ import { RATING_BANDS } from "@/lib/ehss/model";
 import { ISSUE_CATEGORIES } from "@/lib/ehss/issues";
 import { contractors, subRegions } from "@/lib/ehss/recorded";
 import { readDemoProfile } from "@/lib/session/profile";
+import { LocalEditsPanel } from "@/components/LocalEditsPanel";
+import { ProvenanceNote } from "@/components/ProvenanceNote";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,10 @@ export default async function AdminPage() {
         contractors, users) is enabled once the app is connected to a
         database.
       </div>
+
+      <LocalEditsPanel />
+
+      <ProvenanceNote />
 
       <section className="card">
         <h2>Scoring &amp; rating</h2>

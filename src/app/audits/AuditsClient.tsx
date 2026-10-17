@@ -7,36 +7,25 @@ import { useEhss } from "@/lib/ehss/store";
 import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatDate, formatScore } from "@/lib/format";
 import {
+  auditableQuarters,
   contractorLabel,
-  previousQuarter,
   quarterLabel,
-  quarterOf,
 } from "@/lib/ehss/model";
 import { knownQuarters, summarizeAll } from "@/lib/ehss/summaries";
-
-/** Quarter options: everything on record, plus the previous, current and
- * next quarter — so the coming quarter's reviews can be opened ahead of
- * time, which is when the schedule is actually planned. */
-/**
- * Quarters a review may be opened for: the ones on record, plus the current
- * and previous quarter.
- *
- * NO FUTURE QUARTER (owner's direction, 2026-10-14). It used to offer the
- * next one so a review could be scheduled ahead; the result was that an
- * audit could exist for a quarter nobody had audited yet, which is a draft
- * with a date that has not happened. The auditor creates the review when
- * there is an audit to record.
- */
-function quarterOptions(existing: string[]): string[] {
-  const current = quarterOf(new Date());
-  const set = new Set([...existing, previousQuarter(current), current]);
-  return [...set].sort((a, b) => b.localeCompare(a));
-}
 
 export function AuditsClient({ canCreate }: { canCreate: boolean }) {
   const router = useRouter();
   const { subRegions, contractors, audits, createAudit } = useEhss();
-  const [quarter, setQuarter] = useState(quarterOf(new Date()));
+  /**
+   * Opens on the latest quarter that HAS reviews, not on today's.
+   *
+   * It used to open on the current quarter, which in October 2026 led with
+   * "0 of 13 complete for Q4 2026" — true, and the first thing anyone saw,
+   * and it reads as a programme that has done nothing rather than one
+   * mid-quarter. The picker still reaches today; it just does not start on
+   * an empty page.
+   */
+  const [quarter, setQuarter] = useState<string | null>(null);
 
   const summaries = useMemo(
     () => summarizeAll(audits, contractors, subRegions),
@@ -47,13 +36,17 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
     [summaries],
   );
 
-  const options = quarterOptions(knownQuarters(audits));
+  const known = knownQuarters(audits);
+  const options = auditableQuarters(known);
+  const latestWithReviews =
+    [...known].sort((a, b) => b.localeCompare(a))[0] ?? options[0]!;
+  const shown = quarter ?? latestWithReviews;
   const activeContractors = contractors.filter((c) => c.active);
 
   /** One row per active contractor for the selected quarter. */
   const coverage = activeContractors.map((c) => {
     const audit = audits.find(
-      (a) => a.contractorId === c.id && a.quarter === quarter,
+      (a) => a.contractorId === c.id && a.quarter === shown,
     );
     return { contractor: c, summary: audit ? byId.get(audit.id) : undefined };
   });
@@ -64,7 +57,7 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
   const start = (contractorId: string) => {
     const id = createAudit({
       contractorId,
-      quarter,
+      quarter: shown,
       auditDate: new Date().toISOString().slice(0, 10),
     });
     router.push(`/audits/${id}`);
@@ -87,12 +80,12 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
               <strong>
                 {done} of {activeContractors.length} complete
               </strong>{" "}
-              for {quarterLabel(quarter)}
+              for {quarterLabel(shown)}
             </p>
           </div>
           <label className="field" style={{ marginBottom: 0 }}>
             <span>Quarter</span>
-            <select value={quarter} onChange={(e) => setQuarter(e.target.value)}>
+            <select value={shown} onChange={(e) => setQuarter(e.target.value)}>
               {options.map((q) => (
                 <option key={q} value={q}>
                   {quarterLabel(q)}
