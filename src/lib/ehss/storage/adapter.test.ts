@@ -37,6 +37,18 @@ const filled: OverridesSnapshot = {
       causes: ["DOC"],
     },
   },
+  events: [
+    {
+      id: "e1",
+      at: "2026-02-01T09:00:00.000Z",
+      actorRole: "auditor",
+      entity: "audit",
+      entityId: "x-2026-Q1",
+      field: "status",
+      from: "draft",
+      to: "submitted",
+    },
+  ],
 };
 
 /**
@@ -66,10 +78,12 @@ function conforms(name: string, make: () => StorageAdapter) {
       await adapter.save(filled);
       const first = await adapter.load();
       first.deletedAuditIds.push("mutated");
+      first.events.push({ ...filled.events[0]!, id: "mutated" });
       delete first.audits[audit.id];
       const second = await adapter.load();
       expect(second.deletedAuditIds).toEqual(["gone-2025-Q4"]);
       expect(second.audits[audit.id]).toBeDefined();
+      expect(second.events).toHaveLength(1);
     });
 
     it("clears", async () => {
@@ -112,6 +126,9 @@ describe("a snapshot can be older than the code reading it", () => {
     expect(normalize({})).toEqual(EMPTY_OVERRIDES);
     expect(normalize({ audits: { a: audit } }).actions).toEqual({});
     expect(normalize({ actions: filled.actions }).deletedAuditIds).toEqual([]);
+    // The trail arrived after the first snapshots were written; a browser
+    // holding one from before must not read as `undefined.length`.
+    expect(normalize({ audits: {} }).events).toEqual([]);
   });
 
   it("counts what it holds, for the panel that offers to discard it", () => {

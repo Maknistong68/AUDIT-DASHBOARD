@@ -34,7 +34,7 @@ import type {
   RecordedAreaScores,
   SubRegion,
 } from "./model";
-import type { DisciplineScores } from "./disciplines";
+import { DISCIPLINES, type DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
 import type { EhssAction } from "./actions";
 import {
@@ -44,6 +44,8 @@ import {
   type StorageAdapter,
 } from "./storage/adapter";
 import { localStorageAdapter } from "./storage/local";
+import { appendEvent, mayWrite, type TrailEvent } from "./trail";
+import type { UserRole } from "../types";
 import { memoryAdapter } from "./storage/memory";
 
 /** The overrides layered on the recorded baseline. One shape, defined by
@@ -85,6 +87,10 @@ export interface LocalEditCounts {
 
 interface StoreValue {
   hydrated: boolean;
+  /** Who changed what, when — by role. Append-only. */
+  events: TrailEvent[];
+  /** Whether this role may change anything at all. */
+  canWrite: boolean;
   localEdits: LocalEditCounts;
   /** Where overrides are kept, and whether anyone else can see them. The
    * UI reads this instead of hard-coding "saved in this browser only", so
@@ -142,9 +148,17 @@ const StoreContext = createContext<StoreValue | null>(null);
 
 export function EhssStoreProvider({
   children,
+  role = null,
   adapter,
 }: {
   children: React.ReactNode;
+  /**
+   * The role acting. Recorded on every change — as a ROLE, never a name —
+   * and checked before every write, so a hidden button is not the only
+   * thing standing between a viewer and a record. Still not a security
+   * boundary: that needs authentication. See lib/ehss/trail.ts.
+   */
+  role?: UserRole | null;
   /**
    * Where overrides live. Defaults to this browser; pass another and
    * nothing else in the app changes, which is the point of the seam.
@@ -174,15 +188,32 @@ export function EhssStoreProvider({
     };
   }, [store]);
 
+  /**
+   * Every mutation goes through here, which is what makes the trail
+   * complete rather than sprinkled: a writer that forgot to record its
+   * change would have to bypass the only way to change anything.
+   *
+   * `log` returns the events this change should record. It is given the
+   * state BEFORE the change, because "status: draft → submitted" needs the
+   * old value and only the caller knows where to find it.
+   */
   const update = useCallback(
-    (fn: (prev: Overrides) => Overrides) => {
+    (
+      fn: (prev: Overrides) => Overrides,
+      log?: (prev: Overrides) => Array<Omit<TrailEvent, "id" | "at">>,
+    ) => {
+      if (!mayWrite(role)) return;
       setOverrides((prev) => {
-        const next = fn(prev);
+        let next = fn(prev);
+        if (next === prev) return prev;
+        for (const event of log?.(prev) ?? []) {
+          next = { ...next, events: appendEvent(next.events, { ...event }) };
+        }
         void store.save(next);
         return next;
       });
     },
-    [store],
+    [store, role],
   );
 
   const { contractors, audits } = useMemo(() => merge(overrides), [overrides]);
@@ -206,13 +237,25 @@ export function EhssStoreProvider({
       const id = `act-${input.contractorId}-${Date.now().toString(36)}-${Math.random()
         .toString(36)
         .slice(2, 7)}`;
-      update((prev) => ({
-        ...prev,
-        actions: { ...prev.actions, [id]: { ...input, id } },
-      }));
+      update(
+        (prev) => ({
+          ...prev,
+          actions: { ...prev.actions, [id]: { ...input, id } },
+        }),
+        () => [
+          {
+            actorRole: role!,
+            entity: "action",
+            entityId: id,
+            field: `raised against ${input.target.label}`,
+            from: null,
+            to: `due ${input.targetQuarter}`,
+          },
+        ],
+      );
       return id;
     },
-    [update],
+    [update, role],
   );
 
   const closeActionByHand = useCallback(
@@ -227,8 +270,23 @@ export function EhssStoreProvider({
             [actionId]: { ...action, closedByHand: closure },
           },
         };
+      },
+      (prev) => {
+        const action = prev.actions[actionId];
+        return action
+          ? [
+              {
+                actorRole: role!,
+                entity: "action" as const,
+                entityId: actionId,
+                field: `closed by hand (${action.target.label})`,
+                from: "open",
+                to: closure.reason,
+              },
+            ]
+          : [];
       }),
-    [update],
+    [update, role],
   );
 
   const reopenAction = useCallback(
@@ -305,8 +363,28 @@ export function EhssStoreProvider({
           ...prev,
           audits: { ...prev.audits, [auditId]: { ...audit, areaScores: kept } },
         };
+      },
+      (prev) => {
+        const was = currentAudit(auditId, prev)?.areaScores ?? {};
+        const codes = [...new Set([...Object.keys(was), ...Object.keys(areas)])];
+        const render = (a?: { scored: number; possible: number }) =>
+          a ? `${a.scored}/${a.possible}` : null;
+        return codes.flatMap((code) =>
+          render(was[code]) === render(areas[code])
+            ? []
+            : [
+                {
+                  actorRole: role!,
+                  entity: "audit" as const,
+                  entityId: auditId,
+                  field: `area ${code} points`,
+                  from: render(was[code]),
+                  to: render(areas[code]),
+                },
+              ],
+        );
       }),
-    [update, currentAudit],
+    [update, currentAudit, role],
   );
 
   const saveScopedResponses = useCallback(
@@ -355,18 +433,39 @@ export function EhssStoreProvider({
 
   const saveDisciplineScores = useCallback(
     (auditId: string, scores: DisciplineScores) =>
-      update((prev) => {
-        const audit = currentAudit(auditId, prev);
-        if (!audit) return prev;
-        return {
-          ...prev,
-          audits: {
-            ...prev.audits,
-            [auditId]: { ...audit, disciplineScores: scores },
-          },
-        };
-      }),
-    [update, currentAudit],
+      update(
+        (prev) => {
+          const audit = currentAudit(auditId, prev);
+          if (!audit) return prev;
+          return {
+            ...prev,
+            audits: {
+              ...prev.audits,
+              [auditId]: { ...audit, disciplineScores: scores },
+            },
+          };
+        },
+        (prev) => {
+          const was = currentAudit(auditId, prev)?.disciplineScores ?? {};
+          // One event per discipline that moved, not one per save: "the
+          // scores changed" is not a thing anybody can act on.
+          return DISCIPLINES.flatMap((d) =>
+            was[d.id] === scores[d.id]
+              ? []
+              : [
+                  {
+                    actorRole: role!,
+                    entity: "audit" as const,
+                    entityId: auditId,
+                    field: `${d.shortName} score`,
+                    from: was[d.id] === undefined ? null : `${was[d.id]}%`,
+                    to: scores[d.id] === undefined ? null : `${scores[d.id]}%`,
+                  },
+                ],
+          );
+        },
+      ),
+    [update, currentAudit, role],
   );
 
   const saveCriticalRisks = useCallback(
@@ -387,15 +486,32 @@ export function EhssStoreProvider({
 
   const setAuditStatus = useCallback(
     (auditId: string, status: EhssAuditStatus) =>
-      update((prev) => {
-        const audit = currentAudit(auditId, prev);
-        if (!audit) return prev;
-        return {
-          ...prev,
-          audits: { ...prev.audits, [auditId]: { ...audit, status } },
-        };
-      }),
-    [update, currentAudit],
+      update(
+        (prev) => {
+          const audit = currentAudit(auditId, prev);
+          if (!audit) return prev;
+          return {
+            ...prev,
+            audits: { ...prev.audits, [auditId]: { ...audit, status } },
+          };
+        },
+        (prev) => {
+          const was = currentAudit(auditId, prev);
+          return was && was.status !== status
+            ? [
+                {
+                  actorRole: role!,
+                  entity: "audit",
+                  entityId: auditId,
+                  field: "status",
+                  from: was.status,
+                  to: status,
+                },
+              ]
+            : [];
+        },
+      ),
+    [update, currentAudit, role],
   );
 
   const deleteAudit = useCallback(
@@ -420,6 +536,8 @@ export function EhssStoreProvider({
   const value = useMemo<StoreValue>(
     () => ({
       hydrated,
+      events: overrides.events,
+      canWrite: mayWrite(role),
       localEdits,
       storage: { name: store.name, shared: store.shared },
       subRegions: baseSubRegions,
@@ -444,6 +562,8 @@ export function EhssStoreProvider({
     }),
     [
       hydrated,
+      overrides.events,
+      role,
       localEdits,
       store,
       contractors,

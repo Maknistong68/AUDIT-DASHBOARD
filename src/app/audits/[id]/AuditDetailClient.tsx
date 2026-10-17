@@ -32,6 +32,7 @@ import {
   type CriticalRiskScores,
 } from "@/lib/ehss/critical-risks";
 import { ProvenanceNote } from "@/components/ProvenanceNote";
+import { TrailPanel } from "@/components/audit/TrailPanel";
 import { EhssAuditForm } from "./EhssAuditForm";
 import {
   CriticalRiskPanel,
@@ -424,6 +425,8 @@ export function AuditDetailClient({
           />
           </>
         )}
+
+        <TrailPanel entity="audit" entityId={audit.id} />
 
         <ProvenanceNote compact />
       </section>

@@ -33,7 +33,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <EhssStoreProvider>
+        <EhssStoreProvider role={profile?.role ?? null}>
           <div className="shell">
             <header className="topbar">
               <Link className="brand" href="/">
