@@ -8,7 +8,7 @@ import { AuditStatusBadge, RatingBadge } from "@/components/Badges";
 import { formatScore } from "@/lib/format";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import { scoreAreasAndAnswers } from "@/lib/ehss/scoring";
-import { scoreChecklist } from "@/lib/ehss/summaries";
+import { priorReview, priorRiskScope, scoreChecklist } from "@/lib/ehss/summaries";
 import {
   contractorLabel,
   auditableQuarters,
@@ -243,6 +243,9 @@ export function AuditDetailClient({
   const isAdmin = role === "admin";
   const mayEdit = isAdmin || role === "auditor";
   const canEdit = mayEdit && (audit.status === "draft" || unlocked);
+  /** Last quarter, for the screen the auditor is standing on site with. */
+  const prior = priorReview(audits, audit);
+  const priorScope = priorRiskScope(audits, audit);
   const checklist = scoreChecklist(audit);
   const checklistScore = checklist.total;
   const crcAuditScore = crcScore(audit.criticalRisks);
@@ -336,6 +339,7 @@ export function AuditDetailClient({
           <CriticalRiskPanel
             key={`${panelKey}-crc`}
             audit={audit}
+            priorScope={priorScope}
             canEdit={canEdit}
             onSaveRisks={(risks) => saveCriticalRisks(audit.id, risks)}
             onSaveResponses={(scopeId: string, responses: Responses) =>
@@ -380,6 +384,7 @@ export function AuditDetailClient({
             key={`${panelKey}-${unlocked}`}
             initialResponses={audit.responses}
             initialAreas={audit.areaScores ?? {}}
+            prior={prior}
             canEdit={canEdit}
             status={audit.status}
             isAdmin={isAdmin}

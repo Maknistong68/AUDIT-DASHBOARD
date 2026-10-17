@@ -4,8 +4,11 @@ import {
   boardBySubRegion,
   latestQuarter,
   programmeKpis,
+  priorReview,
+  priorRiskScope,
   programmeTrend,
   quartersOnRecord,
+  scoreChecklist,
   recentReviews,
   scoredDisciplines,
   sectionMoves,
@@ -275,5 +278,57 @@ describe("the board reports what it claims to report", () => {
     expect(two.ids).toEqual(["hs", "env"]);
     expect(two.singleDiscipline).toBe(false);
     expect(two.weight).toBe(0.5);
+  });
+});
+
+describe("what happened last time", () => {
+  it("finds the previous finalized review and its areas", () => {
+    const q1 = audits.find((a) => a.id === "abya112-2026-Q1")!;
+    const prior = priorReview(audits, q1);
+    expect(prior).not.toBeNull();
+    expect(prior!.quarter).toBe("2025-Q4");
+    // The same figures the Q4 2025 page shows, to the hundredth.
+    const q4 = audits.find((a) => a.id === "abya112-2025-Q4")!;
+    const q4score = scoreChecklist(q4);
+    expect(prior!.total).toBe(q4score.total);
+    expect(prior!.areas["B6"]).toBe(
+      q4score.sections
+        .find((s) => s.code === "B")!
+        .subSections.find((ss) => ss.code === "B6")!.score,
+    );
+  });
+
+  it("returns nothing for a contractor's first review", () => {
+    const first = audits.find((a) => a.id === "nbc026-2026-Q1")!;
+    expect(priorReview(audits, first)).toBeNull();
+  });
+
+  it("never compares against a draft", () => {
+    const q1 = audits.find((a) => a.id === "abya112-2026-Q1")!;
+    const drafted = audits.map((a) =>
+      a.id === "abya112-2025-Q4" ? { ...a, status: "draft" as const } : a,
+    );
+    // The only earlier review is now a draft, so there is nothing to compare
+    // against — an unfinished review is not a record of anything.
+    expect(priorReview(drafted, q1)).toBeNull();
+  });
+
+  it("offers the previous scope without pre-filling it", () => {
+    const q1 = audits.find((a) => a.id === "abya112-2026-Q1")!;
+    // No recorded audit carries hazards, so there is nothing to carry.
+    expect(priorRiskScope(audits, q1)).toBeNull();
+
+    const withScope = audits.map((a) =>
+      a.id === "abya112-2025-Q4"
+        ? { ...a, criticalRisks: { fire: 80, lifting: 60 } }
+        : a,
+    );
+    const scope = priorRiskScope(withScope, q1)!;
+    expect(scope.quarter).toBe("2025-Q4");
+    expect(scope.risks).toEqual(["fire", "lifting"]);
+    // And the next review still has nothing in scope until someone says so:
+    // a carried hazard would have to carry a score, and the only honest
+    // score is none.
+    expect(q1.criticalRisks).toEqual({});
   });
 });

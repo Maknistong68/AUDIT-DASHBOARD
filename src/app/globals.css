@@ -3438,9 +3438,13 @@ table.matrix td.matrix-cell {
   background: var(--mat-hover);
 }
 
-/* The jump target must clear both sticky bars. */
+/* The jump target must clear the sticky toolbar — whose height changes, so
+   the offset is measured by the form and published as --entry-bar-h rather
+   than guessed here. The fallback is the height the bar had when this was a
+   fixed number; it is wrong the moment a row is added, which is the whole
+   reason for the variable. */
 .q-area {
-  scroll-margin-top: 170px;
+  scroll-margin-top: calc(var(--entry-bar-h, 170px) + 22px);
 }
 
 .entry-empty {
@@ -4772,4 +4776,151 @@ input.risk-input {
   font-style: normal;
   color: var(--status-good);
   font-weight: 560;
+}
+
+/* Last quarter, beside this quarter — the thing the auditor could not see. */
+.entry-prior {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.entry-prior b {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.area-prior {
+  font-size: 10.5px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Below target last review and below target again: the owner's definition
+   of recurring, applied where the auditor can act on it. */
+.area-prior.is-repeat {
+  color: var(--status-critical);
+  border-color: color-mix(in srgb, var(--status-critical) 45%, transparent);
+  background: color-mix(in srgb, var(--status-critical) 12%, transparent);
+}
+
+.area-prior b {
+  margin-right: 5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* CRC scope: carried forward on purpose, and a zero nobody typed called out. */
+.risk-notes {
+  display: flex;
+  align-items: center;
+  gap: 10px 14px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.risk-carry {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 560;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  border: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent);
+  background: var(--accent-wash);
+  color: var(--ink-1);
+  cursor: pointer;
+}
+
+.risk-carry:hover { background: var(--mat-hover); }
+
+.risk-warn {
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--status-warning);
+}
+
+/* The scoring rules, closed by default, where the scoring happens. */
+.entry-help {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.entry-help summary {
+  cursor: pointer;
+  color: var(--accent-strong);
+  font-weight: 560;
+  list-style: none;
+  width: fit-content;
+}
+
+.entry-help summary::-webkit-details-marker { display: none; }
+.entry-help summary::before { content: "ⓘ "; }
+
+.entry-help div {
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: var(--r-3);
+  background: var(--mat-2);
+  max-width: 68ch;
+}
+
+.entry-help p {
+  margin: 0 0 8px;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.entry-help p:last-child { margin-bottom: 0; }
+.entry-help b { color: var(--ink-1); font-weight: 600; }
+
+/* Review status filter — "awaiting approval" is a queue, not a label. */
+.status-filter {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin: 10px 0 2px;
+  border-radius: var(--r-pill);
+  background: var(--mat-sunken);
+  border: 1px solid var(--mat-line);
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.status-filter::-webkit-scrollbar { display: none; }
+
+.status-filter button {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  padding: 6px 13px;
+  min-height: 32px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.status-filter button:hover { color: var(--ink-1); }
+
+.status-filter button[aria-pressed="true"] {
+  background: var(--ink-1);
+  color: var(--page);
+  font-weight: 620;
+}
+
+/* Something is actually waiting. */
+.status-filter button.is-waiting:not([aria-pressed="true"]) {
+  color: var(--status-warning);
 }

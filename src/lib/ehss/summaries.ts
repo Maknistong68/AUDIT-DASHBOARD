@@ -2305,3 +2305,73 @@ export function scoredDisciplines(
     singleDiscipline: ids.length === 1,
   };
 }
+
+/* ------------------------------------------------------------------ *
+ * What happened last time
+ *
+ * An auditor filling this quarter's review could not see last quarter's
+ * anywhere on the screen they were using. The data was always there; it was
+ * on another page. Walking on site blind to the previous findings is how a
+ * programme audits the same gap four quarters running and calls each one new.
+ * ------------------------------------------------------------------ */
+
+export interface PriorReview {
+  quarter: string;
+  total: number | null;
+  /** Area code ("A", "B6", "C1") -> what it scored last time. */
+  areas: Record<string, number | null>;
+}
+
+/**
+ * The finalized review immediately before this one for the same contractor.
+ *
+ * Drafts are excluded: an unfinished review is not a record of anything, and
+ * an auditor comparing against one would be comparing against their own
+ * half-finished work.
+ */
+export function priorReview(
+  audits: EhssAudit[],
+  audit: EhssAudit,
+): PriorReview | null {
+  const previous = audits
+    .filter(
+      (a) =>
+        a.contractorId === audit.contractorId &&
+        a.id !== audit.id &&
+        a.status !== "draft" &&
+        a.quarter < audit.quarter,
+    )
+    .sort((a, b) => b.quarter.localeCompare(a.quarter))[0];
+  if (!previous) return null;
+
+  const score = scoreChecklist(previous);
+  const areas: Record<string, number | null> = {};
+  for (const section of score.sections) {
+    for (const ss of section.subSections) {
+      areas[ss.code ?? section.code] = ss.score;
+    }
+  }
+  return { quarter: previous.quarter, total: score.total, areas };
+}
+
+/** Which hazards the contractor's previous finalized review had in scope.
+ * A SUGGESTION for the next review, never a pre-fill: see the CRC panel. */
+export function priorRiskScope(
+  audits: EhssAudit[],
+  audit: EhssAudit,
+): { quarter: string; risks: CriticalRiskId[] } | null {
+  const previous = audits
+    .filter(
+      (a) =>
+        a.contractorId === audit.contractorId &&
+        a.id !== audit.id &&
+        a.status !== "draft" &&
+        a.quarter < audit.quarter,
+    )
+    .sort((a, b) => b.quarter.localeCompare(a.quarter))[0];
+  if (!previous) return null;
+  const risks = CRITICAL_RISKS.filter(
+    (r) => previous.criticalRisks[r.id] !== undefined,
+  ).map((r) => r.id);
+  return risks.length === 0 ? null : { quarter: previous.quarter, risks };
+}

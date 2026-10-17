@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import {
   ANSWER_LABELS,
@@ -17,6 +17,9 @@ import {
 } from "@/lib/ehss/issues";
 import { areaSource, scoreAreasAndAnswers } from "@/lib/ehss/scoring";
 import { formatScore } from "@/lib/format";
+import { TARGET_SCORE } from "@/lib/ehss/disciplines";
+import { quarterLabel } from "@/lib/ehss/model";
+import type { PriorReview } from "@/lib/ehss/summaries";
 
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
 
@@ -130,6 +133,7 @@ function AreaPoints({
 export function EhssAuditForm({
   initialResponses,
   initialAreas,
+  prior,
   canEdit,
   status,
   isAdmin = false,
@@ -141,6 +145,15 @@ export function EhssAuditForm({
   initialResponses: Record<string, EhssResponse>;
   /** Area points from an imported review; `{}` for one entered here. */
   initialAreas: RecordedAreaScores;
+  /**
+   * The same contractor's previous finalized review, per area.
+   *
+   * An auditor used to fill this form with no sight of last quarter — the
+   * data existed, on another page. A gap that was below target last time
+   * and is below target again is the single most useful thing to know while
+   * standing on the site, and it was the one thing the screen would not say.
+   */
+  prior: PriorReview | null;
   canEdit: boolean;
   status: EhssAuditStatus;
   isAdmin?: boolean;
@@ -164,6 +177,45 @@ export function EhssAuditForm({
   const [filter, setFilter] = useState<FormFilter>("all");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * The sticky toolbar's measured height, published as a CSS variable so a
+   * jump lands below it rather than behind it.
+   *
+   * It used to be a fixed 170px in the stylesheet, which was right for the
+   * two rows the bar had then. The bar now has three, the third expands
+   * when the scoring help is opened, and a hard-coded offset cannot be
+   * right for a box whose height changes. Measuring it is the only version
+   * of this that stays correct when a row is added — and a row was added.
+   */
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barHeight, setBarHeight] = useState(170);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const measure = (height: number) => {
+      // The bar's HEIGHT is not the offset a jump needs to clear: it sticks
+      // BELOW the floating top bar, so what a target must clear is where
+      // its bottom edge comes to rest — its sticky `top` plus its height.
+      // Reading `top` from the computed style rather than repeating 74px
+      // here keeps the two from drifting when the top bar changes.
+      const stickyTop = parseFloat(getComputedStyle(el).top);
+      setBarHeight(
+        Math.ceil(height + (Number.isFinite(stickyTop) ? stickyTop : 0)),
+      );
+    };
+    const observer = new ResizeObserver(([entry]) => {
+      // BORDER box, not content box: the bar carries 11px of padding and a
+      // 1px border, and a content-box measurement lands the target 24px
+      // behind the thing it was supposed to clear.
+      const h =
+        entry?.borderBoxSize?.[0]?.blockSize ??
+        el.getBoundingClientRect().height;
+      if (h > 0) measure(h);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const touch = () => {
     setDirty(true);
@@ -394,8 +446,8 @@ export function EhssAuditForm({
   };
 
   return (
-    <div>
-      <div className="entry-bar">
+    <div style={{ "--entry-bar-h": `${barHeight}px` } as React.CSSProperties}>
+      <div className="entry-bar" ref={barRef}>
         <div className="entry-bar-top">
           <span className="entry-progress" aria-live="polite">
             <strong>
@@ -410,6 +462,11 @@ export function EhssAuditForm({
             {formatScore(score.total)}
             <em>{ratingFor(score.total) ?? "unrated"}</em>
           </span>
+          {prior && (
+            <span className="entry-prior">
+              {quarterLabel(prior.quarter)} <b>{formatScore(prior.total)}</b>
+            </span>
+          )}
           {missingObservations > 0 && (
             <button
               type="button"
@@ -433,6 +490,33 @@ export function EhssAuditForm({
             ))}
           </span>
         </div>
+        {/* The rules, where the scoring happens. They lived only on the
+            admin reference page, which an auditor on site cannot reach and
+            would not think to. Closed by default: this is the auditor's
+            screen and it is long enough. */}
+        <details className="entry-help">
+          <summary>How this is scored</summary>
+          <div>
+            <p>
+              Points = weight × <b>Full 1</b>, <b>Partial ½</b>, <b>No 0</b>.
+              A question marked <b>N/A</b> comes out of the top and the
+              bottom — it is not a zero, it is not asked.
+            </p>
+            <p>
+              An <b>area</b> scores its points over the weight that applied.
+              A <b>section</b> is the mean of its areas, so a small area
+              counts as much as a large one. The <b>total</b> is the mean of
+              the three sections.
+            </p>
+            <p>
+              Every Partial or No needs at least one cause, and more than one
+              may apply — a finding usually has several and picking one loses
+              the rest. There is <b>no notes field and no photo upload</b>,
+              deliberately: this system holds contractor results and names
+              nobody, which is what lets it run where it runs.
+            </p>
+          </div>
+        </details>
         <div className="entry-jump" role="group" aria-label="Jump to area">
           {areaList.map((a) => {
             const st = areaState.get(a.key)!;
@@ -491,6 +575,15 @@ export function EhssAuditForm({
             </div>
             {visible.map((area) => {
               const st = areaState.get(area.key)!;
+              const priorArea = prior?.areas[area.key];
+              // "Again" is the owner's definition of recurring applied to an
+              // area: below target last review AND below target now.
+              const repeat =
+                priorArea !== undefined &&
+                priorArea !== null &&
+                priorArea < TARGET_SCORE &&
+                st.score !== null &&
+                st.score < TARGET_SCORE;
               const shown = area.questions.filter((q) =>
                 matches(filter, responses[q.code]),
               );
@@ -516,6 +609,19 @@ export function EhssAuditForm({
                           ? "from answers"
                           : "not scored"}
                     </span>
+                    {priorArea !== undefined && (
+                      <span
+                        className={`area-prior${repeat ? " is-repeat" : ""}`}
+                        title={
+                          repeat
+                            ? `Below ${TARGET_SCORE}% in ${quarterLabel(prior!.quarter)} and again now — this is the second review running`
+                            : `${quarterLabel(prior!.quarter)}: ${formatScore(priorArea)}`
+                        }
+                      >
+                        {repeat && <b>again</b>}
+                        last {formatScore(priorArea)}
+                      </span>
+                    )}
                     <span className="section-score">
                       {formatScore(st.score)}
                     </span>
@@ -654,6 +760,10 @@ export function EhssAuditForm({
           {ratingFor(score.total) ?? "unrated"} · {answeredTotal.answered}/
           {answeredTotal.total} answered
           {status === "draft" && score.total !== null ? " · provisional" : ""}
+          {/* Say what Save actually does. It implies a durability it does
+              not have: edits live in THIS browser and nobody else can see
+              them. Removed when the database lands, not before. */}
+          {" · saved in this browser only"}
         </span>
         {missingObservations > 0 && (
           <span className="form-error">
@@ -688,6 +798,7 @@ export function EhssAuditForm({
               type="button"
               disabled={!dirty}
               onClick={save}
+              title="Held in this browser until the app is connected to a database"
             >
               {dirty ? "Save" : "Saved"}
             </button>

@@ -26,6 +26,17 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
    * an empty page.
    */
   const [quarter, setQuarter] = useState<string | null>(null);
+  /**
+   * Which reviews the history table lists.
+   *
+   * Submitting used to set a status and tell nobody: the review left the
+   * auditor's hands and appeared in no queue, so an approval happened when
+   * somebody remembered rather than when something was waiting. "Awaiting
+   * approval" is that queue, and it leads the filter when anything is in it.
+   */
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "draft" | "submitted" | "approved"
+  >("all");
 
   const summaries = useMemo(
     () => summarizeAll(audits, contractors, subRegions),
@@ -68,6 +79,15 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
       b.quarter.localeCompare(a.quarter) ||
       a.contractorName.localeCompare(b.contractorName),
   );
+  const counts = {
+    draft: history.filter((s) => s.status === "draft").length,
+    submitted: history.filter((s) => s.status === "submitted").length,
+    approved: history.filter((s) => s.status === "approved").length,
+  };
+  const shownHistory =
+    statusFilter === "all"
+      ? history
+      : history.filter((s) => s.status === statusFilter);
 
   return (
     <div className="stack">
@@ -163,6 +183,28 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
         <p className="sub">
           {history.length} quarterly reviews on record, newest first
         </p>
+        <div className="status-filter" role="group" aria-label="Status">
+          {(
+            [
+              ["all", `All ${history.length}`],
+              ["submitted", `Awaiting approval ${counts.submitted}`],
+              ["draft", `Draft ${counts.draft}`],
+              ["approved", `Approved ${counts.approved}`],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={statusFilter === id}
+              className={
+                id === "submitted" && counts.submitted > 0 ? "is-waiting" : undefined
+              }
+              onClick={() => setStatusFilter(id)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="table-scroll">
           <table className="data">
             <thead>
@@ -177,7 +219,7 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
               </tr>
             </thead>
             <tbody>
-              {history.map((s) => (
+              {shownHistory.map((s) => (
                 <tr key={s.id}>
                   <td>
                     <Link href={`/audits/${s.id}`}>{quarterLabel(s.quarter)}</Link>

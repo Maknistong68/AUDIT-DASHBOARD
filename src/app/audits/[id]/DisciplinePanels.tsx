@@ -5,7 +5,7 @@ import { RatingBadge } from "@/components/Badges";
 import { ChecklistForm } from "@/components/audit/ChecklistForm";
 import type { Responses } from "@/components/audit/QuestionRow";
 import { formatScore } from "@/lib/format";
-import { ratingFor, type EhssAudit } from "@/lib/ehss/model";
+import { quarterLabel, ratingFor, type EhssAudit } from "@/lib/ehss/model";
 import {
   DISCIPLINES,
   type DisciplineId,
@@ -143,11 +143,23 @@ export function Scorecard({
  */
 export function CriticalRiskPanel({
   audit,
+  priorScope,
   canEdit,
   onSaveRisks,
   onSaveResponses,
 }: {
   audit: EhssAudit;
+  /**
+   * What the contractor's previous review had in scope.
+   *
+   * A SUGGESTION, never a pre-fill. `criticalRisks[id]` is both the
+   * in-scope flag and the score, so carrying a hazard forward silently
+   * would have to carry a number with it — and the only honest number is
+   * none, which the type cannot hold. A zero that nobody typed is a zero
+   * that drags the whole discipline down and reads as a real finding. So
+   * the previous scope is offered, with one deliberate click to take it.
+   */
+  priorScope: { quarter: string; risks: CriticalRiskId[] } | null;
   canEdit: boolean;
   onSaveRisks: (risks: CriticalRiskScores) => void;
   onSaveResponses: (scopeId: string, responses: Responses) => void;
@@ -158,6 +170,14 @@ export function CriticalRiskPanel({
 
   const inScope = CRITICAL_RISKS.filter((r) => draft[r.id] !== undefined);
   const derived = crcScore(draft);
+  /** In scope, from its own checklist, and still sitting at the zero the
+   * scope toggle created. Worth saying out loud: a zero nobody typed is
+   * indistinguishable from a zero somebody meant. */
+  const unscored = inScope.filter(
+    (r) => draft[r.id] === 0 && riskScore(audit, r.id).source !== "checklist",
+  );
+  const carryable =
+    priorScope?.risks.filter((id) => draft[id] === undefined) ?? [];
 
   const setScore = (id: CriticalRiskId, raw: string) => {
     const value = raw === "" ? 0 : Number(raw);
@@ -195,6 +215,34 @@ export function CriticalRiskPanel({
         <PanelScore score={derived} />
       </div>
 
+      {(carryable.length > 0 || unscored.length > 0) && (
+        <div className="risk-notes">
+          {carryable.length > 0 && canEdit && (
+            <button
+              type="button"
+              className="risk-carry"
+              onClick={() => {
+                setSaved(false);
+                setDraft((prev) => {
+                  const next = { ...prev };
+                  for (const id of carryable) next[id] = 0;
+                  return next;
+                });
+              }}
+            >
+              Carry {carryable.length} hazard
+              {carryable.length === 1 ? "" : "s"} forward from{" "}
+              {quarterLabel(priorScope!.quarter)}
+            </button>
+          )}
+          {unscored.length > 0 && (
+            <span className="risk-warn">
+              {unscored.length} in scope with no score yet
+            </span>
+          )}
+        </div>
+      )}
+
       <ul className="risk-list">
         {CRITICAL_RISKS.map((risk) => {
           const scopeId = riskScopeId(risk.id);
@@ -218,6 +266,8 @@ export function CriticalRiskPanel({
                   <b>{risk.label}</b>
                   <em>
                     {DOMAIN_BY_ID[risk.domain].label}
+                    {priorScope?.risks.includes(risk.id) &&
+                      ` · in scope ${quarterLabel(priorScope.quarter)}`}
                     {expandable &&
                       ` · ${progress.answered}/${questionCount(scope)} answered`}
                   </em>
