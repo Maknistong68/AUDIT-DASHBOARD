@@ -19,7 +19,7 @@ import { useEhss } from "@/lib/ehss/store";
  * when the database lands.
  */
 export function LocalEditsPanel() {
-  const { localEdits, resetLocalEdits, hydrated } = useEhss();
+  const { localEdits, resetLocalEdits, hydrated, storage } = useEhss();
   const [confirming, setConfirming] = useState(false);
 
   // Before hydration the store reports the baseline, so a count would read
@@ -31,6 +31,10 @@ export function LocalEditsPanel() {
     localEdits.deleted +
     localEdits.contractors +
     localEdits.actions;
+
+  // Once storage is shared this panel is answering a question nobody has:
+  // the edits ARE the record, and there is nothing local to discard.
+  if (storage.shared) return null;
 
   return (
     <section className="card">

@@ -187,6 +187,7 @@ export function AuditDetailClient({
     saveDisciplineScores,
     saveCriticalRisks,
     saveScopedResponses,
+    storage,
     setAuditStatus,
     deleteAudit,
   } = useEhss();
@@ -384,6 +385,7 @@ export function AuditDetailClient({
             key={`${panelKey}-${unlocked}`}
             initialResponses={audit.responses}
             initialAreas={audit.areaScores ?? {}}
+            sharedStorage={storage.shared}
             prior={prior}
             canEdit={canEdit}
             status={audit.status}

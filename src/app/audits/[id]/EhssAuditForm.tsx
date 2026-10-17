@@ -133,6 +133,7 @@ function AreaPoints({
 export function EhssAuditForm({
   initialResponses,
   initialAreas,
+  sharedStorage,
   prior,
   canEdit,
   status,
@@ -145,6 +146,10 @@ export function EhssAuditForm({
   initialResponses: Record<string, EhssResponse>;
   /** Area points from an imported review; `{}` for one entered here. */
   initialAreas: RecordedAreaScores;
+  /** True when a save is visible to other people. Read from the storage
+   * seam rather than assumed, so the warning below disappears by itself
+   * the day a shared adapter is wired in. */
+  sharedStorage: boolean;
   /**
    * The same contractor's previous finalized review, per area.
    *
@@ -760,10 +765,10 @@ export function EhssAuditForm({
           {ratingFor(score.total) ?? "unrated"} · {answeredTotal.answered}/
           {answeredTotal.total} answered
           {status === "draft" && score.total !== null ? " · provisional" : ""}
-          {/* Say what Save actually does. It implies a durability it does
-              not have: edits live in THIS browser and nobody else can see
-              them. Removed when the database lands, not before. */}
-          {" · saved in this browser only"}
+          {/* Say what Save actually does. While storage is local it implies
+              a durability it does not have: edits live in THIS browser and
+              nobody else can see them. */}
+          {!sharedStorage && " · saved in this browser only"}
         </span>
         {missingObservations > 0 && (
           <span className="form-error">
@@ -798,7 +803,11 @@ export function EhssAuditForm({
               type="button"
               disabled={!dirty}
               onClick={save}
-              title="Held in this browser until the app is connected to a database"
+              title={
+                sharedStorage
+                  ? "Saved for everyone"
+                  : "Held in this browser until the app is connected to a database"
+              }
             >
               {dirty ? "Save" : "Saved"}
             </button>

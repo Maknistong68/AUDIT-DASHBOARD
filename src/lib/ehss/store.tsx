@@ -36,84 +36,21 @@ import type {
 } from "./model";
 import type { DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
-import { readIssues } from "./issues";
 import type { EhssAction } from "./actions";
+import {
+  EMPTY_OVERRIDES,
+  countOverrides,
+  type OverridesSnapshot,
+  type StorageAdapter,
+} from "./storage/adapter";
+import { localStorageAdapter } from "./storage/local";
+import { memoryAdapter } from "./storage/memory";
 
-/* Renamed from "ehss-demo-v1" when the generated demo dataset was replaced
- * by the real audits. The rename is deliberate: it orphans anything a
- * browser still held from the demo era, which would otherwise keep
- * surfacing contractors and reviews that no longer exist. */
-const STORAGE_KEY = "ehss-v2";
+/** The overrides layered on the recorded baseline. One shape, defined by
+ * the storage seam, so the provider and the adapters cannot disagree. */
+type Overrides = OverridesSnapshot;
 
-interface Overrides {
-  /** Contractor id -> active flag, when the user changed it. */
-  contractorActive: Record<string, boolean>;
-  /** Audit id -> audit, for reviews the user created or edited. */
-  audits: Record<string, EhssAudit>;
-  /** Audits the user deleted (baseline ones included). */
-  deletedAuditIds: string[];
-  /** Actions raised against findings. There is no baseline for these —
-   * every one was raised by somebody here. */
-  actions: Record<string, EhssAction>;
-}
-
-const EMPTY: Overrides = {
-  contractorActive: {},
-  audits: {},
-  deletedAuditIds: [],
-  actions: {},
-};
-
-/**
- * Reviews saved before issue categories replaced the single OB code carry
- * `observation` instead of `issues`. Upgrade them on read rather than
- * forcing anyone to clear their browser — `readIssues` maps the old code to
- * its nearest category and ignores anything unrecognised.
- */
-function upgradeAudits(
-  audits: Record<string, EhssAudit>,
-): Record<string, EhssAudit> {
-  const out: Record<string, EhssAudit> = {};
-  for (const [id, audit] of Object.entries(audits)) {
-    const responses: EhssAudit["responses"] = {};
-    for (const [code, r] of Object.entries(audit.responses ?? {})) {
-      const legacy = r as { answer: EhssAudit["responses"][string]["answer"] } & {
-        issues?: unknown;
-        observation?: unknown;
-      };
-      responses[code] = {
-        answer: legacy.answer,
-        issues: readIssues(legacy.issues ?? legacy.observation),
-      };
-    }
-    out[id] = { ...audit, responses, criticalRisks: audit.criticalRisks ?? {} };
-  }
-  return out;
-}
-
-function readOverrides(): Overrides {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<Overrides>;
-    return {
-      contractorActive: parsed.contractorActive ?? {},
-      audits: upgradeAudits(parsed.audits ?? {}),
-      deletedAuditIds: parsed.deletedAuditIds ?? [],
-      actions: parsed.actions ?? {},
-    };
-  } catch {
-    return EMPTY; // private mode, blocked storage, or corrupt payload
-  }
-}
-
-function writeOverrides(o: Overrides): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
-  } catch {
-    // Storage unavailable — the session still works, it just won't persist.
-  }
-}
+const EMPTY = EMPTY_OVERRIDES;
 
 function merge(o: Overrides): {
   contractors: EhssContractor[];
@@ -149,6 +86,10 @@ export interface LocalEditCounts {
 interface StoreValue {
   hydrated: boolean;
   localEdits: LocalEditCounts;
+  /** Where overrides are kept, and whether anyone else can see them. The
+   * UI reads this instead of hard-coding "saved in this browser only", so
+   * a shared adapter removes that warning by itself. */
+  storage: { name: string; shared: boolean };
   subRegions: SubRegion[];
   contractors: EhssContractor[];
   audits: EhssAudit[];
@@ -199,32 +140,55 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
+export function EhssStoreProvider({
+  children,
+  adapter,
+}: {
+  children: React.ReactNode;
+  /**
+   * Where overrides live. Defaults to this browser; pass another and
+   * nothing else in the app changes, which is the point of the seam.
+   * `memoryAdapter` on the server, where there is no `window` and a
+   * provider that assumed one would crash the render.
+   */
+  adapter?: StorageAdapter;
+}) {
+  const store = useMemo(
+    () =>
+      adapter ??
+      (typeof window === "undefined" ? memoryAdapter() : localStorageAdapter()),
+    [adapter],
+  );
   const [overrides, setOverrides] = useState<Overrides>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setOverrides(readOverrides());
-    setHydrated(true);
-  }, []);
-
-  const update = useCallback((fn: (prev: Overrides) => Overrides) => {
-    setOverrides((prev) => {
-      const next = fn(prev);
-      writeOverrides(next);
-      return next;
+    let live = true;
+    void store.load().then((loaded) => {
+      if (!live) return;
+      setOverrides(loaded);
+      setHydrated(true);
     });
-  }, []);
+    return () => {
+      live = false;
+    };
+  }, [store]);
+
+  const update = useCallback(
+    (fn: (prev: Overrides) => Overrides) => {
+      setOverrides((prev) => {
+        const next = fn(prev);
+        void store.save(next);
+        return next;
+      });
+    },
+    [store],
+  );
 
   const { contractors, audits } = useMemo(() => merge(overrides), [overrides]);
 
   const localEdits = useMemo<LocalEditCounts>(
-    () => ({
-      audits: Object.keys(overrides.audits).length,
-      actions: Object.keys(overrides.actions).length,
-      deleted: overrides.deletedAuditIds.length,
-      contractors: Object.keys(overrides.contractorActive).length,
-    }),
+    () => countOverrides(overrides),
     [overrides],
   );
 
@@ -448,12 +412,16 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     [update],
   );
 
-  const resetLocalEdits = useCallback(() => update(() => EMPTY), [update]);
+  const resetLocalEdits = useCallback(() => {
+    void store.clear();
+    setOverrides(EMPTY);
+  }, [store]);
 
   const value = useMemo<StoreValue>(
     () => ({
       hydrated,
       localEdits,
+      storage: { name: store.name, shared: store.shared },
       subRegions: baseSubRegions,
       contractors,
       audits,
@@ -477,6 +445,7 @@ export function EhssStoreProvider({ children }: { children: React.ReactNode }) {
     [
       hydrated,
       localEdits,
+      store,
       contractors,
       audits,
       overrides.actions,
