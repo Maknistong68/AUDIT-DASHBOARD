@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FloatingPanel } from "@/components/FloatingPanel";
 import { ContractorView } from "@/components/board/ContractorView";
@@ -25,6 +25,7 @@ import { quarterLabel } from "@/lib/ehss/model";
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { formatScore } from "@/lib/format";
+import { downloadCsv, exportName } from "@/lib/export/csv";
 import {
   boardBySubRegion,
   collectObservations,
@@ -33,6 +34,7 @@ import {
   latestQuarter,
   programmeKpis,
   programmeTrend,
+  quarterCoverage,
   quartersOnRecord,
   recentReviews,
   sectionMoves,
@@ -65,15 +67,54 @@ const FLAT = flattenChecklist(CHECKLIST);
 export function DashboardClient() {
   const { contractors, subRegions, audits, hydrated } = useEhss();
   const [includeInactive, setIncludeInactive] = useState(false);
+  /**
+   * Whose patch. The organisation IS two sub-regions with a director each,
+   * and the board showed both with no way to narrow to one — so each
+   * director read a programme average that is half somebody else's
+   * contractors. Remembered per browser, because a director opens their own
+   * patch every time and picking it again each morning is a tax.
+   */
+  const [region, setRegion] = useState<string | null>(null);
+  const [regionReady, setRegionReady] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("ehss-region");
+      if (saved) setRegion(saved);
+    } catch {
+      // Blocked storage: the board still works, it just forgets.
+    }
+    setRegionReady(true);
+  }, []);
+  const chooseRegion = (id: string | null) => {
+    setRegion(id);
+    try {
+      if (id) window.localStorage.setItem("ehss-region", id);
+      else window.localStorage.removeItem("ehss-region");
+    } catch {
+      /* see above */
+    }
+  };
   const [quarter, setQuarter] = useState<string | null>(null);
   const [selected, setSelected] = useState<BoardRow | null>(null);
   const [area, setArea] = useState<AreaStanding | null>(null);
+  /** Who the open contractor is being read against. */
+  const [compareId, setCompareId] = useState<string | null>(null);
 
   const summaries = useMemo(
     () => summarizeAll(audits, contractors, subRegions),
     [audits, contractors, subRegions],
   );
-  const scoped = useMemo(
+  const scoped = useMemo(() => {
+    const byActive = includeInactive
+      ? summaries
+      : summaries.filter((s) => s.contractorActive);
+    return region === null
+      ? byActive
+      : byActive.filter((s) => s.subRegionId === region);
+  }, [summaries, includeInactive, region]);
+  /** The programme, whatever the director is looking at — so a sub-region
+   * figure always has the whole against which to read it. */
+  const programme = useMemo(
     () => (includeInactive ? summaries : summaries.filter((s) => s.contractorActive)),
     [summaries, includeInactive],
   );
@@ -92,6 +133,16 @@ export function DashboardClient() {
    * record the scorecard weights collapse to it, and a board headed "EHSS
    * performance" would be ranking Health & Safety without saying so. */
   const basis = useMemo(() => scoredDisciplines(scoped, shown), [scoped, shown]);
+  const coverage = useMemo(
+    () => quarterCoverage(scoped, contractors, shown, region),
+    [scoped, contractors, shown, region],
+  );
+  /** The programme average, for a sub-region to be read against. */
+  const programmeKpi = useMemo(
+    () => programmeKpis(programme, shown),
+    [programme, shown],
+  );
+
   const feed = useMemo(
     () => recentReviews(scoped.filter((s) => s.quarter === shown), 5),
     [scoped, shown],
@@ -107,9 +158,40 @@ export function DashboardClient() {
     [panels],
   );
 
+  /**
+   * The current view as a file. No export existed, so the only way a figure
+   * left this app was somebody retyping it — a second, unverified copy of
+   * data the rest of this project works hard to keep checkable.
+   *
+   * It exports what is ON SCREEN, filters included, because a CSV that
+   * silently holds more than the view it came from is how two people end up
+   * arguing from the same filename.
+   */
+  const exportRows = () => {
+    downloadCsv(exportName("contractors", shown), [
+      ["Quarter", "Sub-region", "Contractor", "Score", "Band", "Change", "Areas below target", "Areas scored"],
+      ...league.map((row) => {
+        const summary = scoped.find(
+          (x) => x.contractorId === row.contractorId && x.quarter === shown,
+        );
+        return [
+          shown ?? "",
+          summary?.subRegionName ?? "",
+          row.label,
+          row.score ?? "",
+          summary?.rating ?? "",
+          row.delta ?? "",
+          row.areasBelow,
+          row.areasScored,
+        ];
+      }),
+    ]);
+  };
+
   const pick = (row: BoardRow) => {
     setSelected(row);
     setArea(null);
+    setCompareId(null);
   };
   const pickById = (contractorId: string) => {
     const row = league.find((r) => r.contractorId === contractorId);
@@ -166,7 +248,20 @@ export function DashboardClient() {
   const closeAll = () => {
     setSelected(null);
     setArea(null);
+    setCompareId(null);
   };
+
+  /** The comparison contractor's areas, on the same quarters as the open
+   * one so the two figures are answering the same question. */
+  const compareAreas = useMemo(() => {
+    if (!compareId) return {};
+    const theirs = finalized(scoped)
+      .filter((s) => s.contractorId === compareId)
+      .sort((a, b) => a.quarter.localeCompare(b.quarter));
+    return Object.fromEntries(
+      stickyAreas(theirs).map((a) => [a.code, a.score]),
+    ) as Record<string, number | null>;
+  }, [compareId, scoped]);
 
   if (!hydrated && summaries.length === 0) {
     return <div className="bn" />;
@@ -178,7 +273,9 @@ export function DashboardClient() {
         <div className="bn-head-id">
           <h1>EHSS performance</h1>
           <p>
-            Quarterly contractor audits across {subRegions.length} sub-regions
+            {region === null
+              ? `Quarterly contractor audits across ${subRegions.length} sub-regions`
+              : `${subRegions.find((sr) => sr.id === region)?.name ?? ""} · programme average ${formatScore(programmeKpi.average)}`}
             {basis.singleDiscipline && (
               <>
                 {" · "}
@@ -191,6 +288,25 @@ export function DashboardClient() {
           </p>
         </div>
         <div className="bn-head-tools">
+          <div className="bn-seg" role="group" aria-label="Sub-region">
+            <button
+              type="button"
+              aria-pressed={region === null}
+              onClick={() => chooseRegion(null)}
+            >
+              All
+            </button>
+            {subRegions.map((sr) => (
+              <button
+                key={sr.id}
+                type="button"
+                aria-pressed={region === sr.id}
+                onClick={() => chooseRegion(sr.id)}
+              >
+                {sr.name.replace(/^Sub Region /, "SR ")}
+              </button>
+            ))}
+          </div>
           <div className="bn-seg" role="group" aria-label="Quarter">
             {quarters.map((q) => (
               <button
@@ -211,6 +327,9 @@ export function DashboardClient() {
             />
             <span>Inactive</span>
           </label>
+          <button type="button" className="bn-export" onClick={exportRows}>
+            Export CSV
+          </button>
           <div className="bn-avg">
             <span>Programme</span>
             <strong style={{ color: bandColor(kpi.average) }}>
@@ -224,7 +343,7 @@ export function DashboardClient() {
       <div className="bn-grid">
         <Card
           title="Programme trend"
-          note={`Each faint line is one of ${trend.contractors.length} contractors`}
+          note={`${trend.quarters.length} quarter${trend.quarters.length === 1 ? "" : "s"} on record · each faint line is one of ${trend.contractors.length} contractors`}
           wide
           className="bn-trend"
           action={<GoLink href="/contractors" label="Open contractor trajectories" />}
@@ -298,11 +417,26 @@ export function DashboardClient() {
           note="areas weak two audits running"
         />
 
+        {/* Coverage, not a review count. "11 reviews" says nothing about the
+            two contractors nobody audited, and those two are exactly the
+            ones nobody is thinking about. */}
         <StatTile
           className="bn-s4"
-          label="Reviews"
-          value={league.length}
-          note={shown ? `finalized in ${quarterLabel(shown)}` : "no quarter on record"}
+          label="Audited"
+          value={
+            <>
+              {coverage.audited}
+              <em className="bn-of"> of {coverage.expected}</em>
+            </>
+          }
+          note={
+            coverage.missing.length === 0
+              ? shown
+                ? `every contractor, ${quarterLabel(shown)}`
+                : "no quarter on record"
+              : `not audited: ${coverage.missing.map((m) => m.label).join(", ")}`
+          }
+          tone={coverage.missing.length > 0 ? "var(--status-warning)" : undefined}
         />
 
         <Link className="bn-action" href="/audits">
@@ -340,6 +474,12 @@ export function DashboardClient() {
               sections={detail.sections}
               areas={detail.areas}
               causes={detail.causes}
+              peers={league
+                .filter((r) => r.contractorId !== selected.contractorId)
+                .map((r) => ({ contractorId: r.contractorId, label: r.label }))}
+              compareId={compareId}
+              onCompare={setCompareId}
+              compareAreas={compareAreas}
               onOpenArea={setArea}
             />
           )}

@@ -2375,3 +2375,47 @@ export function priorRiskScope(
   ).map((r) => r.id);
   return risks.length === 0 ? null : { quarter: previous.quarter, risks };
 }
+
+/**
+ * Who was audited this quarter and who was not.
+ *
+ * The coverage table lives on the reviews page; a director looking at a
+ * programme average has no way to know it is a mean over eleven of
+ * thirteen contractors, and the two who are missing are exactly the two
+ * nobody is thinking about.
+ */
+export interface QuarterCoverage {
+  quarter: string | null;
+  audited: number;
+  expected: number;
+  /** Active contractors with no finalized review this quarter. */
+  missing: Array<{ contractorId: string; label: string; subRegionId: string }>;
+}
+
+export function quarterCoverage(
+  summaries: AuditSummary[],
+  contractors: EhssContractor[],
+  quarter: string | null,
+  subRegionId: string | null = null,
+): QuarterCoverage {
+  const active = contractors.filter(
+    (c) => c.active && (subRegionId === null || c.subRegionId === subRegionId),
+  );
+  const done = new Set(
+    finalized(summaries)
+      .filter((s) => s.quarter === quarter)
+      .map((s) => s.contractorId),
+  );
+  return {
+    quarter,
+    audited: active.filter((c) => done.has(c.id)).length,
+    expected: active.length,
+    missing: active
+      .filter((c) => !done.has(c.id))
+      .map((c) => ({
+        contractorId: c.id,
+        label: `${c.name} (${c.code})`,
+        subRegionId: c.subRegionId,
+      })),
+  };
+}

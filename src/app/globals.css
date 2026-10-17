@@ -4924,3 +4924,56 @@ input.risk-input {
 .status-filter button.is-waiting:not([aria-pressed="true"]) {
   color: var(--status-warning);
 }
+
+/* Export: the only way a figure left this app used to be retyping it. */
+.bn-export {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  padding: 7px 16px;
+  min-height: 40px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--mat-line);
+  background: var(--mat-2);
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.bn-export:hover { background: var(--mat-hover); color: var(--ink-1); }
+
+/* Compare: a second mark on the same row, not a second panel. */
+.dv-h-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dv-compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.dv-compare select {
+  width: auto;
+  max-width: 150px;
+  min-height: 28px;
+  padding: 4px 26px 4px 10px;
+  font-size: 11.5px;
+}
+
+.dv-peer {
+  flex: none;
+  min-width: 48px;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The comparison is ahead of this contractor on this area. */
+.dv-peer.is-behind { color: var(--status-warning); }

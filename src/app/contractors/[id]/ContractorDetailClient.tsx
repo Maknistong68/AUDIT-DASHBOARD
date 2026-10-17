@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { ProvenanceNote } from "@/components/ProvenanceNote";
 import { useEhss } from "@/lib/ehss/store";
 import { StatTile } from "@/components/StatTile";
 import { ScoreMeter } from "@/components/ScoreMeter";
@@ -217,6 +218,11 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
                 <th>Status</th>
                 <th className="num">Score</th>
                 <th>Rating</th>
+                {/* The provenance line lived only on the audit page, which
+                    is one more click than anyone holding last quarter's
+                    report will make. The question — "why does this differ
+                    from the number I have?" — is asked here. */}
+                <th className="num">Sheet stated</th>
               </tr>
             </thead>
             <tbody>
@@ -240,11 +246,23 @@ export function ContractorDetailClient({ contractorId }: { contractorId: string 
                       <RatingBadge rating={s.rating} />
                     )}
                   </td>
+                  <td className="num" style={{ color: "var(--muted)" }}>
+                    {s.reportedTotal === null ? (
+                      "—"
+                    ) : (
+                      <span
+                        title={`The source sheet printed ${s.reportedTotal}%. The score beside it is calculated from that sheet's own points, which is what this programme scores.`}
+                      >
+                        {s.reportedTotal}%
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <ProvenanceNote compact />
       </section>
     </div>
   );

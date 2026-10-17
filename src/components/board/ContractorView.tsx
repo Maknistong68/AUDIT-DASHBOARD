@@ -31,6 +31,10 @@ export function ContractorView({
   sections,
   areas,
   causes,
+  peers,
+  compareId,
+  onCompare,
+  compareAreas,
   onOpenArea,
 }: {
   label: string;
@@ -39,6 +43,20 @@ export function ContractorView({
   sections: SectionStanding[];
   areas: AreaStanding[];
   causes: IssueCount[];
+  /**
+   * The other contractors in the quarter, so one can be put beside this one.
+   *
+   * Comparing two was possible only on the checklist matrix, which is not
+   * where anyone looks and does not answer the question a director actually
+   * asks — "is this one bad, or are they all like this?". The peer is drawn
+   * as a second mark on the same row rather than a second panel: two
+   * numbers side by side is a comparison, two panels is homework.
+   */
+  peers: Array<{ contractorId: string; label: string }>;
+  compareId: string | null;
+  onCompare: (contractorId: string | null) => void;
+  /** The comparison contractor's areas, keyed by area code. */
+  compareAreas: Record<string, number | null>;
   onOpenArea: (area: AreaStanding) => void;
 }) {
   const series = reviews
@@ -159,25 +177,58 @@ export function ContractorView({
       {/* ---- the way down */}
       {weakest.length > 0 && (
         <section className="dv-block">
-          <h4 className="dv-h">Weakest areas</h4>
+          <div className="dv-h-row">
+            <h4 className="dv-h">Weakest areas</h4>
+            {peers.length > 0 && (
+              <label className="dv-compare">
+                <span>vs</span>
+                <select
+                  value={compareId ?? ""}
+                  onChange={(e) => onCompare(e.target.value || null)}
+                >
+                  <option value="">nobody</option>
+                  {peers.map((peer) => (
+                    <option key={peer.contractorId} value={peer.contractorId}>
+                      {peer.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
           <ul className="dv-areas">
-            {weakest.map((a) => (
-              <li key={a.code}>
-                <button type="button" onClick={() => onOpenArea(a)}>
-                  <span
-                    className="dv-dot"
-                    style={{ background: bandColor(a.score) }}
-                    aria-hidden
-                  />
-                  <span className="dv-area-name">{a.title}</span>
-                  {a.recurring && <span className="dv-tag">recurring</span>}
-                  <span className="dv-area-val">{formatScore(a.score)}</span>
-                  <span className="dv-go" aria-hidden>
-                    ›
-                  </span>
-                </button>
-              </li>
-            ))}
+            {weakest.map((a) => {
+              const peer = compareId ? compareAreas[a.code] : undefined;
+              const diff =
+                peer !== undefined && peer !== null && a.score !== null
+                  ? Math.round((a.score - peer) * 10) / 10
+                  : null;
+              return (
+                <li key={a.code}>
+                  <button type="button" onClick={() => onOpenArea(a)}>
+                    <span
+                      className="dv-dot"
+                      style={{ background: bandColor(a.score) }}
+                      aria-hidden
+                    />
+                    <span className="dv-area-name">{a.title}</span>
+                    {a.recurring && <span className="dv-tag">recurring</span>}
+                    {compareId && (
+                      <span
+                        className={`dv-peer${diff !== null && diff < 0 ? " is-behind" : ""}`}
+                        title={`The comparison contractor scores ${formatScore(peer ?? null)} here`}
+                      >
+                        {formatScore(peer ?? null)}
+                      </span>
+                    )}
+                    <span className="dv-area-val">{formatScore(a.score)}</span>
+                    <span className="dv-go" aria-hidden>
+                      ›
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
