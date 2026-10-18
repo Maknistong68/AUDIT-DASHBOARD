@@ -6,10 +6,12 @@ import { bandColor, bandFor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { formatScore } from "@/lib/format";
 import { quarterLabel } from "@/lib/ehss/model";
+import { TargetBar } from "@/components/charts/Marks";
 import type {
   AuditSummary,
   BoardPanel,
   BoardRow,
+  ProgrammeKpis,
   SectionMove,
 } from "@/lib/ehss/summaries";
 
@@ -38,19 +40,17 @@ export function Card({
   title,
   note,
   action,
-  wide,
   className,
   children,
 }: {
   title: string;
   note?: ReactNode;
   action?: ReactNode;
-  wide?: boolean;
   className?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={`bn-card${wide ? " is-wide" : ""}${className ? ` ${className}` : ""}`}>
+    <section className={`bn-card${className ? ` ${className}` : ""}`}>
       <header className="bn-card-head">
         <div>
           <h2>{title}</h2>
@@ -77,6 +77,84 @@ export function Delta({ value, suffix }: { value: number | null; suffix?: string
       {flat ? "–" : value > 0 ? "▲" : "▼"} {Math.abs(value).toFixed(1)}
       {suffix}
     </span>
+  );
+}
+
+/**
+ * THE ONE THING THE BOARD SAYS.
+ *
+ * A bento of ten equal tiles has no subject: a reader who has never seen this
+ * screen has nowhere to land, and the board used to print its headline figure
+ * three times at three sizes (a header pill, a tile hero, a row inside
+ * "Against target") while never stating the fact those figures add up to.
+ * This tile is that fact, in four parts and no sentence:
+ *
+ *   the figure · how far it is from target · how the contractors are spread
+ *   across the scorecard's own bands
+ *
+ * The gap meter is the same `TargetBar` every score in the app is drawn with,
+ * so its length means the same thing here as in the watchlist. The band row
+ * shows EVERY band including the empty ones, because a zero in the top band
+ * is the finding — it reads correctly beside the bands that are populated,
+ * which is not true of a lone "0" on a tile of its own.
+ */
+export function HeroTile({
+  kpi,
+  quarter,
+  basis,
+}: {
+  kpi: ProgrammeKpis;
+  quarter: string | null;
+  /** What the average is an average OF, when that needs saying. */
+  basis?: ReactNode;
+}) {
+  return (
+    <section className="bn-card bn-hero">
+      <header className="bn-card-head">
+        <div>
+          <h2>Programme average</h2>
+          <p>
+            {quarter ? quarterLabel(quarter) : "no quarter on record"}
+            {kpi.contractors > 0 && ` · ${kpi.contractors} contractors`}
+          </p>
+        </div>
+        {basis}
+      </header>
+
+      <div className="bn-hero-fig">
+        <strong>{formatScore(kpi.average)}</strong>
+        <Delta value={kpi.delta} />
+      </div>
+
+      <div className="bn-hero-meter">
+        <TargetBar score={kpi.average} label="Programme average" lead />
+        <span className="bn-hero-gap">
+          {kpi.gap === null ? (
+            "not scored"
+          ) : kpi.gap === 0 ? (
+            `at the ${TARGET_SCORE}% target`
+          ) : (
+            <>
+              <b>{kpi.gap.toFixed(1)}</b> under the {TARGET_SCORE}% target
+            </>
+          )}
+        </span>
+      </div>
+
+      <ul className="bn-bands">
+        {kpi.bands.map((b) => (
+          <li
+            key={b.id}
+            className={b.count === 0 ? "is-zero" : undefined}
+            title={`${b.count} ${b.label}`}
+          >
+            <i style={{ background: `var(--band-${b.id})` }} aria-hidden />
+            <strong>{b.count}</strong>
+            <em>{b.short}</em>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -110,6 +188,7 @@ export function StatTile({
   label,
   value,
   note,
+  mark,
   tone,
   delta,
   className,
@@ -118,6 +197,10 @@ export function StatTile({
   label: string;
   value: ReactNode;
   note: ReactNode;
+  /** The figure as a shape. A tile with a number and no mark is a sentence
+   * with a digit in it; seven of the board's ten tiles used to be exactly
+   * that. Omitted only where the quantity has no shape to draw. */
+  mark?: ReactNode;
   tone?: string;
   delta?: number | null;
   className?: string;
@@ -133,6 +216,7 @@ export function StatTile({
       <strong className="bn-stat-value" style={tone ? { color: tone } : undefined}>
         {value}
       </strong>
+      {mark}
       <p className="bn-stat-note">{note}</p>
     </section>
   );
@@ -156,9 +240,9 @@ export function ReviewFeed({
         return (
           <li key={r.id}>
             <button type="button" onClick={() => onSelect(r.contractorId)}>
-              <span className="bn-feed-mark" aria-hidden>
-                {r.contractorName.slice(0, 2).toUpperCase()}
-              </span>
+              {/* The leftmost column used to hold a square of the
+                  contractor's initials — decoration in the one place a row
+                  has room for a mark. It carries the score instead. */}
               <span className="bn-feed-id">
                 <b>
                   {r.contractorName} ({r.contractorCode})
@@ -166,6 +250,7 @@ export function ReviewFeed({
                 <em>
                   {r.subRegionName} · {quarterLabel(r.quarter)}
                 </em>
+                <TargetBar score={r.overall} label={r.contractorName} />
               </span>
               <span className="bn-feed-score">
                 <b style={{ color: bandColor(r.overall) }}>
@@ -182,18 +267,24 @@ export function ReviewFeed({
 }
 
 /**
- * Each sub-region against the 90% target. Two bars, not a chart: a
- * director's own patch and the other one, with the distance left to run
- * printed rather than inferred from a length.
+ * Each sub-region against the 90% target.
+ *
+ * These are `TargetBar`s on the full 0-100 track, like every other score in
+ * the app. They used to be drawn as a fraction of the target instead
+ * (`score / 90`), which made the same 62.4 a different length here than in
+ * the tile beside it — two scales on one screen, and a reader comparing
+ * lengths across them is comparing nothing.
+ *
+ * The programme row appears only when it is a REFERENCE rather than a repeat:
+ * with a sub-region selected, a director needs the whole against which to
+ * read their own patch, and without one the hero tile is already that figure.
  */
 export function TargetGoals({
   panels,
   programme,
 }: {
   panels: BoardPanel[];
-  /** The whole programme, as the row the two sub-regions sit either side
-   * of — without it each director reads their own bar with nothing to
-   * read it against. */
+  /** The whole programme, or null when the hero already prints it. */
   programme: number | null;
 }) {
   if (panels.length === 0) return <div className="chart-empty">—</div>;
@@ -205,33 +296,31 @@ export function TargetGoals({
       score: p.average,
       lead: false,
     })),
-    {
-      id: "programme",
-      name: "Programme",
-      note: `${panels.reduce((n, p) => n + p.rows.length, 0)} contractors`,
-      score: programme,
-      lead: true,
-    },
+    ...(programme === null
+      ? []
+      : [
+          {
+            id: "programme",
+            name: "Programme",
+            note: `${panels.reduce((n, p) => n + p.rows.length, 0)} contractors`,
+            score: programme,
+            lead: true,
+          },
+        ]),
   ];
   return (
     <ul className="bn-goals">
-      {rows.map((p) => {
-        const pct = p.score === null ? 0 : Math.min(100, (p.score / TARGET_SCORE) * 100);
-        return (
-          <li key={p.id} className={p.lead ? "is-lead" : undefined}>
-            <span className="bn-goal-track">
-              <i style={{ width: `${Math.max(2, pct)}%` }} />
-            </span>
-            <span className="bn-goal-foot">
-              <b>{p.name}</b>
-              <em>{p.note}</em>
-              <span className="spacer" />
-              <strong>{formatScore(p.score)}</strong>
-            </span>
-          </li>
-        );
-      })}
-      <li className="bn-goals-foot">Target {TARGET_SCORE}%</li>
+      {rows.map((p) => (
+        <li key={p.id} className={p.lead ? "is-lead" : undefined}>
+          <TargetBar score={p.score} label={p.name} />
+          <span className="bn-goal-foot">
+            <b>{p.name}</b>
+            <em>{p.note}</em>
+            <span className="spacer" />
+            <strong>{formatScore(p.score)}</strong>
+          </span>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -255,9 +344,10 @@ export function Watchlist({
           <button type="button" onClick={() => onSelect(row)}>
             <b>{row.label}</b>
             <em>
-              {row.areasBelow}/{row.areasScored} areas below target
+              {row.areasBelow}/{row.areasScored} areas
             </em>
             <strong>{formatScore(row.score)}</strong>
+            <TargetBar score={row.score} label={row.label} onAccent={i === 0} />
           </button>
         </li>
       ))}

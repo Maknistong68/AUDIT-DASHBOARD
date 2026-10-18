@@ -5,12 +5,20 @@ import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { formatScore } from "@/lib/format";
 
 /**
- * The two marks the visual drill-down levels are built from.
+ * The small marks every tile and row in the app is built from.
  *
- * Directors read shapes before they read sentences, so every row in levels
- * one and two is a magnitude plus a direction and nothing else. Both marks
- * carry their number as text as well: the band palette is an ordered status
- * scale, so colour is never allowed to be the only channel.
+ * Directors read shapes before they read sentences, so a row is a magnitude
+ * plus a direction and nothing else. Every mark here carries its number as
+ * text as well: the band palette is an ordered status scale, so colour is
+ * never allowed to be the only channel.
+ *
+ * `TargetBar` is the ONE score mark. Anywhere a 0-100 score is drawn — the
+ * board's hero, the sub-region rows, the watchlist, the review feed, the
+ * reviews table — it is this bar, on the full 0-100 track with the tick at
+ * the target. The board used to draw the same quantity two ways (one tile
+ * normalised the score to the target instead, so 62.4 was a different length
+ * in two tiles on one screen), and a reader cannot compare lengths that do
+ * not share a scale.
  */
 
 /**
@@ -21,14 +29,21 @@ import { formatScore } from "@/lib/format";
 export function TargetBar({
   score,
   label,
+  lead,
+  onAccent,
 }: {
   score: number | null;
   /** Accessible name; the number beside the bar is rendered by the caller. */
   label: string;
+  /** The board's headline meter: the same mark, drawn thicker. */
+  lead?: boolean;
+  /** Drawn on an accent-filled row, where a band colour has nothing to sit
+   * on — the fill switches to the ink that goes on the accent. */
+  onAccent?: boolean;
 }) {
   return (
     <span
-      className="tbar"
+      className={`tbar${lead ? " is-lead" : ""}${onAccent ? " is-on-accent" : ""}`}
       role="img"
       aria-label={`${label}: ${formatScore(score)}, target ${TARGET_SCORE}%`}
     >
@@ -37,7 +52,7 @@ export function TargetBar({
           <i
             style={{
               width: `${Math.max(1.5, Math.min(100, score))}%`,
-              background: bandColor(score),
+              background: onAccent ? "var(--on-accent)" : bandColor(score),
             }}
           />
         )}
@@ -107,5 +122,90 @@ export function Spark({
         strokeWidth={1}
       />
     </svg>
+  );
+}
+
+/**
+ * How many of a known set, as cells rather than a fraction.
+ *
+ * "9 of 11" is a number a reader has to divide. Eleven cells with nine filled
+ * is the same fact as a shape, and the two that are not filled are visible as
+ * holes rather than as a subtraction. Used for review coverage and for
+ * recurring areas, where the denominator is small, fixed and meaningful.
+ *
+ * Capped at `max` cells: past about twenty the cells stop being countable and
+ * the strip becomes a bar, at which point the printed fraction is doing the
+ * work anyway.
+ */
+export function DotStrip({
+  filled,
+  total,
+  label,
+  tone,
+  max = 20,
+}: {
+  filled: number;
+  total: number;
+  label: string;
+  /** Fill colour for the filled cells; the accent when not given. */
+  tone?: string;
+  max?: number;
+}) {
+  if (total <= 0 || total > max) return null;
+  return (
+    <span
+      className="dstrip"
+      role="img"
+      aria-label={`${label}: ${filled} of ${total}`}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <i
+          key={i}
+          className={i < filled ? "is-on" : undefined}
+          style={i < filled && tone ? { background: tone } : undefined}
+        />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Two parts of one count, side by side.
+ *
+ * A single figure for "actions" hides the only distinction that matters at
+ * board altitude — how many of them are overdue. Two segments share one
+ * track, separated by a gap in the surface colour rather than a stroke.
+ *
+ * The segments carry no inline numerals. The tile prints both counts in
+ * order on the line directly above ("9 · 2 overdue"), so the colour is not
+ * the only channel, and a numeral set inside a 7px segment would either be
+ * clipped or be fighting its own fill for contrast.
+ */
+export function SplitBar({
+  parts,
+  label,
+}: {
+  parts: Array<{ key: string; count: number; tone: string; label: string }>;
+  label: string;
+}) {
+  const total = parts.reduce((n, p) => n + p.count, 0);
+  if (total === 0) return null;
+  return (
+    <span
+      className="sbar"
+      role="img"
+      aria-label={`${label}: ${parts
+        .map((p) => `${p.count} ${p.label}`)
+        .join(", ")}`}
+    >
+      {parts
+        .filter((p) => p.count > 0)
+        .map((p) => (
+          <i
+            key={p.key}
+            style={{ flexGrow: p.count, background: p.tone }}
+          />
+        ))}
+    </span>
   );
 }

@@ -54,6 +54,13 @@
   /* Categorical series, fixed order — validated against #20232a (dataviz) */
   --series-1: #ccf45b;
   --series-2: #49b8f5;
+
+  /* The fill of an UNMARKED data mark — the thirteen columns the board is not
+     currently about, the open half of the actions bar. Its own step rather
+     than panel opacity: at panel opacity thirteen columns vanish into the
+     card. Lives here rather than on .cols-wrap because more than the columns
+     draw unmarked marks now. */
+  --col-fill: rgba(255, 255, 255, 0.12);
   --series-3: #f08a4b;
   --series-4: #b48cf0;
 
@@ -2207,6 +2214,8 @@ table.data tr.is-out td {
     --band-minimal: #a85f00;
     --band-non: #c41e1e;
 
+    --col-fill: #777777;
+
     /* Material carries depth, and paper has none. */
     --mat-1: #ffffff;
     --mat-2: #f4f4f4;
@@ -2275,6 +2284,9 @@ table.data tr.is-out td {
   .bn-grid > * {
     margin-bottom: 10px;
   }
+
+  /* A display figure costs nothing on screen and a third of a page here. */
+  .bn-hero-fig strong { font-size: 32px; }
 
   a[href] {
     text-decoration: none;
@@ -3070,6 +3082,24 @@ table.matrix td.matrix-cell {
   width: 100%;
 }
 
+/* The board's headline meter: the same mark, drawn thick enough to lead a
+   tile. Not a different mark — a reader compares its length with the bars in
+   the watchlist, so the scale has to be the same one. */
+.tbar.is-lead .tbar-track { height: 12px; border-radius: 6px; }
+.tbar.is-lead .tbar-track i { border-radius: 6px; }
+.tbar.is-lead .tbar-track b { top: -3px; bottom: -3px; width: 2px; opacity: 0.6; }
+
+/* On an accent-filled row the band colours have nothing to sit on, so the
+   mark switches to the ink that goes on the accent. A prop rather than an
+   !important override of the inline fill. */
+.tbar.is-on-accent .tbar-track {
+  background: color-mix(in srgb, var(--on-accent) 20%, transparent);
+}
+.tbar.is-on-accent .tbar-track b {
+  background: var(--on-accent);
+  opacity: 0.55;
+}
+
 .tbar-track {
   position: relative;
   display: block;
@@ -3093,6 +3123,43 @@ table.matrix td.matrix-cell {
   width: 2px;
   background: var(--ink-1);
   opacity: 0.45;
+}
+
+/* ---- How many of a known set, as cells ---- */
+
+.dstrip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.dstrip i {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--mat-sunken);
+}
+
+.dstrip i.is-on { background: var(--ink-2); }
+
+/* ---- Two parts of one count ---- */
+
+.sbar {
+  display: flex;
+  width: 100%;
+  height: 7px;
+  /* The gap between the two fills is the surface showing through, 2px of it,
+     the same separator every stacked mark in this app uses. A stroke around
+     each segment would add ink that is not data. */
+  gap: 2px;
+}
+
+.sbar i {
+  display: block;
+  min-width: 4px;
+  border-radius: 4px;
 }
 
 .rspark {
@@ -3989,30 +4056,6 @@ table.matrix td.matrix-cell {
   white-space: nowrap;
 }
 
-.bn-avg {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 14px 6px 16px;
-  min-height: 40px;
-  border-radius: var(--r-pill);
-  background: var(--mat-1);
-  border: 1px solid var(--mat-line);
-  box-shadow: inset 0 1px 0 var(--mat-edge);
-}
-
-.bn-avg span {
-  font-size: 11.5px;
-  color: var(--muted);
-}
-
-.bn-avg strong {
-  font-size: 17px;
-  font-weight: 680;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---- The grid ---- */
 
 .bn-grid {
@@ -4022,16 +4065,20 @@ table.matrix td.matrix-cell {
   align-items: stretch;
 }
 
-.bn-trend   { grid-column: span 5; }
-.bn-league  { grid-column: span 3; }
-.bn-reviews { grid-column: span 4; }
-.bn-s1, .bn-s2 { grid-column: span 3; }
-.bn-target, .bn-watchc { grid-column: span 3; grid-row: span 2; }
-/* Row three: recurring gaps, actions, coverage. "Start a review" used to
-   sit here as a dashed tile and was a second route to a nav item that
-   already exists; it is now the corner arrow on the coverage tile, which
-   is where someone acts on a review nobody has done. */
-.bn-s3, .bn-s4, .bn-s5 { grid-column: span 2; }
+/* Four rows, and the first tile is the one the board is for.
+   Row 1 — the message, and where it is going.
+   Row 2 — WHO, across the full width: thirteen columns used to share a
+           quarter of the grid, which is the narrowest chart on the board
+           carrying the comparison the board exists to make.
+   Row 3 — the three lists a director acts from.
+   Row 4 — the counts, all one size, because none of them outranks another.
+   The spans are written out per tile rather than left to auto-flow, so a
+   tile added later cannot silently reshuffle the row above it. */
+.bn-hero    { grid-column: span 5; }
+.bn-trend   { grid-column: span 7; }
+.bn-league  { grid-column: span 12; }
+.bn-target, .bn-watchc, .bn-reviews { grid-column: span 4; }
+.bn-s2, .bn-s3, .bn-s4, .bn-s5 { grid-column: span 3; }
 
 /* ---- The tile itself ---- */
 
@@ -4149,17 +4196,111 @@ table.matrix td.matrix-cell {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- The hero: the one thing the board says ----
+
+   Exactly one figure on this screen is display-sized. It used to be four
+   (three stat tiles and a league hero all at ~30px, plus the same average
+   again in a header pill at 17px), which is the same as none. */
+
+.bn-hero-fig {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.bn-hero-fig strong {
+  font-size: clamp(44px, 5.2vw, 60px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  /* Proportional figures, deliberately: tabular digits give every numeral
+     the width of a zero, and at display size that makes 62.4 read loose.
+     tabular-nums belongs in columns that align vertically. */
+  font-variant-numeric: normal;
+}
+
+.bn-hero-meter {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bn-hero-gap {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bn-hero-gap b {
+  font-weight: 680;
+  color: var(--ink-1);
+}
+
+/* Where the contractors sit on the scorecard's own scale. Every band is
+   listed, zeros included: a zero in the top band IS the finding, and it
+   reads as one beside the bands that are populated. */
+.bn-bands {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 11px 0 0;
+  border-top: 1px solid var(--mat-line);
+  display: flex;
+  gap: 6px 14px;
+  flex-wrap: wrap;
+}
+
+.bn-bands li {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+
+.bn-bands i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  transform: translateY(-1px);
+}
+
+.bn-bands strong {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.bn-bands em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* A band nobody is in keeps its place and recedes — present, not absent. */
+.bn-bands li.is-zero strong { color: var(--muted); font-weight: 580; }
+.bn-bands li.is-zero i { opacity: 0.4; }
+
 /* ---- Stat tile ---- */
 
 .bn-stat { justify-content: space-between; }
 
 .bn-stat-value {
   display: block;
-  font-size: clamp(26px, 3vw, 32px);
+  font-size: clamp(22px, 2.4vw, 26px);
   font-weight: 700;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   line-height: 1.05;
-  font-variant-numeric: tabular-nums;
+  /* See the hero figure: proportional at this size too. */
+  font-variant-numeric: normal;
+}
+
+/* The figure's shape, under the figure. */
+.bn-stat .dstrip,
+.bn-stat .sbar,
+.bn-stat .tbar {
+  margin-top: -2px;
 }
 
 .bn-of {
@@ -4175,22 +4316,6 @@ table.matrix td.matrix-cell {
   font-size: 11.5px;
   line-height: 1.35;
   color: var(--muted);
-}
-
-/* ---- This-quarter hero over the columns ---- */
-
-.bn-league-hero {
-  display: flex;
-  align-items: baseline;
-  gap: 9px;
-  flex-wrap: wrap;
-}
-
-.bn-league-hero strong {
-  font-size: clamp(24px, 2.8vw, 30px);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  font-variant-numeric: tabular-nums;
 }
 
 .bn-league .chart-wrap { margin-top: auto; }
@@ -4224,24 +4349,18 @@ table.matrix td.matrix-cell {
 
 .bn-feed button:hover { background: var(--mat-hover); }
 
-.bn-feed-mark {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--mat-2);
-  color: var(--ink-2);
-  font-size: 11px;
-  font-weight: 680;
-  letter-spacing: 0.01em;
-}
-
 .bn-feed-id {
   flex: 1;
   min-width: 0;
   display: block;
+}
+
+/* The row's own score, where a square of the contractor's initials used to
+   sit. A monogram is decoration standing in the one place a row has room
+   for a mark. */
+.bn-feed-id .tbar {
+  margin-top: 5px;
+  max-width: 190px;
 }
 
 .bn-feed-id b {
@@ -4304,22 +4423,7 @@ table.matrix td.matrix-cell {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.bn-goal-track {
-  display: block;
-  height: 10px;
-  border-radius: var(--r-pill);
-  background: var(--mat-sunken);
-  overflow: hidden;
-}
-
-.bn-goal-track i {
-  display: block;
-  height: 100%;
-  border-radius: var(--r-pill);
-  background: var(--accent);
+  gap: 15px;
 }
 
 .bn-goal-foot {
@@ -4351,12 +4455,6 @@ table.matrix td.matrix-cell {
   font-variant-numeric: tabular-nums;
 }
 
-.bn-goals-foot {
-  margin-top: auto;
-  font-size: 11px;
-  color: var(--muted);
-}
-
 /* ---- Watchlist ---- */
 
 .bn-watch {
@@ -4372,6 +4470,7 @@ table.matrix td.matrix-cell {
   width: 100%;
   display: grid;
   grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
   gap: 2px 10px;
   align-items: center;
   padding: 12px 14px;
@@ -4402,6 +4501,12 @@ table.matrix td.matrix-cell {
   color: var(--muted);
 }
 
+.bn-watch .tbar {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+}
+
 .bn-watch strong {
   grid-row: 1 / 3;
   grid-column: 2;
@@ -4425,10 +4530,6 @@ table.matrix td.matrix-cell {
 
 .trend-wrap, .cols-wrap { position: relative; }
 
-/* The unmarked columns are a data mark, not a panel tint, so they get their
-   own step — at panel opacity thirteen of them vanish into the card. */
-.cols-wrap { --col-fill: rgba(255, 255, 255, 0.12); }
-
 .cols-wrap .col-g { cursor: pointer; }
 .cols-wrap .col-g:focus-visible { outline: none; }
 .cols-wrap .col-g:focus-visible rect:nth-of-type(2) {
@@ -4441,17 +4542,14 @@ table.matrix td.matrix-cell {
    the trend takes the full row and the other two share the next one. */
 
 @media (max-width: 1240px) {
-  .bn-trend { grid-column: span 12; }
-  .bn-league { grid-column: span 5; }
-  .bn-reviews { grid-column: span 7; }
-  .bn-target, .bn-watchc { grid-column: span 6; grid-row: auto; }
-  .bn-s3, .bn-s4, .bn-s5 { grid-column: span 4; }
+  .bn-hero, .bn-trend { grid-column: span 12; }
+  .bn-target, .bn-watchc { grid-column: span 6; }
+  .bn-reviews { grid-column: span 12; }
 }
 
 @media (max-width: 860px) {
-  .bn-league, .bn-reviews { grid-column: span 12; }
-  .bn-s1, .bn-s2 { grid-column: span 6; }
-  .bn-s3, .bn-s4, .bn-s5 { grid-column: span 6; }
+  .bn-target, .bn-watchc { grid-column: span 12; }
+  .bn-s2, .bn-s3, .bn-s4, .bn-s5 { grid-column: span 6; }
 }
 
 @media (max-width: 620px) {
@@ -4461,8 +4559,8 @@ table.matrix td.matrix-cell {
   .bn-seg { flex: 1; }
   .bn-seg button { flex: 1; padding: 7px 10px; }
   .bn-avg { flex: 1; justify-content: space-between; }
-  .bn-target, .bn-watchc { grid-column: span 12; }
   .bn-card { padding: 14px 13px 16px; }
+  .bn-bands { gap: 6px 11px; }
 }
 
 /* The tile's corner arrow. */
@@ -4486,7 +4584,6 @@ table.matrix td.matrix-cell {
 }
 
 /* The programme row is the one the sub-regions are read against. */
-.bn-goals .is-lead .bn-goal-track { background: var(--accent-track); }
 .bn-goals .is-lead b { color: var(--accent); }
 
 /* Two series on the trend card means a legend, always. */
@@ -4520,12 +4617,22 @@ table.matrix td.matrix-cell {
   color: var(--muted);
 }
 
-/* What the headline figure is an average OF. Said plainly, in the ink the
-   rest of the subtitle wears — a caveat set in a warning colour reads as an
-   error, and this is not one. */
+/* What the headline figure is an average OF — a chip in the hero's own
+   header, because it qualifies that figure and used to trail off the end of
+   a page subtitle three tiles away from it. Plain ink, deliberately: a
+   caveat set in a warning colour reads as an error, and this is not one. */
 .bn-basis {
-  font-weight: 600;
+  flex: none;
+  max-width: 180px;
+  font-size: 11px;
+  font-weight: 580;
+  line-height: 1.35;
   color: var(--ink-2);
+  text-align: right;
+  background: var(--mat-2);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-3);
+  padding: 5px 8px;
 }
 
 /* ===========================================================================

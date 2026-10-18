@@ -118,7 +118,7 @@ export function ProgrammeTrendChart({
           <span>
             <i style={{ background: "var(--series-2)" }} aria-hidden />
             All reviews
-            <em>whoever was audited that quarter</em>
+            <em>all audited that quarter</em>
           </span>
         </div>
       )}

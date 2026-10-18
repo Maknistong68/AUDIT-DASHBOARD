@@ -15,9 +15,14 @@ import type { BoardRow } from "@/lib/ehss/summaries";
  * same recessive fill. Colour is not identity here and not rank either:
  * change the selection and only the marked column moves.
  *
- * Each column prints its own score, set vertically inside the bar the way a
- * narrow column has to, so the figure never depends on the hover and a
- * printed value always sits beside the shape.
+ * Each column prints its own score, so the figure never depends on the
+ * hover. Upright on the cap where the band is wide enough for it — rotated
+ * inside the bar is what a narrow column forces, not what anyone reads
+ * first, and this chart used to run at a quarter of the grid's width.
+ *
+ * The axis carries the contractor's WORK-ORDER CODE, not its initials. Two
+ * letters is not an identifier here: initials repeat across thirteen
+ * contractors and the code is the thing that tells them apart.
  */
 export function ScoreColumns({
   rows,
@@ -39,7 +44,8 @@ export function ScoreColumns({
   }
 
   const H = height;
-  const pad = { top: 10, right: 2, bottom: 30, left: 2 };
+  // Top padding carries the cap label; bottom carries the code pucks.
+  const pad = { top: 22, right: 2, bottom: 30, left: 2 };
   const iw = Math.max(40, W - pad.left - pad.right);
   const ih = H - pad.top - pad.bottom;
 
@@ -113,34 +119,48 @@ export function ScoreColumns({
                 stroke={hot && !on ? "var(--ink-2)" : "none"}
                 strokeWidth={1}
               />
-              {bh > 42 && (
-                <text
-                  x={x + bw / 2}
-                  y={pad.top + ih - 10}
-                  transform={`rotate(-90 ${x + bw / 2} ${pad.top + ih - 10})`}
-                  textAnchor="start"
-                  fontSize={10.5}
-                  fontWeight={600}
-                  fill={on ? "var(--on-accent)" : "var(--ink-2)"}
-                >
-                  {formatScore(row.score)}
-                </text>
-              )}
+              {row.score !== null &&
+                (band >= 34 ? (
+                  <text
+                    x={x + bw / 2}
+                    y={top - 7}
+                    textAnchor="middle"
+                    fontSize={11}
+                    fontWeight={650}
+                    fill={on ? "var(--accent)" : "var(--ink-2)"}
+                  >
+                    {formatScore(row.score)}
+                  </text>
+                ) : (
+                  bh > 42 && (
+                    <text
+                      x={x + bw / 2}
+                      y={pad.top + ih - 10}
+                      transform={`rotate(-90 ${x + bw / 2} ${pad.top + ih - 10})`}
+                      textAnchor="start"
+                      fontSize={10.5}
+                      fontWeight={600}
+                      fill={on ? "var(--on-accent)" : "var(--ink-2)"}
+                    >
+                      {formatScore(row.score)}
+                    </text>
+                  )
+                ))}
               <circle
                 cx={x + bw / 2}
                 cy={pad.top + ih + 15}
-                r={Math.min(10, bw / 2 + 2)}
+                r={Math.min(11, bw / 2 + 3)}
                 fill={on ? "var(--accent)" : "var(--col-fill)"}
               />
               <text
                 x={x + bw / 2}
                 y={pad.top + ih + 18.5}
                 textAnchor="middle"
-                fontSize={8.5}
+                fontSize={9}
                 fontWeight={650}
                 fill={on ? "var(--on-accent)" : "var(--muted)"}
               >
-                {row.name.slice(0, 2).toUpperCase()}
+                {row.code}
               </text>
             </g>
           );

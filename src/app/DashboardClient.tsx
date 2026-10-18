@@ -7,14 +7,15 @@ import { ContractorView } from "@/components/board/ContractorView";
 import { AreaView } from "@/components/board/AreaView";
 import {
   Card,
-  Delta,
   GoLink,
+  HeroTile,
   ReviewFeed,
   SectionChips,
   StatTile,
   TargetGoals,
   Watchlist,
 } from "@/components/board/Bento";
+import { DotStrip, SplitBar, TargetBar } from "@/components/charts/Marks";
 import { ProvenanceNote } from "@/components/ProvenanceNote";
 import { ActionList, RaiseAction } from "@/components/board/Actions";
 import { tallyActions, type ManualCloseReason } from "@/lib/ehss/actions";
@@ -30,6 +31,7 @@ import { formatScore } from "@/lib/format";
 import { downloadCsv, exportName } from "@/lib/export/csv";
 import {
   boardBySubRegion,
+  checklistAreas,
   collectObservations,
   finalized,
   issueBreakdown,
@@ -50,6 +52,9 @@ import {
 } from "@/lib/ehss/summaries";
 
 const FLAT = flattenChecklist(CHECKLIST);
+/** 15: section A plus B1-B12 plus C1-C2. The denominator of the recurring
+ * strip, so the tile says "3 of 15" as a shape rather than a bare "3". */
+const CHECKLIST_AREAS = checklistAreas().length;
 
 /**
  * The board — a bento of tiles over one quarter.
@@ -309,20 +314,9 @@ export function DashboardClient() {
       <header className="bn-head">
         <div className="bn-head-id">
           <h1>EHSS performance</h1>
-          <p>
-            {region === null
-              ? `Quarterly contractor audits across ${subRegions.length} sub-regions`
-              : `${subRegions.find((sr) => sr.id === region)?.name ?? ""} · programme average ${formatScore(programmeKpi.average)}`}
-            {basis.singleDiscipline && (
-              <>
-                {" · "}
-                <b className="bn-basis">
-                  {basis.names[0]} only — {Math.round((1 - basis.weight) * 100)}%
-                  of the scorecard is not yet scored
-                </b>
-              </>
-            )}
-          </p>
+          {region !== null && (
+            <p>{subRegions.find((sr) => sr.id === region)?.name ?? ""}</p>
+          )}
         </div>
         <div className="bn-head-tools">
           <div className="bn-seg" role="group" aria-label="Sub-region">
@@ -367,21 +361,26 @@ export function DashboardClient() {
           <button type="button" className="bn-export" onClick={exportRows}>
             Export CSV
           </button>
-          <div className="bn-avg">
-            <span>Programme</span>
-            <strong style={{ color: bandColor(kpi.average) }}>
-              {formatScore(kpi.average)}
-            </strong>
-            <Delta value={kpi.delta} />
-          </div>
         </div>
       </header>
 
       <div className="bn-grid">
+        <HeroTile
+          kpi={kpi}
+          quarter={shown}
+          basis={
+            basis.singleDiscipline ? (
+              <b className="bn-basis">
+                {basis.names[0]} only — {Math.round((1 - basis.weight) * 100)}%
+                of the scorecard is not yet scored
+              </b>
+            ) : undefined
+          }
+        />
+
         <Card
           title="Programme trend"
-          note={`${trend.quarters.length} quarter${trend.quarters.length === 1 ? "" : "s"} on record · each faint line is one of ${trend.contractors.length} contractors`}
-          wide
+          note={`${trend.quarters.length} quarter${trend.quarters.length === 1 ? "" : "s"} · ${trend.contractors.length} contractors`}
           className="bn-trend"
           action={<GoLink href="/contractors" label="Open contractor trajectories" />}
         >
@@ -391,18 +390,38 @@ export function DashboardClient() {
 
         <Card
           title="This quarter"
-          note={`${league.length} contractor${league.length === 1 ? "" : "s"}, weakest first`}
+          note="weakest first"
           className="bn-league"
         >
-          <div className="bn-league-hero">
-            <strong>{formatScore(kpi.average)}</strong>
-            <Delta value={kpi.delta} />
-          </div>
           <ScoreColumns
             rows={league}
             selectedId={selected?.contractorId ?? null}
             onSelect={pick}
           />
+        </Card>
+
+        <Card
+          title="Against target"
+          note={`Sub-regions vs ${TARGET_SCORE}%`}
+          className="bn-target"
+        >
+          {/* With a sub-region selected the programme row is the whole to
+              read that patch against; with none selected the hero is
+              already that figure, so passing it again would print it
+              twice. */}
+          <TargetGoals
+            panels={panels}
+            programme={region === null ? null : programmeKpi.average}
+          />
+        </Card>
+
+        <Card
+          title="Watchlist"
+          note="Weakest three"
+          className="bn-watchc"
+          action={<GoLink href="/findings" label="Open findings analysis" />}
+        >
+          <Watchlist rows={league.slice(0, 3)} onSelect={pick} />
         </Card>
 
         <Card
@@ -415,43 +434,34 @@ export function DashboardClient() {
         </Card>
 
         <StatTile
-          className="bn-s1"
-          label="Below target"
-          value={
-            <>
-              {kpi.belowTarget}
-              <em className="bn-of"> of {kpi.contractors}</em>
-            </>
-          }
-          note={`contractors under ${TARGET_SCORE}%`}
-        />
-
-        <StatTile
           className="bn-s2"
           label="Weakest area"
           value={kpi.weakestArea ? formatScore(kpi.weakestArea.score) : "—"}
           tone={bandColor(kpi.weakestArea?.score ?? null)}
+          mark={
+            kpi.weakestArea ? (
+              <TargetBar
+                score={kpi.weakestArea.score}
+                label={kpi.weakestArea.title}
+              />
+            ) : undefined
+          }
           note={kpi.weakestArea?.title ?? "—"}
         />
-
-        <Card title="Against target" note={`Sub-regions vs ${TARGET_SCORE}%`} className="bn-target">
-          <TargetGoals panels={panels} programme={kpi.average} />
-        </Card>
-
-        <Card
-          title="Watchlist"
-          note="Weakest three this quarter"
-          className="bn-watchc"
-          action={<GoLink href="/findings" label="Open findings analysis" />}
-        >
-          <Watchlist rows={league.slice(0, 3)} onSelect={pick} />
-        </Card>
 
         <StatTile
           className="bn-s3"
           label="Recurring gaps"
           value={kpi.recurringAreas}
-          note="areas weak two audits running"
+          mark={
+            <DotStrip
+              filled={kpi.recurringAreas}
+              total={CHECKLIST_AREAS}
+              label="Areas weak two reviews running"
+              tone="var(--band-minimal)"
+            />
+          }
+          note={`of ${CHECKLIST_AREAS} areas, weak two reviews running`}
         />
 
         {/* The answer to "and what are we doing about it?", which the
@@ -469,10 +479,29 @@ export function DashboardClient() {
             </>
           }
           tone={tally.overdue > 0 ? "var(--status-critical)" : undefined}
+          mark={
+            <SplitBar
+              label="Actions"
+              parts={[
+                {
+                  key: "open",
+                  count: tally.open,
+                  tone: "var(--col-fill)",
+                  label: "open",
+                },
+                {
+                  key: "overdue",
+                  count: tally.overdue,
+                  tone: "var(--status-critical)",
+                  label: "overdue",
+                },
+              ]}
+            />
+          }
           note={
             tally.open + tally.overdue + tally.closedByReview === 0
-              ? "none raised — open a contractor to raise one"
-              : `${tally.closedByReview} closed by a later review`
+              ? "none raised"
+              : `${tally.closedByReview} closed`
           }
         />
 
@@ -487,6 +516,13 @@ export function DashboardClient() {
               {coverage.audited}
               <em className="bn-of"> of {coverage.expected}</em>
             </>
+          }
+          mark={
+            <DotStrip
+              filled={coverage.audited}
+              total={coverage.expected}
+              label="Reviews done this quarter"
+            />
           }
           note={
             coverage.missing.length === 0

@@ -33,6 +33,7 @@ import {
   type SubRegion,
 } from "./model";
 import { GAP_CATEGORIES, type IssueCode } from "./issues";
+import { BANDS, bandFor, type BandId } from "./bands";
 
 export interface SectionSummary {
   code: string;
@@ -1899,6 +1900,23 @@ export interface ProgrammeKpis {
   delta: number | null;
   contractors: number;
   belowTarget: number;
+  /**
+   * Points the quarter's average sits under target, as its own field so the
+   * board does not have to do arithmetic in a template. Null when nothing is
+   * scored; 0 once the programme is at or above target.
+   */
+  gap: number | null;
+  /**
+   * How many of the quarter's contractors sit in each rating band, in the
+   * scorecard's own order.
+   *
+   * COUNTS, never percentages: eleven reviews cannot carry a percentage
+   * without inventing precision. Every band is present even at zero — a zero
+   * in the top band is the finding, not an absence, and it reads correctly
+   * because it sits in an ordered scale beside the bands that do have
+   * contractors in them.
+   */
+  bands: Array<{ id: BandId; label: string; short: string; count: number }>;
   /** The checklist area with the lowest programme mean this quarter. */
   weakestArea: { code: string; title: string; score: number } | null;
   /** Areas below target in this review AND the one before it, programme-wide.
@@ -1967,15 +1985,24 @@ export function programmeKpis(
     }
   }
 
+  const average =
+    values.length === 0
+      ? null
+      : round(values.reduce((sum, v) => sum + v, 0) / values.length);
+
   return {
     quarter,
-    average:
-      values.length === 0
-        ? null
-        : round(values.reduce((sum, v) => sum + v, 0) / values.length),
+    average,
     delta,
     contractors: inQuarter.length,
     belowTarget: values.filter((v) => v < TARGET_SCORE).length,
+    gap: gapToTarget(average),
+    bands: BANDS.map((b) => ({
+      id: b.id,
+      label: b.label,
+      short: b.short,
+      count: values.filter((v) => bandFor(v)?.id === b.id).length,
+    })),
     weakestArea,
     recurringAreas: stickyAreas(summaries).filter((a) => a.recurring).length,
   };
