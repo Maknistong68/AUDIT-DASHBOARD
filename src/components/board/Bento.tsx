@@ -108,6 +108,11 @@ export function HeroTile({
   /** What the average is an average OF, when that needs saying. */
   basis?: ReactNode;
 }) {
+  // The bars are scaled to the fullest band, not to the contractor count:
+  // with eleven reviews spread over five bands, scaling to eleven leaves
+  // every bar a stub and the shape of the distribution disappears.
+  const widest = kpi.bands.reduce((n, b) => Math.max(n, b.count), 0);
+
   return (
     <section className="bn-card bn-hero">
       <header className="bn-card-head">
@@ -148,9 +153,21 @@ export function HeroTile({
             className={b.count === 0 ? "is-zero" : undefined}
             title={`${b.count} ${b.label}`}
           >
-            <i style={{ background: `var(--band-${b.id})` }} aria-hidden />
-            <strong>{b.count}</strong>
+            <i
+              className="bn-band-dot"
+              style={{ background: `var(--band-${b.id})` }}
+              aria-hidden
+            />
             <em>{b.short}</em>
+            <span className="bn-band-bar" aria-hidden>
+              <i
+                style={{
+                  width: `${(b.count / Math.max(1, widest)) * 100}%`,
+                  background: `var(--band-${b.id})`,
+                }}
+              />
+            </span>
+            <strong>{b.count}</strong>
           </li>
         ))}
       </ul>

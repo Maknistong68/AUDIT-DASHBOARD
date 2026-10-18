@@ -24,6 +24,20 @@ import type { BoardRow } from "@/lib/ehss/summaries";
  * letters is not an identifier here: initials repeat across thirteen
  * contractors and the code is the thing that tells them apart.
  */
+/** A column: 4px rounded at the data end, square at the baseline. */
+function columnPath(x: number, y: number, w: number, h: number): string {
+  const r = Math.min(4, w / 2, h);
+  return [
+    `M${x},${y + h}`,
+    `L${x},${y + r}`,
+    `Q${x},${y} ${x + r},${y}`,
+    `L${x + w - r},${y}`,
+    `Q${x + w},${y} ${x + w},${y + r}`,
+    `L${x + w},${y + h}`,
+    "Z",
+  ].join("");
+}
+
 export function ScoreColumns({
   rows,
   selectedId,
@@ -80,6 +94,17 @@ export function ScoreColumns({
           opacity={0.7}
         />
 
+        {/* The zero the columns grow from, stated. Without it thirteen
+            rounded bars read as floating pills. */}
+        <line
+          x1={pad.left}
+          x2={W - pad.right}
+          y1={pad.top + ih}
+          y2={pad.top + ih}
+          stroke="var(--grid)"
+          strokeWidth={1}
+        />
+
         {rows.map((row, i) => {
           const bh = h(row.score);
           const x = pad.left + band * i + (band - bw) / 2;
@@ -109,12 +134,8 @@ export function ScoreColumns({
                 height={ih + 26}
                 fill="transparent"
               />
-              <rect
-                x={x}
-                y={top}
-                width={bw}
-                height={bh}
-                rx={Math.min(6, bw / 2)}
+              <path
+                d={columnPath(x, top, bw, bh)}
                 fill={on ? "var(--accent)" : "var(--col-fill)"}
                 stroke={hot && !on ? "var(--ink-2)" : "none"}
                 strokeWidth={1}

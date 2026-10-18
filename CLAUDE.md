@@ -243,6 +243,13 @@ Two invariants shape everything:
   Analytics always exclude draft audits. The cookie keeps its old name
   because renaming it signs every open session out and it is shown nowhere;
   its module moved to `src/lib/session/`.
+- **`/welcome` opens with figures, not a description.** It is the first
+  screen anybody sees and was six paragraphs of prose. The dataset is now
+  four counts — contractors, reviews, quarters, sub-regions — read FROM
+  `recorded.ts` rather than typed into a sentence, so they cannot drift from
+  it the way "13 contractors" would the first time a quarter is imported.
+  **Both privacy paragraphs stay exactly as written**: they are PDPL Art. 12
+  transparency (`docs/COMPLIANCE-KSA.md` §5.1), not copy.
 - **Nothing user-facing says "demo".** It used to: the welcome page
   advertised "built-in sample data — 11 contractors, four quarters", every
   header carried a `· demo` badge and a "Restart demo" button. All of that
@@ -264,14 +271,42 @@ Two invariants shape everything:
 - **The board is a BENTO of tiles over one quarter** (`/`, `DashboardClient`
   + `components/board/Bento.tsx`). Built to a reference the owner supplied
   (2026-10-17) and matched deliberately: a twelve-column grid, each tile its
-  own rounded glass surface with one job and one scale. Top row — the
-  programme trend, this quarter's contractors as columns, the latest
-  reviews. Below — below target, weakest area, against target, the
-  watchlist, recurring gaps, reviews, start a review. The spans are written
-  out per tile (`.bn-trend`, `.bn-league`, …) rather than left to auto-flow,
-  so a tile added later cannot silently reshuffle the row above it.
-  Every tile that carries a corner arrow goes somewhere real; an arrow that
-  opens nothing is the worst affordance on a dashboard.
+  own rounded glass surface with one job and one scale. Four rows —
+  **the hero and the trend** (5 + 7), **this quarter's contractors across
+  the full width** (12), **against target / watchlist / latest reviews**
+  (4 + 4 + 4), then the four counts (3 each). The spans are written out per
+  tile (`.bn-hero`, `.bn-trend`, `.bn-league`, …) rather than left to
+  auto-flow, so a tile added later cannot silently reshuffle the row above
+  it. Every tile that carries a corner arrow goes somewhere real; an arrow
+  that opens nothing is the worst affordance on a dashboard.
+- **One tile is the subject, and ONE figure is display-sized**
+  (`HeroTile`, 2026-10-18). The board was ten tiles none wider than 5/12,
+  with four figures tied at 26–32px and the programme average printed three
+  times — a header pill, a league hero and a row inside "Against target" —
+  while never stating the fact they add up to. The hero says it in four
+  parts and no sentence: the average, its gap to target as a meter, and the
+  five rating bands as a small bar chart of how many contractors sit in
+  each. **Every band shows, zeros included.** The "no misleading zeros"
+  rule below is about a zero that reads as a clean audit; a zero in the top
+  band IS the finding, and on an ordered scale beside four populated bands
+  it cannot be misread. Nothing else on the board may take a display size,
+  and large standalone figures use PROPORTIONAL numerals — `tabular-nums`
+  gives every digit a zero's width and makes `62.4` read loose at 60px, so
+  it stays where digits align vertically (tables, axis ticks).
+  `programmeKpis()` carries `gap` and `bands`; `board.test.ts` pins both,
+  and pins the banding on a summary with a second discipline because the
+  real data cannot tell `overall` from `total` apart.
+- **`TargetBar` is the one score mark** (`charts/Marks.tsx`). Anywhere a
+  0–100 score is drawn — the hero meter, the sub-region rows, the
+  watchlist, the review feed, the weakest-area tile, the reviews table, the
+  programme-weakness list on `/findings` — it is that bar, on the full
+  0–100 track with the tick at the target. "Against target" used to
+  normalize to the target instead (`score / 90`), so the same 62.4 was a
+  different length in two tiles on one screen, and a reader comparing
+  lengths across them was comparing nothing. `DotStrip` (how many of a
+  known set, with the missing ones as holes) and `SplitBar` (open against
+  overdue) live beside it. Seven of the board's ten tiles drew no mark at
+  all before this; all ten do now.
   **It used to be "ONE chart" pinned to `100dvh`, and that rule was the bug.**
   Thirteen contractors in a viewport-tall chart can only be enormous, with
   everything else squeezed around them — the owner's words were "a bar chart
@@ -291,10 +326,12 @@ Two invariants shape everything:
   `weightedOverall` renormalizes over whatever is scored, which is right and
   is also how a board misleads: with H&S alone the weights collapse onto it
   and a contractor's "overall" IS their H&S score, under a heading that says
-  EHSS. `scoredDisciplines()` is how a view knows, and the subtitle says
-  "Health & Safety only — 60% of the scorecard is not yet scored" until a
-  second discipline is recorded. Don't remove it; remove the condition when
-  the other four arrive.
+  EHSS. `scoredDisciplines()` is how a view knows, and a chip in the HERO's
+  own header says "Health & Safety only — 60% of the scorecard is not yet
+  scored" until a second discipline is recorded. It sits there rather than
+  in the page subtitle because it qualifies that figure, and used to trail
+  off the end of a sentence three tiles away from it. Don't remove it;
+  remove the condition when the other four arrive.
 - **The two board charts.** `ProgrammeTrendChart` plots TWO means over the
   fan of every contractor's own path. **Like for like** (accent, with the
   wash) is the contractors audited in every quarter on record — the only
@@ -499,9 +536,18 @@ Two invariants shape everything:
   Every audit on record holds area points and no answers, so the gap
   register, the SHEW heat-map, the issue categories, per-question recurrence
   and the question rankings have nothing to show. Each of those now renders
-  only with its own data, and `/findings` — where every card is
-  question-level — carries one line pointing at the checklist tab instead of
-  a page of empty headings and filters over nothing.
+  only with its own data.
+  **The answer to a page with nothing to show is to find what the data DOES
+  support, not to explain the absence** (2026-10-18). `/findings` is in the
+  primary nav and rendered one line of apology, because every card on it is
+  question-level. It now leads with **"Where the programme is weak"** —
+  all fifteen checklist areas from `areaTrends()`, worst first, each a
+  `TargetBar` and a `Spark`. That comes straight off the area points, is
+  already computed and tested, and is a different cut from `/checklist`'s
+  contractor × area matrix (programme-wide over quarters, not per
+  contractor). The question-level cards below it stay gated exactly as they
+  were. The two filters that only scope those cards wait for them, because
+  a filter over nothing is furniture.
   Three rules follow, and they are all conditional rendering, never deletion,
   so everything returns by itself once reviews carry answers:
   1. **No dead ends.** Level 2 offers "See what the auditors recorded" only
@@ -526,7 +572,8 @@ Two invariants shape everything:
   and is not to be "fixed" by matching the sheet.
 - New dashboard features: compute in `summaries.ts`, filter in the client.
 - **Programme-wide analysis is one destination, two tabs** (`AnalysisTabs`):
-  `/findings` is observation-centric (the gap register, SHEW heat-map,
+  `/findings` is observation-centric (area weakness programme-wide, then
+  the gap register, SHEW heat-map,
   observation trends, findings across quarters, CRC hazards) and
   `/checklist` is question-centric (the contractor × checklist-area matrix
   and the most widely failed questions). They share the Findings nav entry

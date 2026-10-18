@@ -16,7 +16,8 @@ import {
   stickyAreas,
   summarizeAll,
 } from "./summaries";
-import { TARGET_SCORE } from "./disciplines";
+import { TARGET_SCORE, gapToTarget } from "./disciplines";
+import { BANDS } from "./bands";
 
 const all = summarizeAll(audits, contractors, subRegions);
 const latest = latestQuarter(all);
@@ -99,6 +100,35 @@ describe("the programme headline", () => {
 
   it("counts every contractor below target", () => {
     expect(kpi.belowTarget).toBe(kpi.contractors);
+  });
+
+  it("states the gap to target, which is what the hero is about", () => {
+    expect(kpi.gap).toBe(gapToTarget(kpi.average));
+    expect(kpi.gap).toBeGreaterThan(0);
+  });
+
+  it("spreads the quarter's contractors across every band, zeros included", () => {
+    // Every band is present whether or not anyone is in it: the hero's band
+    // row reads as a scale, and a band that disappeared when it emptied
+    // would make "nobody is compliant" invisible — which is the finding.
+    expect(kpi.bands.map((b) => b.id)).toEqual(BANDS.map((b) => b.id));
+    expect(kpi.bands.reduce((n, b) => n + b.count, 0)).toBe(kpi.contractors);
+    expect(kpi.bands.find((b) => b.id === "compliant")!.count).toBe(0);
+    expect(kpi.bands.every((b) => b.short.length > 0)).toBe(true);
+  });
+
+  it("bands on the scorecard figure, not the checklist total", () => {
+    // As with the ranking: the two are the same number while H&S is the only
+    // discipline scored, so a second one has to be recorded for the test to
+    // be able to tell which field was banded.
+    const [first, ...rest] = all;
+    const withEnv: typeof all = [
+      { ...first!, disciplineScores: { ...first!.disciplineScores, env: 100 }, overall: 95 },
+      ...rest,
+    ];
+    const moved = programmeKpis(withEnv, first!.quarter);
+    expect(first!.total).toBeLessThan(90);
+    expect(moved.bands.find((b) => b.id === "compliant")!.count).toBe(1);
   });
 });
 
