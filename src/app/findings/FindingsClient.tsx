@@ -10,6 +10,7 @@ import {
 import { useEhss } from "@/lib/ehss/store";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import {
+  areaTrends,
   closedFindings,
   collectObservations,
   criticalRiskStats,
@@ -24,6 +25,9 @@ import { CRITICAL_RISKS } from "@/lib/ehss/critical-risks";
 import { DomainGapHeatmap } from "@/components/charts/DomainGapHeatmap";
 import { CriticalRiskBars } from "@/components/charts/CriticalRiskBars";
 import { IssueTrendGrid } from "@/components/charts/IssueTrendGrid";
+import { Spark, TargetBar } from "@/components/charts/Marks";
+import { TARGET_SCORE } from "@/lib/ehss/disciplines";
+import { formatScore } from "@/lib/format";
 
 const GAP_OPTIONS = GAP_CATEGORIES;
 
@@ -111,6 +115,21 @@ export function FindingsClient() {
   const closed = useMemo(() => closedFindings(histories, 12), [histories]);
   const tracked = track === "stuck" ? stuck : closed;
 
+  /**
+   * The one programme-wide analysis the recorded reviews fully support.
+   *
+   * Everything else on this page is question-level, and the reviews on
+   * record carry area points and no answers — so this destination, which
+   * sits in the primary nav, rendered a single line of apology. Area trends
+   * come straight off the area scores, cover all fifteen areas and are
+   * already computed, so the page leads with them instead: a bar against
+   * target and the shape of where it is going, worst first.
+   */
+  const areas = useMemo(
+    () => [...areaTrends(scopedSummaries)].sort((a, b) => a.latest - b.latest),
+    [scopedSummaries],
+  );
+
   /** Each card renders only with its own data. A page of empty headings
    * reads as an unfinished product to anyone being shown it, and every one
    * of these fills in by itself once reviews carry per-question answers. */
@@ -118,12 +137,13 @@ export function FindingsClient() {
   const hasHistories = stuck.length > 0 || closed.length > 0;
   const hasCrc = crcStats.length > 0;
   const hasAnything = hasFindings || hasHistories || hasCrc;
+  const hasAreas = areas.length > 0;
 
   return (
     <div className="stack">
       <AnalysisTabs />
       {/* Filters over nothing are furniture. They come back with the data. */}
-      {hasAnything && (
+      {(hasAnything || hasAreas) && (
       <div className="filter-row">
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Sub-region</span>
@@ -156,6 +176,7 @@ export function FindingsClient() {
             ))}
           </select>
         </label>
+        {hasFindings && (
         <label className="field" style={{ marginBottom: 0 }}>
           <span>SHEW pillar</span>
           <select value={domain} onChange={(e) => setDomain(e.target.value)}>
@@ -167,6 +188,8 @@ export function FindingsClient() {
             ))}
           </select>
         </label>
+        )}
+        {hasFindings && (
         <label className="field" style={{ marginBottom: 0 }}>
           <span>Classification</span>
           <select
@@ -181,7 +204,31 @@ export function FindingsClient() {
             ))}
           </select>
         </label>
+        )}
       </div>
+      )}
+
+      {hasAreas && (
+      <section className="card">
+        <h2>Where the programme is weak</h2>
+        <p className="sub">
+          All {areas.length} checklist areas, weakest first · target{" "}
+          {TARGET_SCORE}%
+        </p>
+        <ul className="wk-list">
+          {areas.map((a) => (
+            <li key={a.code}>
+              <span className="wk-id">
+                <b>{a.code}</b>
+                <em>{a.title}</em>
+              </span>
+              <TargetBar score={a.latest} label={`${a.code} ${a.title}`} />
+              <Spark values={a.scores} />
+              <strong>{formatScore(a.latest)}</strong>
+            </li>
+          ))}
+        </ul>
+      </section>
       )}
 
       {hasFindings && (
@@ -379,16 +426,9 @@ export function FindingsClient() {
       </section>
       )}
 
-      {/* Nothing on this page is question-level except the CRC bars, so with
-          no answers on record the whole page is empty. The filters alone are
-          worse than a plain line saying where the analysis actually is. */}
-      {!hasAnything && (
+      {!hasAnything && !hasAreas && (
         <section className="card">
-          <p className="sub" style={{ margin: 0 }}>
-            Findings are recorded question by question. The reviews on record
-            carry area scores, so the analysis for them is on the{" "}
-            <Link href="/checklist">H&amp;S checklist</Link> tab.
-          </p>
+          <div className="chart-empty">No finalized reviews yet.</div>
         </section>
       )}
     </div>

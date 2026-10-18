@@ -3125,6 +3125,115 @@ table.matrix td.matrix-cell {
   opacity: 0.45;
 }
 
+/* A score in a table cell, with its bar under it. The column stays narrow:
+   the bar is there to be compared down the column, not read precisely — the
+   figure above it does that. */
+.num-bar {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 52px;
+}
+
+.num-bar .tbar { width: 52px; }
+
+/* ---- The welcome screen's figures ----
+   What is on record, as four numbers. It was a sentence describing the
+   dataset, which is the one thing a sentence is worse at than a figure. */
+
+.wel-figs {
+  list-style: none;
+  margin: 16px 0 20px;
+  padding: 14px 0;
+  border-top: 1px solid var(--mat-line);
+  border-bottom: 1px solid var(--mat-line);
+  display: flex;
+  gap: 10px 22px;
+  flex-wrap: wrap;
+}
+
+.wel-figs li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.wel-figs strong {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.wel-figs em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---- "Where the programme is weak": one row per checklist area ----
+   A bar against target and the shape of where it is going. No prose per
+   row: the code, the title, the length and the spark say it. */
+
+.wk-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wk-list li {
+  display: grid;
+  grid-template-columns: minmax(130px, 1.1fr) minmax(90px, 2fr) 56px 52px;
+  align-items: center;
+  gap: 12px;
+}
+
+.wk-id {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.wk-id b {
+  flex: none;
+  font-size: 11px;
+  font-weight: 680;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wk-id em {
+  font-style: normal;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wk-list strong {
+  text-align: right;
+  font-size: 13.5px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 620px) {
+  .wk-list li {
+    grid-template-columns: 1fr 56px 52px;
+    grid-template-areas: "id id id" "bar spark score";
+    gap: 5px 10px;
+  }
+
+  .wk-id { grid-area: id; }
+  .wk-list .tbar { grid-area: bar; }
+  .wk-list .rspark { grid-area: spark; }
+  .wk-list strong { grid-area: score; }
+}
+
 /* ---- How many of a known set, as cells ---- */
 
 .dstrip {

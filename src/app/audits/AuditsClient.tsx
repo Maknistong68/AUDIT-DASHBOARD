@@ -12,6 +12,7 @@ import {
   quarterLabel,
 } from "@/lib/ehss/model";
 import { knownQuarters, summarizeAll } from "@/lib/ehss/summaries";
+import { DotStrip, TargetBar } from "@/components/charts/Marks";
 
 export function AuditsClient({ canCreate }: { canCreate: boolean }) {
   const router = useRouter();
@@ -96,12 +97,18 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
           <div>
             <h2>Quarterly review coverage</h2>
             <p className="sub">
-              Every active contractor needs one review per quarter —{" "}
               <strong>
-                {done} of {activeContractors.length} complete
+                {done} of {activeContractors.length}
               </strong>{" "}
-              for {quarterLabel(shown)}
+              complete for {quarterLabel(shown)}
             </p>
+            {/* The fraction as cells, so the reviews nobody has done are
+                holes rather than a subtraction. */}
+            <DotStrip
+              filled={done}
+              total={activeContractors.length}
+              label={`Reviews complete for ${quarterLabel(shown)}`}
+            />
           </div>
           <label className="field" style={{ marginBottom: 0 }}>
             <span>Quarter</span>
@@ -233,7 +240,17 @@ export function AuditsClient({ canCreate }: { canCreate: boolean }) {
                     <AuditStatusBadge status={s.status} />
                   </td>
                   <td className="num">
-                    {s.status === "draft" ? "—" : formatScore(s.overall)}
+                    {s.status === "draft" ? (
+                      "—"
+                    ) : (
+                      <span className="num-bar">
+                        {formatScore(s.overall)}
+                        <TargetBar
+                          score={s.overall}
+                          label={`${s.contractorName} ${quarterLabel(s.quarter)}`}
+                        />
+                      </span>
+                    )}
                   </td>
                   <td>
                     {s.status === "draft" ? (

@@ -1,14 +1,43 @@
 import { completeOnboarding } from "./actions";
+import { audits, contractors, subRegions } from "@/lib/ehss/recorded";
+
+/**
+ * The first screen anybody sees, and it was six paragraphs of prose.
+ *
+ * What makes someone want to go in is the data, so the description is
+ * replaced by what is actually on record — counted from the dataset rather
+ * than typed into a sentence, so it cannot drift from it the way "13
+ * contractors" did the moment a quarter was imported.
+ *
+ * The two privacy paragraphs stay exactly as written: they are PDPL Art. 12
+ * transparency, not copy, and a notice nobody opens is not a notice
+ * (docs/COMPLIANCE-KSA.md §5.1).
+ */
+const FIGURES = [
+  { value: contractors.length, label: "contractors" },
+  { value: audits.length, label: "reviews" },
+  {
+    value: new Set(audits.map((a) => a.quarter)).size,
+    label: "quarters",
+  },
+  { value: subRegions.length, label: "sub-regions" },
+];
 
 export default function WelcomePage() {
   return (
     <div className="card login-card" style={{ maxWidth: 460 }}>
       <h2>Welcome to the Audit Dashboard</h2>
       <p className="sub">
-        EHSS quarterly scoring and trend analytics for Oxagon contractors.
-        13 contractors across two sub-regions, with the Health &amp; Safety
-        reviews for Q4 2025 and Q1 2026.
+        EHSS quarterly audit scoring for Oxagon contractors
       </p>
+      <ul className="wel-figs">
+        {FIGURES.map((f) => (
+          <li key={f.label}>
+            <strong>{f.value}</strong>
+            <em>{f.label}</em>
+          </li>
+        ))}
+      </ul>
       <form action={completeOnboarding}>
         <label className="field">
           <span>
