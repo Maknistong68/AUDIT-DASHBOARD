@@ -138,6 +138,13 @@ describe("a snapshot can be older than the code reading it", () => {
     expect(normalize({ audits: {} }).observationCauses).toEqual({});
   });
 
+  it("never lets an observation id reach the prototype", () => {
+    const raw = JSON.parse('{"observationCauses":{"__proto__":["DOC"],"constructor":["DOC"],"ok":["DOC"]}}');
+    const out = normalize(raw).observationCauses;
+    expect(Object.keys(out)).toEqual(["ok"]);
+    expect(Object.getPrototypeOf(out)).toBe(Object.prototype);
+  });
+
   it("reads observation causes defensively", () => {
     const read = (v: unknown) =>
       normalize({ observationCauses: v }).observationCauses;

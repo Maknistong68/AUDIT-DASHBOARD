@@ -104,6 +104,7 @@ function readObservationCauses(value: unknown): Record<string, IssueCode[]> {
     return out;
   }
   for (const [id, causes] of Object.entries(value)) {
+    if (id === "__proto__" || id === "constructor" || id === "prototype") continue;
     const read = readIssues(causes);
     if (Array.isArray(causes) && read.length > 0) out[id] = read;
   }

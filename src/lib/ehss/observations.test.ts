@@ -3,6 +3,8 @@ import {
   applyObservationCauses,
   mergeObservationCauses,
   observationCausesEvent,
+  resetObservationCauses,
+  validObservationCauses,
 } from "./observations";
 import { EMPTY_OVERRIDES } from "./storage/adapter";
 import type { RecordedObservation } from "./model";
@@ -48,9 +50,52 @@ describe("applyObservationCauses", () => {
     expect(applyObservationCauses(once, "o:1", ["DOC"])).toBe(once);
   });
 
-  it("an empty list takes the correction back off", () => {
+  it("an empty list is a no-op, never a revert", () => {
     const once = applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["DOC"]);
-    expect(applyObservationCauses(once, "o:1", []).observationCauses).toEqual({});
+    expect(applyObservationCauses(once, "o:1", [])).toBe(once);
+    expect(applyObservationCauses(once, "o:1", ["nope" as never])).toBe(once);
+  });
+
+  it("causes equal to the recorded ones, in any order, remove the override", () => {
+    const once = applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["PLN"], ["DOC", "LED"]);
+    expect(once.observationCauses).toEqual({ "o:1": ["PLN"] });
+    const back = applyObservationCauses(once, "o:1", ["LED", "DOC"], ["DOC", "LED"]);
+    expect(back.observationCauses).toEqual({});
+    // and with no override there is nothing to write
+    expect(applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["DOC"], ["DOC"])).toBe(
+      EMPTY_OVERRIDES,
+    );
+  });
+});
+
+describe("resetObservationCauses", () => {
+  it("deletes the override, and is a no-op without one", () => {
+    const once = applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["IMP"]);
+    expect(resetObservationCauses(once, "o:1").observationCauses).toEqual({});
+    expect(resetObservationCauses(EMPTY_OVERRIDES, "o:1")).toBe(EMPTY_OVERRIDES);
+  });
+});
+
+describe("validObservationCauses", () => {
+  it("gap and site take one to three distinct gap causes", () => {
+    for (const kind of ["gap", "site"] as const) {
+      expect(validObservationCauses(kind, ["DOC"])).toBe(true);
+      expect(validObservationCauses(kind, ["DOC", "PLN", "LED"])).toBe(true);
+      expect(validObservationCauses(kind, [])).toBe(false);
+      expect(validObservationCauses(kind, ["DOC", "PLN", "IMP", "LED"])).toBe(false);
+      expect(validObservationCauses(kind, ["DOC", "DOC"])).toBe(false);
+      expect(validObservationCauses(kind, ["GOOD"])).toBe(false);
+      expect(validObservationCauses(kind, ["DOC", "GOOD"])).toBe(false);
+      expect(validObservationCauses(kind, ["nope" as never])).toBe(false);
+    }
+  });
+
+  it("a positive takes exactly GOOD", () => {
+    expect(validObservationCauses("positive", ["GOOD"])).toBe(true);
+    expect(validObservationCauses("positive", [])).toBe(false);
+    expect(validObservationCauses("positive", ["DOC"])).toBe(false);
+    expect(validObservationCauses("positive", ["GOOD", "DOC"])).toBe(false);
+    expect(validObservationCauses("positive", ["GOOD", "GOOD"])).toBe(false);
   });
 });
 
@@ -71,6 +116,12 @@ describe("observationCausesEvent", () => {
     const prev = applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["PLN", "LED"]);
     const [e] = observationCausesEvent(prev, "o:1", ["PLN"], "admin", ["DOC"]);
     expect(e).toMatchObject({ from: "PLN, LED", to: "PLN" });
+  });
+
+  it("a reset records the recorded causes as the destination", () => {
+    const prev = applyObservationCauses(EMPTY_OVERRIDES, "o:1", ["IMP"]);
+    const [e] = observationCausesEvent(prev, "o:1", ["DOC"], "auditor", ["DOC"]);
+    expect(e).toMatchObject({ from: "IMP", to: "DOC" });
   });
 
   it("records nothing when the causes did not change", () => {
