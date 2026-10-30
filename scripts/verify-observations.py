@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """
-Check data/observations-raw.json against the workbooks it was read from.
+Check the raw observation extract against the workbooks it was read from.
 
     python3 -I scripts/verify-observations.py HS_AUDIT_FINDINGS.xlsx \
-        Excellence_EHSS_..._Health__Safety_Rev.xlsx data/observations-raw.json
+        Excellence_EHSS_..._Health__Safety_Rev.xlsx "$SCRATCH/observations-raw.json"
+
+The raw extract is regenerated into a scratch path by import-observations.py
+and is never committed (it still holds names the pattern cannot catch). The
+committed, reviewed file has the same `blocks` and `observations` shape, so
+this also runs against data/observations-2025Q4-2026Q3.json.
 
 `import-observations.py` finds each block's table from its `SR#` cell and
 reads code, note and comment at fixed offsets from it. This reads the same

@@ -1,7 +1,8 @@
 # Saudi law compliance — assessment and remediation
 
 **Scope:** the EHSS contractor audit dashboard in this repository.
-**Assessed:** September 2026, against the app as it stands on this branch.
+**Assessed:** September 2026, against the app as it stands on this branch;
+updated 2026-10-30 for the observation log (§2, §4).
 **Status:** compliant in design; the remaining items are hosting and
 paperwork decisions, not code.
 
@@ -50,20 +51,60 @@ as a cookie header back to the origin that set it.
 - Contractor organizations and project numbers (`Al Fahd (1272)`)
 - Quarterly discipline scores and checklist answers
 - Observation codes and critical-risk hazard scores
+- **Observation text** (see below): the auditors' own sentences from the
+  Excel audit sheets, held de-identified
+
+### Free text: the observation log, held de-identified
+
+*Added 2026-10-30, on the owner's decision.* The app holds the auditors'
+observation text from the Q4 2025, Q1 2026 and Q3 2026 audit sheets — 1,398
+sentences in `src/lib/ehss/recorded-observations.ts`, each tied to a
+contractor, a checklist area and a quarter, never to a person. It is the one
+place free text exists, and it is admitted on two conditions:
+
+1. **Names are removed by rule.** Auditors type names into those sheets
+   ("Mr. X was operating the MEWP"). `src/lib/ehss/name-patterns.json` is a
+   single pattern, read by both the importers (Python) and `names.ts` (the
+   app), that replaces a titled personal name with `a worker`. It removed
+   39 names from the 1,557 extracted observations.
+2. **Names are removed by review.** A pattern cannot know a name that
+   carries no title. Every observation was read through and the 15 untitled
+   names found were rewritten by hand (ids in the commit that made them,
+   "Assign first-pass causes to every observation"); a later independent
+   sweep found none left. Standalone runs of nine or more digits — full work
+   orders inside document references — are shortened to their last three,
+   so the contractor rule in §4 holds inside the text as well.
+
+The unreviewed extract, which still had the untitled names, was committed
+once and pushed. On the owner's instruction (2026-10-30) it was purged from
+**every commit of the repository by a history rewrite**; only reviewed text
+is in the repository now, and the raw extract is regenerated into a scratch
+path when needed and never committed. Photographs, the "Evidence (Photo)"
+column and the auditor and phone-number rows were never read.
+
+Where it lives: until the database arrives in phase 2, the log ships **in the
+app bundle like the scores** — static and the same for every visitor — but
+as a separate chunk loaded only by the Observations page. Nothing in the app
+accepts typed observation text yet. When auditors can enter it (phase 5) the
+field will warn on name patterns, using the same `names.ts`, because
+removal by review is a one-off and entry is ongoing.
 
 ### Deliberately absent
 
 No worker records. No names, ID or Iqama numbers, passports,
 nationalities, salaries or wage data. No photographs, attachments or
 document store. No auditor contact details. No free-text field anywhere in
-the scoring path. No analytics, telemetry or third-party trackers. No
-cookies other than the one above.
+the scoring path, and no text entry in the app other than the display name.
+No analytics, telemetry or third-party trackers. No cookies other than the
+one above.
 
 **Why this holds under change:** the absence is structural, not a policy
-someone has to remember. Answers are enums; comments are codes from a fixed
-list; there is no upload path. The most common way an audit tool acquires
-personal data — a free-text "comments" box or a site photograph — does not
-exist here. Keep it that way and the compliance position does not drift.
+someone has to remember. Answers are enums; the reasons on a finding are
+codes from a fixed list; there is no upload path. The most common way an
+audit tool acquires personal data — a free-text "comments" box or a site
+photograph — does not exist here. The observation log is imported text, not
+an input, and is checked by a pattern and a read-through before it is
+stored. Keep it that way and the compliance position does not drift.
 
 ---
 
@@ -72,7 +113,7 @@ exist here. Keep it that way and the compliance position does not drift.
 | PDPL obligation | Status | Reasoning |
 |---|---|---|
 | Lawful basis for processing (Art. 5–6) | ✅ | The only personal data is a self-supplied display name used to render the session. Legitimate interest; no sensitive categories involved |
-| Data minimization (Art. 10) | ✅ **Exemplary** | One optional free-text name. The architecture actively prevents collecting more |
+| Data minimization (Art. 10) | ✅ **Exemplary** | One optional free-text name, plus observation text held only after names are removed by rule and by review (§2). The architecture actively prevents collecting more |
 | Sensitive personal data (Art. 1, 16) | ✅ N/A | None processed. Health data in this app is *organizational* H&S performance, not any individual's health |
 | Privacy notice / transparency (Art. 12) | ⚠️ **Gap** | `/welcome` asks for a name without saying what happens to it. **Fix in §5.1** |
 | Consent & withdrawal (Art. 5, 11) | ✅ | Providing the name is voluntary; "Restart demo" deletes it |
@@ -105,8 +146,15 @@ facts hold:
   no-personal-data rule in `CLAUDE.md` is an invariant and not a preference.
 - **Contractor-level results only.** Organizational audit scores, not
   individual performance.
-- **No free text and no uploads.** A comments box or a site photograph is
-  how an audit tool acquires personal data by accident, and neither exists.
+- **Free text only as de-identified observation text, and no uploads.** The
+  observation log (§2) is held on the owner's decision of 2026-10-30 *because*
+  every sentence has had personal names removed — by the shared pattern and
+  by a read-through — so it names nobody. That is what keeps it inside this
+  determination; a sentence that named a worker would void it. A live
+  comments box or a site photograph is how an audit tool acquires personal
+  data by accident, and neither exists. Entry of observation text by
+  auditors (phase 5) re-opens this item: it must warn on name patterns
+  before it ships.
 - **Contractors are identified only by initials and the last three digits of
   the work order** — `SIBS (838)`, `AF (272)`. Applied when the real Q4 2025
   and Q1 2026 audits were imported (owner's instruction, 2026-10-07): full
@@ -115,6 +163,8 @@ facts hold:
   names or mobile numbers** — row 3 of every sheet block was deliberately not
   read (`scripts/import-hs-audit.py`), because importing it would have put
   personal data in the app and broken both §2 and this section in one step.
+  The observation importer and the Q3 review importer keep the same rule (the
+  review workbook's auditor row is row 4 and its repeats at 115 and 148).
 
 **Design consequences, applied:**
 
@@ -124,7 +174,8 @@ facts hold:
 3. No SCCs, Binding Common Rules or transfer assessment are needed for the
    data as scoped.
 4. **Re-open this section if the scope changes.** Adding worker records,
-   named auditors, photographs or free text does not merely add a feature —
+   named auditors, photographs or un-reviewed free text does not merely add a
+   feature —
    it changes which laws apply and where the system may run.
 
 ## 5. Remediation — fastest path, nothing ripped out
@@ -151,7 +202,10 @@ Send this document. §2 is your Record of Processing Activities.
 
 ### 5.5 When the database is added — *design-time constraints*
 - Keep the no-personal-data rule at the **schema** level: no worker table,
-  no free-text column in the scoring path, no attachment storage.
+  no free-text column in the scoring path, no attachment storage. The one
+  free-text column is the observation text (phase 2 moves the log into the
+  database); it takes only text that has passed `names.ts` and the review in
+  §2.
 - Auditor identity: store an opaque user id, not a name, in audit records.
   If auditors need to be identifiable, that is a deliberate scope change
   requiring a lawful basis and a retention period — not a default.

@@ -3,7 +3,13 @@
 Pull every audit observation out of the two workbooks, with names removed.
 
     python3 -I scripts/import-observations.py HS_AUDIT_FINDINGS.xlsx \
-        Excellence_EHSS_..._Health__Safety_Rev.xlsx > data/observations-raw.json
+        Excellence_EHSS_..._Health__Safety_Rev.xlsx > "$SCRATCH/observations-raw.json"
+
+The output is the RAW extract and is never committed: the shared pattern
+removes titled names only, so it still holds the untitled names a person has
+to find by reading. Regenerate it into a scratch path whenever it is needed
+(to verify, to categorise, to merge); the reviewed result is
+data/observations-2025Q4-2026Q3.json, made by merge-observation-causes.py.
 
 `import-hs-audit.py` reads the points and deliberately ignores the narrative.
 This reads the narrative: the "Observations" table at the foot of each block,
