@@ -9,16 +9,23 @@
  * ONE DEFINITION, TWO READERS. The importer is Python and runs before the
  * app sees the file, so the pattern lives in `name-patterns.json`, which
  * both languages read. It is a single regex source that means the same in
- * JavaScript and Python: the title's case is spelled out as character
- * classes instead of an `i` flag (the two engines do not agree on flags),
- * and there is no lookbehind or named group. Change a title in the JSON,
- * never by editing a regex here.
+ * JavaScript and Python. Three things make that true:
+ * - Boundaries are explicit character classes, never `\b`: the engines
+ *   disagree on what a word character is once text is not ASCII.
+ * - Whitespace is an explicit class, not `\s`, for the same reason.
+ * - Case is spelled out as character classes, not an `i` flag. Ms and Miss
+ *   are case-sensitive on purpose: "MS Excel" and "miss Friday" are not names.
+ *
+ * Letters are ASCII plus Latin-1 accented letters. Arabic-script names are
+ * OUT OF SCOPE for this pattern; a later human read-through is what catches
+ * them. Change a title in the JSON, never by editing a regex here.
  *
  * Deliberately narrow. A title followed by a capitalised word is a name; a
  * lone title, or one followed by lower case ("Dr. pepper"), is not. Missing
- * a name is the failure this exists to prevent, but a pattern that rewrote
- * "Mr" in ordinary prose would corrupt the observation, so it requires the
- * shape of a name and no more.
+ * a name is the failure this exists to prevent, so a name word takes any
+ * capitalised word with letters, apostrophes or hyphens ("AHMED", "McDonald",
+ * "Al-Harbi", "O'Brien"), and a lowercase particle ("bin", "al") may join
+ * two of them. A particle never ends a match.
  */
 
 import patterns from "./name-patterns.json";
