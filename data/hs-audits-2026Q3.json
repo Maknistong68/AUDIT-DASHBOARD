@@ -1,0 +1,162 @@
+{
+ "audits": [
+  {
+   "quarter": "2026-Q3",
+   "subRegionId": "sr2",
+   "project": "AL FAHD-4800001272",
+   "projectNo": "4800001272",
+   "name": "AL FAHD",
+   "auditDate": "2026-07-19",
+   "inspectionNo": "HSW-03",
+   "areas": {
+    "A": {
+     "scored": 23.0,
+     "possible": 49.0
+    },
+    "B1": {
+     "scored": 6.0,
+     "possible": 6.0
+    },
+    "B2": {
+     "scored": 6.5,
+     "possible": 7.0
+    },
+    "B3": {
+     "scored": 7.5,
+     "possible": 9.0
+    },
+    "B4": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B5": {
+     "scored": 5.0,
+     "possible": 5.0
+    },
+    "B6": {
+     "scored": 5.0,
+     "possible": 15.0
+    },
+    "B7": {
+     "scored": 1.5,
+     "possible": 3.0
+    },
+    "B8": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "B9": {
+     "scored": 2.0,
+     "possible": 2.0
+    },
+    "B10": {
+     "scored": 4.0,
+     "possible": 4.0
+    },
+    "B11": {
+     "scored": 6.0,
+     "possible": 7.0
+    },
+    "B12": {
+     "scored": 2.0,
+     "possible": 4.0
+    },
+    "C1": {
+     "scored": 4.5,
+     "possible": 19.0
+    },
+    "C2": {
+     "scored": 18.0,
+     "possible": 25.0
+    }
+   },
+   "reportedTotal": 62.05,
+   "answers": {
+    "A1": "partial",
+    "A2": "no",
+    "A3": "partial",
+    "A4": "partial",
+    "A5": "partial",
+    "A6": "partial",
+    "A7": "partial",
+    "A8": "full",
+    "A9": "partial",
+    "A10": "full",
+    "A11": "partial",
+    "A12": "no",
+    "A13": "partial",
+    "A14": "no",
+    "A15": "partial",
+    "B1.1": "full",
+    "B1.2": "full",
+    "B2.1": "full",
+    "B2.2": "full",
+    "B2.3": "partial",
+    "B2.4": "full",
+    "B3.1": "full",
+    "B3.2": "full",
+    "B3.3": "partial",
+    "B4.1": "partial",
+    "B4.2": "partial",
+    "B5.1": "full",
+    "B5.2": "full",
+    "B5.3": "full",
+    "B6.1": "partial",
+    "B6.2": "partial",
+    "B6.3": "no",
+    "B6.4": "no",
+    "B6.5": "no",
+    "B6.6": "partial",
+    "B6.7": "partial",
+    "B6.8": "partial",
+    "B6.9": "no",
+    "B7.1": "partial",
+    "B7.2": "partial",
+    "B8.1": "partial",
+    "B9.1": "full",
+    "B9.2": "na",
+    "B9.3": "full",
+    "B10.1": "full",
+    "B10.2": "full",
+    "B11.1": "full",
+    "B11.2": "partial",
+    "B11.3": "full",
+    "B12.1": "partial",
+    "B12.2": "partial",
+    "C1.1": "na",
+    "C1.2": "partial",
+    "C1.3": "na",
+    "C1.4": "na",
+    "C1.5": "na",
+    "C1.6": "na",
+    "C1.7": "na",
+    "C1.8": "full",
+    "C1.9": "partial",
+    "C1.10": "na",
+    "C1.11": "partial",
+    "C1.12": "no",
+    "C2.2": "full",
+    "C2.3": "partial",
+    "C2.4": "full",
+    "C2.5": "full",
+    "C2.6": "partial",
+    "C2.7": "full",
+    "C2.8": "full",
+    "C2.9": "partial",
+    "C2.10": "partial",
+    "C2.11": "full",
+    "C2.12": "full",
+    "C2.13": "full",
+    "C2.14": "partial",
+    "C2.15": "no",
+    "C2.16": "full",
+    "C2.17": "partial",
+    "C2.18": "partial",
+    "C2.19": "partial"
+   }
+  }
+ ],
+ "problems": [
+  "2026-Q3 AL FAHD-4800001272: C1 printed 19 possible, but its answers leave 9 applicable"
+ ]
+}

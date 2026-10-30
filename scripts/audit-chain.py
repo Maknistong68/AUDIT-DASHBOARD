@@ -75,6 +75,11 @@ def read_dataset() -> dict[str, dict]:
     body = text[text.index("export const audits"):]
     out = {}
     for aid, block in re.findall(r'\{\n    id: "([^"]+)",(.*?)\n  \},', body, re.S):
+        if "responses: {\n" in block:
+            # Scored from its answers, from a different workbook than RECORD:
+            # recorded.test.ts and scripts/import-review-audit.py pin it.
+            print(f"  (skipping {aid}: carries answers, not in {RECORD.name})")
+            continue
         areas = {
             k: (float(s), float(p))
             for k, s, p in re.findall(

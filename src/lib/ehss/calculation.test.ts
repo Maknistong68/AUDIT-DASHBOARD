@@ -73,8 +73,10 @@ describe("the calculation", () => {
   const record = RECORD.audits.filter((a) => !DROPPED(a));
 
   it("covers every imported audit", () => {
-    expect(record).toHaveLength(audits.length);
-    expect(audits).toHaveLength(19);
+    // The import record holds the 19 points-only audits; the 20th is the Q3
+    // 2026 review, imported from a different workbook (see recorded.test.ts).
+    expect(record).toHaveLength(audits.length - 1);
+    expect(audits).toHaveLength(20);
   });
 
   it("agrees with an independent re-derivation, audit by audit", () => {

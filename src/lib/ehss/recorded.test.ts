@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { audits, contractors, subRegions } from "./recorded";
-import { CHECKLIST } from "./checklist";
+import { CHECKLIST, WORKBOOK_FIXTURE_ANSWERS } from "./checklist";
 import { scoreRecordedAreas } from "./scoring";
 import { contractorLabel } from "./model";
 import { checklistAreas, summarizeAll, windowByContractor } from "./summaries";
@@ -15,12 +15,13 @@ import { checklistAreas, summarizeAll, windowByContractor } from "./summaries";
  * pinned here rather than left to a reviewer's eye.
  */
 describe("the recorded dataset", () => {
-  it("holds 19 audits over two quarters for 13 contractors", () => {
-    expect(audits).toHaveLength(19);
+  it("holds 20 audits over three quarters for 13 contractors", () => {
+    expect(audits).toHaveLength(20);
     expect(contractors).toHaveLength(13);
     expect([...new Set(audits.map((a) => a.quarter))].sort()).toEqual([
       "2025-Q4",
       "2026-Q1",
+      "2026-Q3",
     ]);
     expect(new Set(audits.map((a) => a.id)).size).toBe(audits.length);
   });
@@ -72,10 +73,10 @@ describe("the recorded dataset", () => {
     expect([...perQuarter.values()].every((n) => n === 1)).toBe(true);
   });
 
-  it("records area points, never answers", () => {
+  it("records area points, and answers only for the Q3 2026 review", () => {
     for (const a of audits) {
       expect(a.areaScores).toBeDefined();
-      expect(Object.keys(a.responses)).toHaveLength(0);
+      if (a.id !== "af272-2026-Q3") expect(Object.keys(a.responses)).toHaveLength(0);
       for (const [code, area] of Object.entries(a.areaScores!)) {
         expect(checklistAreas().map((x) => x.code)).toContain(code);
         expect(area.possible).toBeGreaterThan(0);
@@ -83,6 +84,27 @@ describe("the recorded dataset", () => {
         expect(area.scored).toBeLessThanOrEqual(area.possible + 0.5);
       }
     }
+  });
+
+  it("the Q3 2026 AL FAHD review carries the workbook's own answers", () => {
+    const a = audits.find((x) => x.id === "af272-2026-Q3")!;
+    expect(
+      Object.fromEntries(
+        Object.entries(a.responses).map(([k, r]) => [k, r.answer]),
+      ),
+    ).toEqual(WORKBOOK_FIXTURE_ANSWERS);
+  });
+
+  it("scores the Q3 2026 review from its answers, to the workbook's own total", () => {
+    const q3 = summarizeAll(audits, contractors, subRegions).find(
+      (s) => s.id === "af272-2026-Q3",
+    )!;
+    // Every area is fully answered, so the answers beat the imported points:
+    // A 46.94, B 74.60, C 61 and 60.85, as scoring.test.ts pins for the same
+    // answers. (The sheet's own stated 62.05 is provenance, not a record.)
+    expect(q3.fromAreaScores).toBe(false);
+    expect(q3.total).toBe(60.85);
+    expect(q3.reportedTotal).toBe(62.05);
   });
 
   it("scores an area as points over applicable weight, and rolls up as the workbook does", () => {
@@ -104,7 +126,13 @@ describe("the recorded dataset", () => {
   });
 
   it("scores every audit, and reports the sheet's figure beside its own", () => {
-    const all = summarizeAll(audits, contractors, subRegions);
+    // The 19 audits recorded as area points. The Q3 2026 review is scored
+    // from its answers and pinned in its own test.
+    const all = summarizeAll(
+      audits.filter((a) => a.id !== "af272-2026-Q3"),
+      contractors,
+      subRegions,
+    );
     expect(all).toHaveLength(19);
     for (const s of all) {
       expect(s.total).not.toBeNull();

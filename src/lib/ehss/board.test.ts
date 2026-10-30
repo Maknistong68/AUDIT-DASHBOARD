@@ -19,8 +19,32 @@ import {
 import { TARGET_SCORE, gapToTarget } from "./disciplines";
 import { BANDS } from "./bands";
 
-const all = summarizeAll(audits, contractors, subRegions);
+// The board's behaviour is pinned over the 19 points-only audits of Q4 2025 and
+// Q1 2026, whose latest quarter has twelve contractors. The Q3 2026 AL FAHD
+// review (the one audit carrying answers) would make Q3 the latest quarter
+// with a single contractor, so it is left out here and pinned on its own
+// below, rather than every assertion above silently re-describing one bar.
+const Q3_REVIEW = "af272-2026-Q3";
+const all = summarizeAll(
+  audits.filter((a) => a.id !== Q3_REVIEW),
+  contractors,
+  subRegions,
+);
 const latest = latestQuarter(all);
+
+describe("the board on the whole dataset", () => {
+  it("opens on Q3 2026, where one contractor has been audited", () => {
+    const whole = summarizeAll(audits, contractors, subRegions);
+    expect(latestQuarter(whole)).toBe("2026-Q3");
+    expect(quartersOnRecord(whole)).toEqual(["2026-Q3", "2026-Q1", "2025-Q4"]);
+    const rows = boardBySubRegion(whole, "2026-Q3", subRegions).flatMap(
+      (p) => p.rows,
+    );
+    expect(rows.map((r) => r.contractorId)).toEqual(["af272"]);
+    // The workbook's own total, calculated from its 81 answers.
+    expect(rows[0]!.score).toBe(60.85);
+  });
+});
 
 describe("the board", () => {
   it("opens on the most recent quarter", () => {

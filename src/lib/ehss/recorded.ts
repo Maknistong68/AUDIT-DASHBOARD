@@ -1,18 +1,22 @@
 /**
  * GENERATED — do not edit by hand.
- *   python3 scripts/build-recorded-dataset.py \
- *       data/hs-audits-2025Q4-2026Q1.json > src/lib/ehss/recorded.ts
+ *   python3 -I scripts/build-recorded-dataset.py \
+ *       data/hs-audits-2025Q4-2026Q1.json data/hs-audits-2026Q3.json \
+ *       > src/lib/ehss/recorded.ts
  *
- * The real Health & Safety audits for Q4 2025 and Q1 2026, as read from
- * HS_AUDIT_FINDINGS.xlsx. This is the app's dataset: there is no demo data.
+ * The real Health & Safety audits for Q4 2025, Q1 2026 and Q3 2026, as read
+ * from HS_AUDIT_FINDINGS.xlsx and the AL FAHD (272) quarterly review
+ * workbook. This is the app's dataset: there is no demo data.
  *
  * Contractors are INITIALS + THE LAST THREE DIGITS OF THE WORK ORDER, which
  * is all the app ever sees. It keeps the dataset unidentifying, and it
  * settles the source file's three spellings of SIBS by construction.
  *
- * Each audit carries the checklist's 15 AREA scores as raw points, not
- * per-question answers: the sheet records a narrative per question and no
- * machine-readable answer, so there is nothing honest to put in `responses`.
+ * Each audit carries the checklist's 15 AREA scores as raw points. The
+ * findings sheets record a narrative per question and no machine-readable
+ * answer, so those audits have an empty `responses`; the one review
+ * workbook (af272-2026-Q3) records an answer per question and carries them,
+ * with no causes yet.
  * `possible` varies between audits because N/A questions drop out of it,
  * which is the workbook's own rule.
  *
@@ -589,6 +593,117 @@ export const audits: EhssAudit[] = [
       B12: { scored: 2, possible: 4 },
       C1: { scored: 8.5, possible: 13 },
       C2: { scored: 15.5, possible: 21 },
+    },
+  },
+  {
+    id: "af272-2026-Q3",
+    contractorId: "af272",
+    quarter: "2026-Q3",
+    auditDate: "2026-07-19",
+    inspectionNo: "HSW-03",
+    status: "approved",
+    responses: {
+      "A1": { answer: "partial", issues: [] },
+      "A2": { answer: "no", issues: [] },
+      "A3": { answer: "partial", issues: [] },
+      "A4": { answer: "partial", issues: [] },
+      "A5": { answer: "partial", issues: [] },
+      "A6": { answer: "partial", issues: [] },
+      "A7": { answer: "partial", issues: [] },
+      "A8": { answer: "full", issues: [] },
+      "A9": { answer: "partial", issues: [] },
+      "A10": { answer: "full", issues: [] },
+      "A11": { answer: "partial", issues: [] },
+      "A12": { answer: "no", issues: [] },
+      "A13": { answer: "partial", issues: [] },
+      "A14": { answer: "no", issues: [] },
+      "A15": { answer: "partial", issues: [] },
+      "B1.1": { answer: "full", issues: [] },
+      "B1.2": { answer: "full", issues: [] },
+      "B2.1": { answer: "full", issues: [] },
+      "B2.2": { answer: "full", issues: [] },
+      "B2.3": { answer: "partial", issues: [] },
+      "B2.4": { answer: "full", issues: [] },
+      "B3.1": { answer: "full", issues: [] },
+      "B3.2": { answer: "full", issues: [] },
+      "B3.3": { answer: "partial", issues: [] },
+      "B4.1": { answer: "partial", issues: [] },
+      "B4.2": { answer: "partial", issues: [] },
+      "B5.1": { answer: "full", issues: [] },
+      "B5.2": { answer: "full", issues: [] },
+      "B5.3": { answer: "full", issues: [] },
+      "B6.1": { answer: "partial", issues: [] },
+      "B6.2": { answer: "partial", issues: [] },
+      "B6.3": { answer: "no", issues: [] },
+      "B6.4": { answer: "no", issues: [] },
+      "B6.5": { answer: "no", issues: [] },
+      "B6.6": { answer: "partial", issues: [] },
+      "B6.7": { answer: "partial", issues: [] },
+      "B6.8": { answer: "partial", issues: [] },
+      "B6.9": { answer: "no", issues: [] },
+      "B7.1": { answer: "partial", issues: [] },
+      "B7.2": { answer: "partial", issues: [] },
+      "B8.1": { answer: "partial", issues: [] },
+      "B9.1": { answer: "full", issues: [] },
+      "B9.2": { answer: "na", issues: [] },
+      "B9.3": { answer: "full", issues: [] },
+      "B10.1": { answer: "full", issues: [] },
+      "B10.2": { answer: "full", issues: [] },
+      "B11.1": { answer: "full", issues: [] },
+      "B11.2": { answer: "partial", issues: [] },
+      "B11.3": { answer: "full", issues: [] },
+      "B12.1": { answer: "partial", issues: [] },
+      "B12.2": { answer: "partial", issues: [] },
+      "C1.1": { answer: "na", issues: [] },
+      "C1.2": { answer: "partial", issues: [] },
+      "C1.3": { answer: "na", issues: [] },
+      "C1.4": { answer: "na", issues: [] },
+      "C1.5": { answer: "na", issues: [] },
+      "C1.6": { answer: "na", issues: [] },
+      "C1.7": { answer: "na", issues: [] },
+      "C1.8": { answer: "full", issues: [] },
+      "C1.9": { answer: "partial", issues: [] },
+      "C1.10": { answer: "na", issues: [] },
+      "C1.11": { answer: "partial", issues: [] },
+      "C1.12": { answer: "no", issues: [] },
+      "C2.2": { answer: "full", issues: [] },
+      "C2.3": { answer: "partial", issues: [] },
+      "C2.4": { answer: "full", issues: [] },
+      "C2.5": { answer: "full", issues: [] },
+      "C2.6": { answer: "partial", issues: [] },
+      "C2.7": { answer: "full", issues: [] },
+      "C2.8": { answer: "full", issues: [] },
+      "C2.9": { answer: "partial", issues: [] },
+      "C2.10": { answer: "partial", issues: [] },
+      "C2.11": { answer: "full", issues: [] },
+      "C2.12": { answer: "full", issues: [] },
+      "C2.13": { answer: "full", issues: [] },
+      "C2.14": { answer: "partial", issues: [] },
+      "C2.15": { answer: "no", issues: [] },
+      "C2.16": { answer: "full", issues: [] },
+      "C2.17": { answer: "partial", issues: [] },
+      "C2.18": { answer: "partial", issues: [] },
+      "C2.19": { answer: "partial", issues: [] },
+    },
+    disciplineScores: {},
+    criticalRisks: {},
+    reportedTotal: 62.05,
+    areaScores: {
+      A: { scored: 23, possible: 49 },
+      B1: { scored: 6, possible: 6 },
+      B2: { scored: 6.5, possible: 7 },
+      B3: { scored: 7.5, possible: 9 },
+      B4: { scored: 2, possible: 4 },
+      B5: { scored: 5, possible: 5 },
+      B6: { scored: 5, possible: 15 },
+      B7: { scored: 1.5, possible: 3 },
+      B8: { scored: 2, possible: 4 },
+      B9: { scored: 2, possible: 2 },
+      B10: { scored: 4, possible: 4 },
+      B11: { scored: 6, possible: 7 },
+      B12: { scored: 2, possible: 4 },
+      C1: { scored: 4.5, possible: 19 },
+      C2: { scored: 18, possible: 25 },
     },
   },
 ];

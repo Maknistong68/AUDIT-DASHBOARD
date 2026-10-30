@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """Turn the import record into the app's dataset.
 
-    python3 scripts/build-recorded-dataset.py \
-        data/hs-audits-2025Q4-2026Q1.json > src/lib/ehss/recorded.ts
+    python3 -I scripts/build-recorded-dataset.py \
+        data/hs-audits-2025Q4-2026Q1.json data/hs-audits-2026Q3.json \
+        > src/lib/ehss/recorded.ts
+
+Takes one or more import records. An audit that carries `answers` (a review
+workbook, see import-review-audit.py) is written with `responses`; one that
+carries only area points keeps `responses: {}`.
 
 Contractors are identified by INITIALS + THE LAST THREE DIGITS OF THE WORK
 ORDER, and nothing else reaches the app. Two reasons:
@@ -94,8 +99,9 @@ def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__, file=sys.stderr)
         return 2
-    record = json.load(open(sys.argv[1]))
-    audits = record["audits"]
+    audits = []
+    for path in sys.argv[1:]:
+        audits.extend(json.load(open(path))["audits"])
 
     contractors: dict[str, dict] = {}
     rows: list[dict] = []
@@ -153,19 +159,23 @@ def main() -> int:
     out: list[str] = []
     out.append('/**')
     out.append(' * GENERATED — do not edit by hand.')
-    out.append(' *   python3 scripts/build-recorded-dataset.py \\')
-    out.append(' *       data/hs-audits-2025Q4-2026Q1.json > src/lib/ehss/recorded.ts')
+    out.append(' *   python3 -I scripts/build-recorded-dataset.py \\')
+    out.append(' *       data/hs-audits-2025Q4-2026Q1.json data/hs-audits-2026Q3.json \\')
+    out.append(' *       > src/lib/ehss/recorded.ts')
     out.append(' *')
-    out.append(' * The real Health & Safety audits for Q4 2025 and Q1 2026, as read from')
-    out.append(" * HS_AUDIT_FINDINGS.xlsx. This is the app's dataset: there is no demo data.")
+    out.append(' * The real Health & Safety audits for Q4 2025, Q1 2026 and Q3 2026, as read')
+    out.append(' * from HS_AUDIT_FINDINGS.xlsx and the AL FAHD (272) quarterly review')
+    out.append(" * workbook. This is the app's dataset: there is no demo data.")
     out.append(' *')
     out.append(' * Contractors are INITIALS + THE LAST THREE DIGITS OF THE WORK ORDER, which')
     out.append(' * is all the app ever sees. It keeps the dataset unidentifying, and it')
     out.append(" * settles the source file's three spellings of SIBS by construction.")
     out.append(' *')
-    out.append(" * Each audit carries the checklist's 15 AREA scores as raw points, not")
-    out.append(' * per-question answers: the sheet records a narrative per question and no')
-    out.append(' * machine-readable answer, so there is nothing honest to put in `responses`.')
+    out.append(" * Each audit carries the checklist's 15 AREA scores as raw points. The")
+    out.append(' * findings sheets record a narrative per question and no machine-readable')
+    out.append(' * answer, so those audits have an empty `responses`; the one review')
+    out.append(' * workbook (af272-2026-Q3) records an answer per question and carries them,')
+    out.append(' * with no causes yet.')
     out.append(' * `possible` varies between audits because N/A questions drop out of it,')
     out.append(" * which is the workbook's own rule.")
     out.append(' *')
@@ -201,7 +211,14 @@ def main() -> int:
         out.append(f'    auditDate: "{row["auditDate"]}",')
         out.append(f'    inspectionNo: "{row["inspectionNo"]}",')
         out.append('    status: "approved",')
-        out.append('    responses: {},')
+        answers = row.get("answers")
+        if answers:
+            out.append('    responses: {')
+            for code, answer in answers.items():
+                out.append(f'      "{code}": {{ answer: "{answer}", issues: [] }},')
+            out.append('    },')
+        else:
+            out.append('    responses: {},')
         out.append('    disciplineScores: {},')
         out.append('    criticalRisks: {},')
         reported = row.get("reportedTotal")

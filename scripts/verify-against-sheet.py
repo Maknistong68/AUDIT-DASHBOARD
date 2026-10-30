@@ -186,6 +186,13 @@ def read_dataset(path):
     audits = []
     for m in re.finditer(r"\{\s*id: \"([^\"]+)\",(.*?)\n  \},", src, re.S):
         body = m.group(2)
+        if "responses: {\n" in body:
+            # A review-workbook audit (answers, not just points). This script
+            # checks the FINDINGS workbook; that audit is read from a different
+            # sheet and is pinned by recorded.test.ts and by the cross-check
+            # inside scripts/import-review-audit.py.
+            print(f"  (skipping {m.group(1)}: carries answers, not from this workbook)")
+            continue
         field = lambda name: (re.search(rf'{name}: "([^"]+)"', body) or [None, None])[1]
         reported = re.search(r"reportedTotal: ([\d.]+)", body)
         audits.append({
