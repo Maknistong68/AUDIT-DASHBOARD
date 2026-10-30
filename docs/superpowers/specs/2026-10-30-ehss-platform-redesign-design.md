@@ -186,6 +186,11 @@ whole-snapshot save lets one auditor silently overwrite another's work, so:
 ## 6. Getting the Excel data in
 
 ### 6.1 One reader
+*Revised 2026-10-30 during planning:* phase 1 extends the existing, verified
+Python reader (`scripts/import-hs-audit.py`) for the first load; the
+TypeScript reader below is built in phase 5, where the in-app import first
+needs it.
+
 A single TypeScript module reads an audit workbook: blocks ten columns
 apart, metadata in rows 1–2 (row 3 — auditor and phone — is never read),
 area points in rows 8–25, observations from the `SR#` header row down. Rows
