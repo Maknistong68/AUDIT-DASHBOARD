@@ -52,9 +52,9 @@ as a cookie header back to the origin that set it.
 - Quarterly discipline scores and checklist answers
 - Observation codes and critical-risk hazard scores
 - **Observation text** (see below): the auditors' own sentences from the
-  Excel audit sheets, held de-identified
+  Excel audit sheets, personal names removed
 
-### Free text: the observation log, held de-identified
+### Free text: the observation log, personal names removed
 
 *Added 2026-10-30, on the owner's decision.* The app holds the auditors'
 observation text from the Q4 2025, Q1 2026 and Q3 2026 audit sheets — 1,398
@@ -62,25 +62,48 @@ sentences in `src/lib/ehss/recorded-observations.ts`, each tied to a
 contractor, a checklist area and a quarter, never to a person. It is the one
 place free text exists, and it is admitted on two conditions:
 
-1. **Names are removed by rule.** Auditors type names into those sheets
-   ("Mr. X was operating the MEWP"). `src/lib/ehss/name-patterns.json` is a
-   single pattern, read by both the importers (Python) and `names.ts` (the
-   app), that replaces a titled personal name with `a worker`. It removed
-   39 names from the 1,557 extracted observations.
-2. **Names are removed by review.** A pattern cannot know a name that
-   carries no title. Every observation was read through and the 15 untitled
-   names found were rewritten by hand (ids in the commit that made them,
-   "Assign first-pass causes to every observation"); a later independent
-   sweep found none left. Standalone runs of nine or more digits — full work
-   orders inside document references — are shortened to their last three,
-   so the contractor rule in §4 holds inside the text as well.
+1. **Personal names are removed by rule.** Auditors type names into those
+   sheets ("Mr. X was operating the MEWP"). `src/lib/ehss/name-patterns.json`
+   is a single `pattern` regex, compiled by `names.ts` (the app's definition),
+   `import-observations.py`, `verify-observations.py` and
+   `check-observations.py`, that replaces a titled personal name with
+   `a worker`. It removed 39 names from the 1,557 extracted observations.
+2. **Untitled personal names are removed by review.** A pattern cannot know a
+   name that carries no title. Every observation was read through and the 15
+   untitled names found were rewritten by hand (ids in the commit that made
+   them, "Assign first-pass causes to every observation"); a later
+   independent sweep found none left. Standalone runs of nine or more digits
+   — full work orders inside document references — are shortened to their
+   last three.
+
+**The limits of this control, stated plainly.** It removes personal names, in
+Latin script, and nothing else. It does **not** remove:
+
+- **Company names.** About 240 observation texts name the contractor in
+  full (its company name), and some name subcontractor companies. The
+  contractor rule in §4 (initials and the last three digits of the work
+  order) therefore holds for the `name` and `code` fields, **not** inside the
+  observation text.
+- **Roles.** A person can remain indirectly identifiable by their role at a
+  named contractor in a given quarter — a sentence that says what a
+  particular post-holder at a named company did or lacked is about one
+  person even though it carries no name. Whether role-level references are
+  acceptable is a decision for the owner and the DPO; it has not been made.
+- **Arabic-script text.** The pattern and the review covered Latin script
+  only.
 
 The unreviewed extract, which still had the untitled names, was committed
-once and pushed. On the owner's instruction (2026-10-30) it was purged from
-**every commit of the repository by a history rewrite**; only reviewed text
-is in the repository now, and the raw extract is regenerated into a scratch
-path when needed and never committed. Photographs, the "Evidence (Photo)"
-column and the auditor and phone-number rows were never read.
+once and pushed to GitHub. On the owner's instruction (2026-10-30) it was
+removed from **every commit on the branch** by a history rewrite on that date.
+That is not a purge: the repository on GitHub is **public**, and the three old
+commits (a67b1a2, 9ce9faa and 0bcfbac), which contained the pre-review
+extract, **remained reachable on GitHub by SHA** until GitHub purges them.
+Pending, the owner's actions: make the repository private, and ask GitHub
+Support for sensitive-data removal of those SHAs. Until both are done the
+extract must be treated as having been public. Only reviewed text is in the
+branch now, and the raw extract is regenerated into a scratch path when
+needed and never committed. Photographs, the "Evidence (Photo)" column and
+the auditor and phone-number rows were never read.
 
 Where it lives: until the database arrives in phase 2, the log ships **in the
 app bundle like the scores** — static and the same for every visitor — but
@@ -146,11 +169,12 @@ facts hold:
   no-personal-data rule in `CLAUDE.md` is an invariant and not a preference.
 - **Contractor-level results only.** Organizational audit scores, not
   individual performance.
-- **Free text only as de-identified observation text, and no uploads.** The
-  observation log (§2) is held on the owner's decision of 2026-10-30 *because*
-  every sentence has had personal names removed — by the shared pattern and
-  by a read-through — so it names nobody. That is what keeps it inside this
-  determination; a sentence that named a worker would void it. A live
+- **Free text only as observation text with personal names removed, and no
+  uploads.** The observation log (§2) is held on the owner's decision of
+  2026-10-30 *because* personal names have been removed from every sentence
+  — by the shared pattern and by a read-through. It is not anonymous: company
+  names and roles remain in the text (§2, limits of the control). A sentence
+  that named a worker would void this determination. A live
   comments box or a site photograph is how an audit tool acquires personal
   data by accident, and neither exists. Entry of observation text by
   auditors (phase 5) re-opens this item: it must warn on name patterns
@@ -177,6 +201,14 @@ facts hold:
    named auditors, photographs or un-reviewed free text does not merely add a
    feature —
    it changes which laws apply and where the system may run.
+
+**Open item: repository visibility.** The GitHub repository is public. That
+contradicts the premise of this section that `data/` — full work orders, full
+contractor names and the observation text as extracted — is kept out of
+public view and that `src/` carries only initials and the last three digits.
+The three pre-review commits were also reachable by SHA after the history
+rewrite (§2). Owner decision pending: make the repository private, and
+request GitHub Support's sensitive-data removal for those SHAs.
 
 ## 5. Remediation — fastest path, nothing ripped out
 

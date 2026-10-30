@@ -277,7 +277,15 @@ def main() -> int:
 
     # The (quarter, project string) -> audit id mapping, built from the rows
     # just assigned ids, so the observations join by the audits' own keys.
-    audit_id_by_key = {(r["quarter"], r["project"]): r["id"] for r in rows}
+    audit_id_by_key: dict[tuple[str, str], str] = {}
+    for r in rows:
+        k = (r["quarter"], r["project"])
+        if k in audit_id_by_key:
+            sys.exit(
+                f"build-recorded-dataset: two audits share (quarter, project) {k!r}: "
+                f"{audit_id_by_key[k]} and {r['id']}; observations could not be joined to one"
+            )
+        audit_id_by_key[k] = r["id"]
     kept: list[tuple[str, dict]] = []  # (audit id, observation), data-file order
     by_audit: dict[str, list[dict]] = {}
     dropped_duplicate = dropped_reference = 0

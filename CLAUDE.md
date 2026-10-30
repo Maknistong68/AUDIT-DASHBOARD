@@ -65,13 +65,22 @@ Two invariants shape everything:
    exception: auditors type names into those sheets ("Mr. X was operating
    the MEWP"), so every sentence went through TWO passes before it reached
    the repository. `src/lib/ehss/name-patterns.json` is one regex that
-   `names.ts` and both Python importers compile (a name becomes exactly
+   `names.ts`, `import-observations.py`, `verify-observations.py` and
+   `check-observations.py` compile (a name becomes exactly
    `a worker`), and a read-through by Claude rewrote the names a pattern
    cannot know — untitled ones — by hand. Text is admitted only after that
    review; the importer is not the control, the review is. The importer's
    raw extract is never committed (it is regenerated into a scratch path
-   when needed), and the repository history was rewritten on the owner's
-   instruction (2026-10-30) to purge the pre-review extract, which still had names, from every commit.
+   when needed). The pre-review extract, which still had names, was
+   committed once: on the owner's instruction it was removed from every
+   commit on the branch by a history rewrite on 2026-10-30, **but the
+   repository on GitHub is public and the three old commits (a67b1a2,
+   9ce9faa, 0bcfbac) remained reachable there by SHA**. Pending, owner's
+   actions: make the repository private and ask GitHub Support for
+   sensitive-data removal of those SHAs. Do not describe the extract as
+   "purged from history" until both are done. The control's limits are in
+   `docs/COMPLIANCE-KSA.md` §2: it removes personal names in Latin script,
+   not company names, roles or Arabic-script text.
    **Nothing in the app accepts typed observation text yet.** When auditors
    can add one (phase 5) the field must warn on name patterns before it
    ships, using that same `names.ts`. Until then do not add a free-text or
@@ -277,42 +286,63 @@ Two invariants shape everything:
     and that a blank area drops out of the mean rather than scoring zero.
     Keep the two implementations independent — the moment the test imports
     the thing it is checking, it stops checking anything.
-- **A new quarter goes in this order, and each step has a gate.** Source
+- **How the first load was made, and what the next quarter needs.** Source
   workbooks live outside the repository and every script takes their path as
   an argument; open them read-only and never re-save one (openpyxl drops the
-  photographs).
+  photographs). Be honest about what is reusable: `import-observations.py`
+  is currently wired to the two first-load workbooks (the findings workbook
+  and the Q3 2026 review workbook) and to the 2025Q4–2026Q1 import record
+  `data/hs-audits-2025Q4-2026Q1.json`; it is not a general "next quarter"
+  command yet.
+  **How the first load was made:**
   1. `import-hs-audit.py` (findings workbook, area points) or
      `import-review-audit.py` (a review workbook with answers) writes an
      import record into `data/`. Neither reads the auditor row.
   2. `import-observations.py <findings> <review>` extracts every observation,
      names removed by the shared pattern, **into a scratch path**
      (`> $SCRATCH/observations-raw.json`). That file still holds names the
-     pattern cannot know, so it is never committed; regenerate it whenever
-     it is needed. `verify-observations.py <findings> <review> <raw>` is
-     the independent second reader (the same idea as
-     `verify-against-sheet.py`): it finds each block's table by searching
-     for the `Observation/Comment` label rather than by offset, and fails
-     naming the block on a count mismatch, a repeated id, or any text still
-     matching the pattern. 1,557 observations in 21 blocks; 39 titled names
-     removed by the pattern.
-  3. The causes pass (Claude, in batches, then reviewed by a person) assigns
-     causes from the seven categories, corrects a kind the sheet got wrong,
-     and **rewrites by hand the names the pattern cannot catch**
-     (15 untitled names the first time; an independent sweep found none
-     left). `merge-observation-causes.py` joins it into the committed
-     `data/observations-2025Q4-2026Q3.json`, and
+     pattern cannot know, so it is never committed. `verify-observations.py
+     <findings> <review> <raw>` is the independent second reader (the same
+     idea as `verify-against-sheet.py`): it finds each block's table by
+     searching for the `Observation/Comment` label rather than by offset, and
+     fails naming the block on a count mismatch, a repeated id, or any text
+     still matching the pattern. 1,557 observations in 21 blocks; 39 titled
+     names removed by the pattern.
+  3. The causes pass was a Claude pass following
+     `docs/OBSERVATION-CATEGORISATION.md`, run over batch files cut from the
+     raw extract. It assigned causes from the seven categories, corrected a
+     kind the sheet got wrong, and flagged names; the names the pattern
+     cannot catch were then **rewritten by hand** into a rewrites file (15
+     untitled names the first time; an independent sweep found none left).
+     The per-batch outputs and the rewrites file are **deliberately not
+     committed**: they hold name spans. `merge-observation-causes.py` joins
+     them into the committed `data/observations-2025Q4-2026Q3.json`, and
      `check-observations.py <that file> <raw>` is the gate: every gap has
      one to three causes, a positive carries `GOOD` only, a reference row
      carries none, `nameReview` is clean or rewritten, no text matches the
      pattern.
   4. `build-recorded-dataset.py` (the command above) writes `recorded.ts`
      and `recorded-observations.ts`. It fails rather than guess: a Partial/No
-     answer with no cause source, an observation with no audit to join.
+     answer with no cause source, an observation with no audit to join, a
+     repeated (quarter, project) audit key.
   5. Then `verify-against-sheet.py <workbook> src/lib/ehss/recorded.ts`,
      `npm test`, `npm run build`, `scripts/audit-chain.py --screen` with
      the app up, and `scripts/check-ui.mjs`. `audit-chain.py` covers the
      points chain; the observation log has its own tests in
      `recorded-observations.test.ts`.
+  **What the next quarter needs:**
+  - `import-observations.py` generalised from the two first-load workbooks
+    and the fixed import record.
+  - `NOT_IN_FINDINGS_WORKBOOK` (`{"af272-2026-Q3"}`) is hard-coded in two
+    verifiers, `scripts/audit-chain.py` and `scripts/verify-against-sheet.py`;
+    a new review-only audit must be added to both.
+  - **A carry-over mode for `merge-observation-causes.py` is the recommended
+    next step before the next quarter** (not built): for ids already in the
+    committed data file, reuse their `causes`, `kind`, `reference` and
+    reviewed (rewritten) text, so only new observations go through the
+    categorisation pass and the name review again. Without it the already
+    reviewed text cannot be reproduced, because the rewrites file is not in
+    the repository.
 - **`fixture.ts`** — the former `mock.ts`: synthetic, 11 contractors over four
   quarters, **tests only**. Nothing in `src/app` may import it. It exists
   because the question-level machinery (findings, issue categories,
@@ -349,7 +379,7 @@ Two invariants shape everything:
   header carried a `· demo` badge and a "Restart demo" button. All of that
   described the generated dataset that no longer exists, and the owner saw
   it and reasonably read the whole app as a mock (2026-10-14). The data is
-  13 real contractors and 19 real audits; the copy says so. The localStorage
+  13 real contractors and 20 real audits; the copy says so. The localStorage
   key moved from `ehss-demo-v1` to `ehss-v2` in the same change, which
   deliberately orphans anything a browser still held from the demo era.
   Keep this straight: `fixture.ts` is the only invented data left and

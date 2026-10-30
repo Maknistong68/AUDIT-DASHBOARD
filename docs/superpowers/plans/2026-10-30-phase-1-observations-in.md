@@ -1,3 +1,5 @@
+> **Superseded instruction (ruling R10):** Tasks 2 and 4 below say to commit `data/observations-raw.json`. That was superseded: the pre-review extract holds names the pattern cannot know and is **never committed**; it is regenerated into a scratch path when needed, and only reviewed text (`data/observations-2025Q4-2026Q3.json`) is committed.
+
 # Phase 1 — Observations In: Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
