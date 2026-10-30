@@ -82,6 +82,27 @@ export interface EhssResponse {
   issues: import("./issues").IssueCode[];
 }
 
+/** What an observation in the audit workbook records. */
+export type ObservationKind = "gap" | "positive" | "site";
+
+/**
+ * One written observation from an audit workbook, names removed. Generated
+ * into `recorded-observations.ts`, which is loaded on demand and never
+ * imported statically. Contractor-level and personal-data-free by the same
+ * rule as the rest of the dataset: the text had every personal name replaced
+ * and every full work order cut to its last three digits.
+ */
+export interface RecordedObservation {
+  id: string; // "af272-2026-Q3:014"
+  auditId: string; // an id in recorded.ts `audits`
+  kind: ObservationKind;
+  questionCode: string | null;
+  text: string;
+  causes: import("./issues").IssueCode[];
+  /** Whose reading of the text the causes are: Claude's first pass until an auditor confirms. */
+  causesSource: "claude" | "auditor";
+}
+
 export interface SubRegion {
   id: string;
   name: string;
