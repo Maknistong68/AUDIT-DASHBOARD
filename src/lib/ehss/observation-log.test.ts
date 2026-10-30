@@ -4,6 +4,7 @@ import {
   filterLog,
   logFilterToParams,
   parseLogFilter,
+  pruneLogFilter,
   toLogRows,
   type LogRow,
 } from "./observation-log";
@@ -114,12 +115,32 @@ describe("filterLog filters", () => {
     expect(ids(filterLog(rows, { q: "missing", contractorId: "c-af", kind: "site" }))).toEqual(["4"]);
   });
 
-  it("matches nothing for an unknown id", () => {
-    expect(filterLog(rows, { q: "", contractorId: "nope" })).toEqual([]);
-  });
-
   it("needsCause returns only gap and site rows with no gap cause", () => {
     expect(ids(filterLog(rows, { q: "", needsCause: true }))).toEqual(["4", "5"]);
+  });
+});
+
+describe("pruneLogFilter", () => {
+  const options = { quarters: ["2026-Q1"], subRegionIds: ["sr-1"], contractorIds: ["c-af"] };
+
+  it("drops a quarter, sub-region or contractor the data does not hold", () => {
+    expect(
+      pruneLogFilter(
+        { q: "x", quarter: "1999-Q1", subRegionId: "nope", contractorId: "nope", kind: "gap" },
+        options,
+      ),
+    ).toEqual({ q: "x", kind: "gap" });
+  });
+
+  it("keeps values the data holds and returns the same object when nothing is dropped", () => {
+    const f = { q: "", quarter: "2026-Q1", subRegionId: "sr-1", contractorId: "c-af" };
+    expect(pruneLogFilter(f, options)).toBe(f);
+  });
+
+  it("an unknown id would match nothing unpruned, and everything once pruned", () => {
+    const f = { q: "", contractorId: "nope" };
+    expect(filterLog(rows, f)).toEqual([]);
+    expect(filterLog(rows, pruneLogFilter(f, options))).toHaveLength(rows.length);
   });
 });
 

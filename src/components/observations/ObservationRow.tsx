@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { quarterLabel } from "@/lib/ehss/model";
 import {
@@ -40,7 +40,22 @@ export function ObservationRow({
   onReset: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [clipped, setClipped] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const textId = useId();
   const positive = row.kind === "positive";
+
+  // The expand control only appears when the collapsed text is actually cut.
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const measure = () => {
+      if (!open) setClipped(el.scrollHeight > el.clientHeight + 1);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [open, row.text]);
 
   return (
     <li className="obs-row">
@@ -56,14 +71,20 @@ export function ObservationRow({
           Open report
         </Link>
       </div>
-      <button
-        type="button"
-        className={open ? "obs-text open" : "obs-text"}
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-      >
+      <p ref={textRef} id={textId} className={open ? "obs-text open" : "obs-text"}>
         {row.text}
-      </button>
+      </p>
+      {(clipped || open) && (
+        <button
+          type="button"
+          className="ghost obs-more"
+          aria-expanded={open}
+          aria-controls={textId}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Show less" : "Show more"}
+        </button>
+      )}
       <div className="obs-causes">
         {positive ? (
           <span className="issue-chips">

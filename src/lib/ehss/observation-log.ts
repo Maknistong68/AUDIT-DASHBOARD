@@ -107,8 +107,33 @@ export function causeCounts(rows: LogRow[]): { code: IssueCode; count: number }[
   }));
 }
 
+/** What the data offers for the three fields a URL can carry without the
+ * parser being able to check them. */
+export interface LogFilterOptions {
+  quarters: string[];
+  subRegionIds: string[];
+  contractorIds: string[];
+}
+
+/** Drop any quarter, sub-region or contractor the data does not hold, once
+ * the data is known. A link with a stale or mistyped id would otherwise empty
+ * the page while its select showed "All". Returns the SAME object when
+ * nothing was dropped, so a caller can tell by identity. */
+export function pruneLogFilter(f: LogFilter, options: LogFilterOptions): LogFilter {
+  const next: LogFilter = { ...f };
+  if (next.quarter && !options.quarters.includes(next.quarter)) delete next.quarter;
+  if (next.subRegionId && !options.subRegionIds.includes(next.subRegionId)) delete next.subRegionId;
+  if (next.contractorId && !options.contractorIds.includes(next.contractorId)) delete next.contractorId;
+  const same =
+    next.quarter === f.quarter &&
+    next.subRegionId === f.subRegionId &&
+    next.contractorId === f.contractorId;
+  return same ? f : next;
+}
+
 /** Read a filter from a URL, keeping only values it knows. An id cannot be
- * checked without data, so it passes through and simply matches nothing. */
+ * checked without data, so it passes through here; `pruneLogFilter` drops it
+ * once the log has loaded. */
 export function parseLogFilter(params: URLSearchParams): LogFilter {
   const f: LogFilter = { q: params.get("q") ?? "" };
   const quarter = params.get("quarter");

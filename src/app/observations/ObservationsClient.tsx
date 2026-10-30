@@ -12,6 +12,7 @@ import {
   filterLog,
   logFilterToParams,
   parseLogFilter,
+  pruneLogFilter,
   toLogRows,
   type LogFilter,
 } from "@/lib/ehss/observation-log";
@@ -105,6 +106,20 @@ function Log({ retry }: { retry: () => void }) {
       areas: AREAS.filter((a) => areas.has(a.code)),
     };
   }, [rows, subRegions]);
+
+  // A link with an unknown or stale id would empty the page while its select
+  // reads "All": once the log is here, drop what the data does not hold. The
+  // URL follows the cleaned filter through the effect above.
+  useEffect(() => {
+    if (!ready) return;
+    setFilter((f) =>
+      pruneLogFilter(f, {
+        quarters: options.quarters,
+        subRegionIds: options.subRegions.map((s) => s.id),
+        contractorIds: options.contractors.map(([id]) => id),
+      }),
+    );
+  }, [ready, options]);
 
   const matches = useMemo(() => filterLog(rows, filter), [rows, filter]);
   const counts = useMemo(() => causeCounts(matches), [matches]);
