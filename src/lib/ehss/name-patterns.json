@@ -1,0 +1,5 @@
+{
+  "titles": ["Mr", "Mrs", "Ms", "Miss", "Eng", "Engr", "Dr"],
+  "replacement": "a worker",
+  "pattern": "\\b(?:[Mm][Rr][Ss]|[Mm][Ii][Ss][Ss]|[Mm][Ss]|[Mm][Rr]|[Ee][Nn][Gg][Rr]|[Ee][Nn][Gg]|[Dd][Rr])\\b\\.?(?:\\s+[A-Z][a-z]+)+\\b"
+}
