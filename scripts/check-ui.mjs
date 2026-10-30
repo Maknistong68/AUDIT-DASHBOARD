@@ -41,6 +41,7 @@ const PATHS = [
   "/audits/ab901-2025-Q4",
   "/contractors",
   "/contractors/ab901",
+  "/observations",
   "/findings",
   "/checklist",
   "/admin",

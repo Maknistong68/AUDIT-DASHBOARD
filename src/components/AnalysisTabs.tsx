@@ -6,14 +6,15 @@ import { usePathname } from "next/navigation";
 /**
  * The two halves of programme-wide analysis, as tabs of one destination.
  *
- * Observations answer "what did auditors record"; the checklist answers
- * "which controls fail, and is it everyone or one contractor". They share a
- * nav entry because the phone tab bar is full at five labels, and because
+ * The log answers "what did auditors write"; the areas, "where is the
+ * programme weak"; the checklist, "which controls fail, and is it everyone or
+ * one contractor". They share a nav entry because the phone tab bar is full at five labels, and because
  * they are genuinely two views of the same reviews.
  */
 const TABS = [
-  { href: "/findings", label: "Observations" },
-  { href: "/checklist", label: "H&S checklist" },
+  { href: "/observations", label: "Log" },
+  { href: "/findings", label: "Areas" },
+  { href: "/checklist", label: "Checklist" },
 ];
 
 export function AnalysisTabs() {

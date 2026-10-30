@@ -131,7 +131,7 @@ export function parseLogFilter(params: URLSearchParams): LogFilter {
 /** The inverse of `parseLogFilter`; empty fields are left out. */
 export function logFilterToParams(f: LogFilter): URLSearchParams {
   const p = new URLSearchParams();
-  if (f.q) p.set("q", f.q);
+  if (f.q.trim()) p.set("q", f.q);
   if (f.quarter) p.set("quarter", f.quarter);
   if (f.subRegionId) p.set("subRegionId", f.subRegionId);
   if (f.contractorId) p.set("contractorId", f.contractorId);

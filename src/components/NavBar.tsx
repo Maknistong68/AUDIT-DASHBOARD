@@ -74,8 +74,8 @@ const PRIMARY: NavItem[] = [
     ),
   },
   {
-    href: "/findings",
-    label: "Findings",
+    href: "/observations",
+    label: "Observations",
     icon: icon(
       <>
         <path d="M10.3 3.6 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z" />
@@ -99,11 +99,16 @@ const REFERENCE: NavItem = {
 /** A route is current when it is the path, or the parent of a detail page. */
 function isCurrent(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
-  // Findings and the H&S checklist analysis are two tabs of one
-  // destination, so the nav marks Findings current on both. The tab bar is
-  // full at five labels — see the comment on `.tabbar a` — which is why
-  // this is a tab and not a sixth entry.
-  if (href === "/findings") return pathname.startsWith("/findings") || pathname.startsWith("/checklist");
+  // The observation log, the area analysis and the H&S checklist analysis
+  // are three tabs of one destination, so the nav marks Observations current
+  // on all of them. The tab bar is full at five labels — see the comment on
+  // `.tabbar a` — which is why these are tabs and not more entries.
+  if (href === "/observations")
+    return (
+      pathname.startsWith("/observations") ||
+      pathname.startsWith("/findings") ||
+      pathname.startsWith("/checklist")
+    );
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

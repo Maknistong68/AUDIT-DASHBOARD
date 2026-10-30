@@ -163,6 +163,11 @@ describe("filter <-> URL", () => {
     expect(parseLogFilter(new URLSearchParams())).toEqual({ q: "" });
   });
 
+  it("leaves a whitespace-only search out of the URL", () => {
+    expect(logFilterToParams({ q: "  " }).toString()).toBe("");
+    expect(logFilterToParams({ q: " a " }).get("q")).toBe(" a ");
+  });
+
   it("ignores unknown filter values", () => {
     expect(
       parseLogFilter(new URLSearchParams("?cause=XYZ&quarter=1999-Q9&kind=foo&area=Z9&needsCause=0&x=1&contractorId=")),
