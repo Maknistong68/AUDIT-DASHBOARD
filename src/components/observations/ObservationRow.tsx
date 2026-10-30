@@ -73,7 +73,7 @@ export function ObservationRow({
           <div
             className="obs-picker"
             role="group"
-            aria-label={`Causes for ${row.questionCode ?? "observation"}`}
+            aria-label={`Causes for ${row.contractorName} ${row.questionCode ?? "observation"}`}
           >
             {GAP_CATEGORIES.map((c) => {
               const on = row.causes.includes(c.code);
@@ -91,7 +91,7 @@ export function ObservationRow({
                   aria-pressed={on}
                   disabled={last || full}
                   title={reason}
-                  aria-label={`${c.label}${last || full ? `. ${reason}` : ""}`}
+                  aria-label={`${c.code} ${c.label}${last || full ? `. ${reason}` : ""}`}
                   onClick={() => onSetCauses(row.id, toggled(row.causes, c.code))}
                 >
                   <b>{c.code}</b> {c.label}

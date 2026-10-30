@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { AnalysisTabs } from "@/components/AnalysisTabs";
 import { CauseChart } from "@/components/observations/CauseChart";
 import { ObservationRow } from "@/components/observations/ObservationRow";
@@ -43,27 +43,37 @@ function Log({ retry }: { retry: () => void }) {
     resetObservationCauses,
   } = useEhss();
   const { observations, loaded, error } = useObservations();
-  const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
 
-  // Everything but the search text lives in the URL. The text is typed into
-  // local state so the input never lags behind a router round trip; the URL
-  // follows it.
-  const urlFilter = useMemo(() => parseLogFilter(new URLSearchParams(search.toString())), [search]);
-  const [q, setQ] = useState(urlFilter.q);
-  const filter = useMemo<LogFilter>(() => ({ ...urlFilter, q }), [urlFilter, q]);
-  const [page, setPage] = useState(0);
-
-  const change = useCallback(
-    (patch: Partial<LogFilter>) => {
-      const next = { ...filter, ...patch };
-      const qs = logFilterToParams(next).toString();
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-      setPage(0);
-    },
-    [pathname, router, filter],
+  // The filter lives in component state, read from the URL once on mount, so
+  // a control answers at once instead of after a router round trip. The URL
+  // follows it through `history.replaceState` (no navigation, no fetch).
+  const [filter, setFilter] = useState<LogFilter>(() =>
+    parseLogFilter(new URLSearchParams(search.toString())),
   );
+  const [page, setPage] = useState(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const top = useRef<HTMLElement>(null);
+
+  const change = useCallback((patch: Partial<LogFilter>) => {
+    setFilter((f) => ({ ...f, ...patch }));
+    setPage(0);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const qs = logFilterToParams(filter).toString();
+      if (qs === window.location.search.replace(/^\?/, "")) return;
+      window.history.replaceState(window.history.state, "", qs ? `${pathname}?${qs}` : pathname);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [filter, pathname]);
+
+  const goPage = (n: number) => {
+    setPage(n);
+    top.current?.scrollIntoView({ block: "start" });
+  };
 
   const ready = hydrated && loaded;
   const summaries = useMemo(
@@ -99,14 +109,18 @@ function Log({ retry }: { retry: () => void }) {
   const matches = useMemo(() => filterLog(rows, filter), [rows, filter]);
   const counts = useMemo(() => causeCounts(matches), [matches]);
 
+  const active = [
+    filter.quarter,
+    filter.subRegionId,
+    filter.contractorId,
+    filter.area,
+    filter.cause,
+    filter.kind,
+  ].filter(Boolean).length;
+
   const pages = Math.max(1, Math.ceil(matches.length / PAGE));
   const at = Math.min(page, pages - 1);
   const shown = matches.slice(at * PAGE, at * PAGE + PAGE);
-
-  // A back/forward step that empties the URL should empty the box too.
-  useEffect(() => {
-    if (!search.toString()) setQ("");
-  }, [search]);
 
   const sel = (
     label: string,
@@ -138,24 +152,35 @@ function Log({ retry }: { retry: () => void }) {
             id="log-q"
             type="text"
             placeholder="Search observations"
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              change({ q: e.target.value });
-            }}
+            value={filter.q}
+            onChange={(e) => change({ q: e.target.value })}
           />
         </label>
-        {sel("Quarter", filter.quarter, (v) => change({ quarter: v }), "All", options.quarters.map((v) => ({ value: v, label: quarterLabel(v) })))}
-        {sel("Sub-region", filter.subRegionId, (v) => change({ subRegionId: v }), "All", options.subRegions.map((s) => ({ value: s.id, label: s.name })))}
-        {sel("Contractor", filter.contractorId, (v) => change({ contractorId: v }), "All", options.contractors.map(([id, label]) => ({ value: id, label })))}
-        {sel("Area", filter.area, (v) => change({ area: v }), "All", options.areas.map((a) => ({ value: a.code, label: `${a.code} ${a.title}` })))}
-        {sel("Cause", filter.cause, (v) => change({ cause: v as LogFilter["cause"] }), "All", GAP_CATEGORIES.map((c) => ({ value: c.code, label: `${c.code} ${c.label}` })))}
-        {sel("Kind", filter.kind, (v) => change({ kind: v as LogFilter["kind"] }), "All", [...KIND_OPTIONS])}
-        <div className="track-toggle">
+        <button
+          type="button"
+          className="obs-filters-btn"
+          aria-expanded={filtersOpen}
+          aria-controls="obs-selects"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+        >
+          Filters{active > 0 ? ` (${active})` : ""}
+        </button>
+        <div id="obs-selects" className="obs-selects" data-open={filtersOpen}>
+          {sel("Quarter", filter.quarter, (v) => change({ quarter: v }), "All", options.quarters.map((v) => ({ value: v, label: quarterLabel(v) })))}
+          {sel("Sub-region", filter.subRegionId, (v) => change({ subRegionId: v }), "All", options.subRegions.map((s) => ({ value: s.id, label: s.name })))}
+          {sel("Contractor", filter.contractorId, (v) => change({ contractorId: v }), "All", options.contractors.map(([id, label]) => ({ value: id, label })))}
+          {sel("Area", filter.area, (v) => change({ area: v }), "All", options.areas.map((a) => ({ value: a.code, label: `${a.code} ${a.title}` })))}
+          {sel("Cause", filter.cause, (v) => change({ cause: v as LogFilter["cause"] }), "All", GAP_CATEGORIES.map((c) => ({ value: c.code, label: `${c.code} ${c.label}` })))}
+          {sel("Kind", filter.kind, (v) => change({ kind: v as LogFilter["kind"] }), "All", [...KIND_OPTIONS])}
+        </div>
+        <div className="track-toggle obs-needs">
           <button
             type="button"
             aria-pressed={!!filter.needsCause}
-            onClick={() => change({ needsCause: filter.needsCause ? undefined : true })}
+            onClick={() => {
+              setFilter((f) => ({ ...f, needsCause: f.needsCause ? undefined : true }));
+              setPage(0);
+            }}
           >
             Needs a cause
           </button>
@@ -177,7 +202,7 @@ function Log({ retry }: { retry: () => void }) {
         </ul>
       ) : matches.length > 0 ? (
         <>
-          <section className="card obs-summary">
+          <section className="card obs-summary" ref={top}>
             <div className="obs-count">
               <b>{matches.length}</b>
               <span>{matches.length === 1 ? "observation" : "observations"}</span>
@@ -201,13 +226,13 @@ function Log({ retry }: { retry: () => void }) {
           </ul>
           {pages > 1 && (
             <nav className="obs-pager" aria-label="Pages">
-              <button type="button" className="ghost" disabled={at === 0} onClick={() => setPage(at - 1)}>
+              <button type="button" className="ghost" disabled={at === 0} onClick={() => goPage(at - 1)}>
                 Previous
               </button>
               <span>
                 {at * PAGE + 1}–{Math.min(matches.length, (at + 1) * PAGE)} of {matches.length}
               </span>
-              <button type="button" className="ghost" disabled={at >= pages - 1} onClick={() => setPage(at + 1)}>
+              <button type="button" className="ghost" disabled={at >= pages - 1} onClick={() => goPage(at + 1)}>
                 Next
               </button>
             </nav>

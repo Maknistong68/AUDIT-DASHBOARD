@@ -63,6 +63,7 @@ export function CauseChart({
                 }
               }}
             >
+              <rect x={0} y={i * ROW} width={width} height={ROW} className="obs-bar-hit" />
               <rect x={0} y={y} width={track} height={BAR} rx={6} className="obs-bar-track" />
               <rect
                 x={0}
