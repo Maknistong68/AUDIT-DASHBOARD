@@ -37,6 +37,11 @@ const RECORD = JSON.parse(
 const DROPPED = (a: { quarter: string; project: string }) =>
   a.quarter === "2025-Q4" && a.project === "SIBS 838";
 
+/** The one audit imported from a review workbook: answers, no area points
+ * (see recorded.test.ts). Everything below that reads points reads the rest. */
+const Q3_REVIEW = "af272-2026-Q3";
+const POINTS_ONLY = audits.filter((a) => a.id !== Q3_REVIEW);
+
 const SECTIONS: Record<string, string[]> = {
   A: ["A"],
   B: Array.from({ length: 12 }, (_, i) => `B${i + 1}`),
@@ -75,7 +80,7 @@ describe("the calculation", () => {
   it("covers every imported audit", () => {
     // The import record holds the 19 points-only audits; the 20th is the Q3
     // 2026 review, imported from a different workbook (see recorded.test.ts).
-    expect(record).toHaveLength(audits.length - 1);
+    expect(record).toHaveLength(POINTS_ONLY.length);
     expect(audits).toHaveLength(20);
   });
 
@@ -90,8 +95,8 @@ describe("the calculation", () => {
         .map((k) => `${k}:${areas[k]!.scored}/${areas[k]!.possible}`)
         .join("|");
 
-    const byKey = new Map(audits.map((a) => [key(a.areaScores!), a]));
-    expect(byKey.size).toBe(audits.length); // no two audits share their points
+    const byKey = new Map(POINTS_ONLY.map((a) => [key(a.areaScores!), a]));
+    expect(byKey.size).toBe(POINTS_ONLY.length); // no two audits share their points
 
     for (const source of record) {
       const expected = independentScore(source.areas);
@@ -115,7 +120,7 @@ describe("the calculation", () => {
   });
 
   it("never produces a score outside 0-100", () => {
-    for (const a of audits) {
+    for (const a of POINTS_ONLY) {
       const score = scoreRecordedAreas(CHECKLIST, a.areaScores!);
       const all = [
         score.total,
@@ -133,7 +138,7 @@ describe("the calculation", () => {
     // The source sheet had one area scored 21.5 out of 21; the importer caps
     // it and records the problem. Anything over 100% would be a broken score,
     // so it must not reach the dataset.
-    for (const a of audits) {
+    for (const a of POINTS_ONLY) {
       for (const [code, area] of Object.entries(a.areaScores!)) {
         expect(area.scored, `${a.id} ${code}`).toBeLessThanOrEqual(area.possible);
         expect(area.scored, `${a.id} ${code}`).toBeGreaterThanOrEqual(0);
@@ -146,7 +151,7 @@ describe("the calculation", () => {
     // The engine rounds area, then section, then total — as the workbook's
     // own cells do. Worth proving that compounding does not drift: if a
     // future change rounds somewhere new, this is what catches it.
-    for (const a of audits) {
+    for (const a of POINTS_ONLY) {
       const pct = Object.fromEntries(
         Object.entries(a.areaScores!).map(([k, v]) => [
           k,

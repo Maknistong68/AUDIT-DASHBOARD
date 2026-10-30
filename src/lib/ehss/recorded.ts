@@ -12,11 +12,13 @@
  * is all the app ever sees. It keeps the dataset unidentifying, and it
  * settles the source file's three spellings of SIBS by construction.
  *
- * Each audit carries the checklist's 15 AREA scores as raw points. The
- * findings sheets record a narrative per question and no machine-readable
- * answer, so those audits have an empty `responses`; the one review
- * workbook (af272-2026-Q3) records an answer per question and carries them,
- * with no causes yet.
+ * Each findings audit carries the checklist's 15 AREA scores as raw points.
+ * The findings sheets record a narrative per question and no
+ * machine-readable answer, so those audits have an empty `responses`. The
+ * one review workbook (af272-2026-Q3) records an answer per question and
+ * carries them (no causes yet) and NO area points: its printed C1
+ * "possible" disagrees with its own answers, so it is scored from the
+ * answers alone.
  * `possible` varies between audits because N/A questions drop out of it,
  * which is the workbook's own rule.
  *
@@ -688,23 +690,6 @@ export const audits: EhssAudit[] = [
     disciplineScores: {},
     criticalRisks: {},
     reportedTotal: 62.05,
-    areaScores: {
-      A: { scored: 23, possible: 49 },
-      B1: { scored: 6, possible: 6 },
-      B2: { scored: 6.5, possible: 7 },
-      B3: { scored: 7.5, possible: 9 },
-      B4: { scored: 2, possible: 4 },
-      B5: { scored: 5, possible: 5 },
-      B6: { scored: 5, possible: 15 },
-      B7: { scored: 1.5, possible: 3 },
-      B8: { scored: 2, possible: 4 },
-      B9: { scored: 2, possible: 2 },
-      B10: { scored: 4, possible: 4 },
-      B11: { scored: 6, possible: 7 },
-      B12: { scored: 2, possible: 4 },
-      C1: { scored: 4.5, possible: 19 },
-      C2: { scored: 18, possible: 25 },
-    },
   },
 ];
 

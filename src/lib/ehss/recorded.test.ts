@@ -14,6 +14,9 @@ import { checklistAreas, summarizeAll, windowByContractor } from "./summaries";
  * ways and pasted one contractor's row under another's name, so both are
  * pinned here rather than left to a reviewer's eye.
  */
+/** The one audit imported from a review workbook rather than the findings one. */
+const Q3_REVIEW = "af272-2026-Q3";
+
 describe("the recorded dataset", () => {
   it("holds 20 audits over three quarters for 13 contractors", () => {
     expect(audits).toHaveLength(20);
@@ -74,9 +77,14 @@ describe("the recorded dataset", () => {
   });
 
   it("records area points, and answers only for the Q3 2026 review", () => {
-    for (const a of audits) {
+    // That review carries answers and NO area points: its printed C1
+    // "possible" (19) disagrees with its own answers (9 applicable).
+    const q3 = audits.find((a) => a.id === Q3_REVIEW)!;
+    expect(q3.areaScores).toBeUndefined();
+    expect(Object.keys(q3.responses)).toHaveLength(81);
+    for (const a of audits.filter((a) => a.id !== Q3_REVIEW)) {
       expect(a.areaScores).toBeDefined();
-      if (a.id !== "af272-2026-Q3") expect(Object.keys(a.responses)).toHaveLength(0);
+      expect(Object.keys(a.responses)).toHaveLength(0);
       for (const [code, area] of Object.entries(a.areaScores!)) {
         expect(checklistAreas().map((x) => x.code)).toContain(code);
         expect(area.possible).toBeGreaterThan(0);
@@ -87,7 +95,7 @@ describe("the recorded dataset", () => {
   });
 
   it("the Q3 2026 AL FAHD review carries the workbook's own answers", () => {
-    const a = audits.find((x) => x.id === "af272-2026-Q3")!;
+    const a = audits.find((x) => x.id === Q3_REVIEW)!;
     expect(
       Object.fromEntries(
         Object.entries(a.responses).map(([k, r]) => [k, r.answer]),
@@ -97,7 +105,7 @@ describe("the recorded dataset", () => {
 
   it("scores the Q3 2026 review from its answers, to the workbook's own total", () => {
     const q3 = summarizeAll(audits, contractors, subRegions).find(
-      (s) => s.id === "af272-2026-Q3",
+      (s) => s.id === Q3_REVIEW,
     )!;
     // Every area is fully answered, so the answers beat the imported points:
     // A 46.94, B 74.60, C 61 and 60.85, as scoring.test.ts pins for the same
@@ -129,7 +137,7 @@ describe("the recorded dataset", () => {
     // The 19 audits recorded as area points. The Q3 2026 review is scored
     // from its answers and pinned in its own test.
     const all = summarizeAll(
-      audits.filter((a) => a.id !== "af272-2026-Q3"),
+      audits.filter((a) => a.id !== Q3_REVIEW),
       contractors,
       subRegions,
     );

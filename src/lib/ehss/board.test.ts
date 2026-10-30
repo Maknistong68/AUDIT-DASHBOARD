@@ -44,6 +44,51 @@ describe("the board on the whole dataset", () => {
     // The workbook's own total, calculated from its 81 answers.
     expect(rows[0]!.score).toBe(60.85);
   });
+
+  // R15: on the whole dataset only AL FAHD (272) was audited in all three
+  // quarters, so the like-for-like line is that one contractor and the
+  // headline is one review. That is the truth on record; the board's default
+  // quarter is a phase 4 decision. Pinned so a change to it is deliberate.
+  it("narrows the like-for-like trend to the one contractor audited every quarter", () => {
+    const trend = programmeTrend(summarizeAll(audits, contractors, subRegions));
+    expect(trend.quarters).toEqual(["2025-Q4", "2026-Q1", "2026-Q3"]);
+    expect(trend.likeForLikeIds).toEqual(["af272"]);
+    expect(trend.likeForLike).toEqual([
+      { quarter: "2025-Q4", score: 75.08, reviews: 1 },
+      { quarter: "2026-Q1", score: 60.76, reviews: 1 },
+      { quarter: "2026-Q3", score: 60.85, reviews: 1 },
+    ]);
+    expect(trend.programme.map((p) => [p.quarter, p.score, p.reviews])).toEqual([
+      ["2025-Q4", 68.26, 8],
+      ["2026-Q1", 62.41, 11],
+      ["2026-Q3", 60.85, 1],
+    ]);
+  });
+
+  it("reports the headline for a quarter of one review (R15)", () => {
+    const whole = summarizeAll(audits, contractors, subRegions);
+    const kpi = programmeKpis(whole, latestQuarter(whole));
+    expect(kpi.quarter).toBe("2026-Q3");
+    expect(kpi.average).toBe(60.85);
+    expect(kpi.contractors).toBe(1);
+    expect(kpi.belowTarget).toBe(1);
+    expect(kpi.gap).toBe(29.15);
+    // Movement is over contractors in both quarters: AL FAHD (272), 60.76 -> 60.85.
+    expect(kpi.delta).toBe(0.09);
+    expect(kpi.bands.map((b) => [b.id, b.count])).toEqual([
+      ["compliant", 0],
+      ["mostly", 0],
+      ["moderate", 0],
+      ["minimal", 1],
+      ["non", 0],
+    ]);
+    expect(kpi.weakestArea).toEqual({
+      code: "B6",
+      title: "Subcontractor Management",
+      score: 33.33,
+    });
+    expect(kpi.recurringAreas).toBe(10);
+  });
 });
 
 describe("the board", () => {

@@ -179,19 +179,24 @@ def read_sheet(path):
     return blocks
 
 
+# Audits in recorded.ts that did NOT come from the findings workbook, so this
+# script has no sheet to compare them with: the AL FAHD (272) Q3 2026 review,
+# read from its own workbook (scripts/import-review-audit.py) and pinned by
+# recorded.test.ts. An explicit list, never "has answers" or "has no areas":
+# a findings audit that later gained either must still be checked.
+NOT_IN_FINDINGS_WORKBOOK = {"af272-2026-Q3"}
+
+
 def read_dataset(path):
     """The generated dataset, parsed out of the TypeScript source directly —
-    so the comparison runs no code the importer also runs."""
+    so the comparison runs no code the importer also runs. Returns the audits
+    to compare and the ids skipped because they are on the allowlist above."""
     src = open(path).read()
-    audits = []
+    audits, skipped = [], []
     for m in re.finditer(r"\{\s*id: \"([^\"]+)\",(.*?)\n  \},", src, re.S):
         body = m.group(2)
-        if "responses: {\n" in body:
-            # A review-workbook audit (answers, not just points). This script
-            # checks the FINDINGS workbook; that audit is read from a different
-            # sheet and is pinned by recorded.test.ts and by the cross-check
-            # inside scripts/import-review-audit.py.
-            print(f"  (skipping {m.group(1)}: carries answers, not from this workbook)")
+        if m.group(1) in NOT_IN_FINDINGS_WORKBOOK:
+            skipped.append(m.group(1))
             continue
         field = lambda name: (re.search(rf'{name}: "([^"]+)"', body) or [None, None])[1]
         reported = re.search(r"reportedTotal: ([\d.]+)", body)
@@ -208,7 +213,7 @@ def read_dataset(path):
                 )
             },
         })
-    return audits
+    return audits, skipped
 
 
 def signature(areas, cap):
@@ -229,7 +234,7 @@ def main() -> int:
         print(__doc__, file=sys.stderr)
         return 2
     blocks = read_sheet(sys.argv[1])
-    audits = read_dataset(sys.argv[2])
+    audits, skipped = read_dataset(sys.argv[2])
 
     broken = [b for b in blocks if b.get("error")]
     for b in broken:
@@ -239,7 +244,9 @@ def main() -> int:
             if not b.get("error") and (b["quarter"], b["project"]) not in DROPPED]
     print(f"workbook: {len(blocks)} blocks, {len(DROPPED)} dropped by design "
           f"-> {len(live)} expected")
-    print(f"dataset:  {len(audits)} audits\n")
+    print(f"dataset:  {len(audits)} audits compared")
+    print(f"          {len(skipped)} skipped, not from this workbook: "
+          f"{', '.join(skipped) or 'none'}\n")
 
     by_points = {signature(b["areas"], True): b for b in live}
 
@@ -259,7 +266,12 @@ def main() -> int:
 
     print("1. THE DATASET AGAINST THE SHEET")
     problems, checked, capped = [], 0, []
+    for missing in sorted(NOT_IN_FINDINGS_WORKBOOK - set(skipped)):
+        problems.append(f"{missing}: on the allowlist but absent from the dataset")
     for a in audits:
+        if not a["areas"]:
+            problems.append(f"{a['id']}: no area points, and not on the allowlist")
+            continue
         block = by_points.get(signature(a["areas"], False))
         if block is None:
             problems.append(f"{a['id']}: no block in the sheet has these points")

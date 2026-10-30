@@ -67,18 +67,27 @@ def shown(value):
     return f"{Decimal(value).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)}%"
 
 
-def read_dataset() -> dict[str, dict]:
+# Audits in recorded.ts that are not in RECORD: the AL FAHD (272) Q3 2026
+# review, read from its own workbook and pinned by recorded.test.ts. An
+# explicit list, never "has answers" or "has no areas": a findings audit that
+# later gained either must still be walked.
+NOT_IN_FINDINGS_WORKBOOK = {"af272-2026-Q3"}
+
+
+def read_dataset() -> tuple[dict[str, dict], list[str], list[str]]:
     """Parse recorded.ts without executing it. Anchored to the audits array:
     the file also declares subRegions and contractors with an `id:` field,
-    and an unanchored scan mislabels the first audit."""
+    and an unanchored scan mislabels the first audit. Returns the audits to
+    walk, the allowlisted ids skipped, and the ids that have no area points
+    without being allowlisted (a failure)."""
     text = DATASET.read_text()
     body = text[text.index("export const audits"):]
     out = {}
+    skipped: list[str] = []
+    pointless: list[str] = []
     for aid, block in re.findall(r'\{\n    id: "([^"]+)",(.*?)\n  \},', body, re.S):
-        if "responses: {\n" in block:
-            # Scored from its answers, from a different workbook than RECORD:
-            # recorded.test.ts and scripts/import-review-audit.py pin it.
-            print(f"  (skipping {aid}: carries answers, not in {RECORD.name})")
+        if aid in NOT_IN_FINDINGS_WORKBOOK:
+            skipped.append(aid)
             continue
         areas = {
             k: (float(s), float(p))
@@ -87,6 +96,7 @@ def read_dataset() -> dict[str, dict]:
             )
         }
         if not areas:
+            pointless.append(aid)
             continue
         field = lambda n: (m.group(1) if (m := re.search(rf'{n}: "([^"]*)"', block)) else None)
         reported = re.search(r"reportedTotal: ([\d.]+)", block)
@@ -97,19 +107,27 @@ def read_dataset() -> dict[str, dict]:
             "inspectionNo": field("inspectionNo"),
             "reportedTotal": float(reported.group(1)) if reported else None,
         }
-    return out
+    return out, skipped, pointless
 
 
 def main() -> int:
     record = json.loads(RECORD.read_text())
-    dataset = read_dataset()
+    dataset, skipped, pointless = read_dataset()
     failures: list[str] = []
+    failures += [
+        f"{aid}: on the allowlist but absent from the dataset"
+        for aid in sorted(NOT_IN_FINDINGS_WORKBOOK - set(skipped))
+    ]
+    failures += [f"{aid}: no area points, and not on the allowlist" for aid in pointless]
 
     print(f"import record : {len(record['audits'])} blocks")
     print(f"dataset       : {len(dataset)} audits with area points")
+    print(f"                {len(skipped)} skipped, not from this workbook: "
+          f"{', '.join(skipped) or 'none'}")
     excluded = len(record["audits"]) - len(dataset)
     if excluded:
-        print(f"                ({excluded} block(s) excluded — declared duplicates)")
+        print(f"                {excluded} record block(s) not in the dataset "
+              f"(declared duplicates)")
 
     # ---- link 1: import record -> dataset ----
     cells = 0

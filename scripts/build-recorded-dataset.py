@@ -171,11 +171,13 @@ def main() -> int:
     out.append(' * is all the app ever sees. It keeps the dataset unidentifying, and it')
     out.append(" * settles the source file's three spellings of SIBS by construction.")
     out.append(' *')
-    out.append(" * Each audit carries the checklist's 15 AREA scores as raw points. The")
-    out.append(' * findings sheets record a narrative per question and no machine-readable')
-    out.append(' * answer, so those audits have an empty `responses`; the one review')
-    out.append(' * workbook (af272-2026-Q3) records an answer per question and carries them,')
-    out.append(' * with no causes yet.')
+    out.append(" * Each findings audit carries the checklist's 15 AREA scores as raw points.")
+    out.append(' * The findings sheets record a narrative per question and no')
+    out.append(' * machine-readable answer, so those audits have an empty `responses`. The')
+    out.append(' * one review workbook (af272-2026-Q3) records an answer per question and')
+    out.append(' * carries them (no causes yet) and NO area points: its printed C1')
+    out.append(' * "possible" disagrees with its own answers, so it is scored from the')
+    out.append(' * answers alone.')
     out.append(' * `possible` varies between audits because N/A questions drop out of it,')
     out.append(" * which is the workbook's own rule.")
     out.append(' *')
@@ -224,9 +226,14 @@ def main() -> int:
         reported = row.get("reportedTotal")
         if reported is not None:
             out.append(f'    reportedTotal: {reported:g},')
-        out.append('    areaScores: {')
-        out.append(area_literal(row["areas"]))
-        out.append('    },')
+        if not answers:
+            # An audit that carries its answers carries no area points: the
+            # review sheet's printed C1 "possible" (19) disagrees with its own
+            # answers (9 applicable), so the points would show a wrong figure
+            # on the audit page. They stay in the import record as provenance.
+            out.append('    areaScores: {')
+            out.append(area_literal(row["areas"]))
+            out.append('    },')
         out.append('  },')
     out.append('];')
     out.append('')
