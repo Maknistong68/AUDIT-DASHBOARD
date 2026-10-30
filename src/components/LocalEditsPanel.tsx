@@ -30,7 +30,8 @@ export function LocalEditsPanel() {
     localEdits.audits +
     localEdits.deleted +
     localEdits.contractors +
-    localEdits.actions;
+    localEdits.actions +
+    localEdits.observations;
 
   // Once storage is shared this panel is answering a question nobody has:
   // the edits ARE the record, and there is nothing local to discard.
@@ -69,9 +70,16 @@ export function LocalEditsPanel() {
             )}
             {localEdits.actions > 0 && (
               <>
-                {total > localEdits.actions && " · "}
+                {total > localEdits.actions + localEdits.observations && " · "}
                 <strong>{localEdits.actions}</strong> action
                 {localEdits.actions === 1 ? "" : "s"} raised
+              </>
+            )}
+            {localEdits.observations > 0 && (
+              <>
+                {total > localEdits.observations && " · "}
+                <strong>{localEdits.observations}</strong> observation
+                {localEdits.observations === 1 ? "" : "s"} recategorised
               </>
             )}
             . These are held in this browser and are visible to nobody else.

@@ -52,6 +52,7 @@ const filled: OverridesSnapshot = {
   contractors: {
     new1: { id: "new1", name: "NEW", code: "123", subRegionId: "sr1", active: true },
   },
+  observationCauses: { "af272-2026-Q3:014": ["DOC", "LED"] },
 };
 
 /**
@@ -133,6 +134,19 @@ describe("a snapshot can be older than the code reading it", () => {
     // holding one from before must not read as `undefined.length`.
     expect(normalize({ audits: {} }).events).toEqual([]);
     expect(normalize({ audits: {} }).contractors).toEqual({});
+    // Corrected observation causes arrived with the observation log.
+    expect(normalize({ audits: {} }).observationCauses).toEqual({});
+  });
+
+  it("reads observation causes defensively", () => {
+    const read = (v: unknown) =>
+      normalize({ observationCauses: v }).observationCauses;
+    expect(read("DOC")).toEqual({});
+    expect(read(["DOC"])).toEqual({});
+    expect(read(null)).toEqual({});
+    expect(
+      read({ a: ["DOC", "nope", "PLN"], b: ["nope"], c: "DOC", d: 4, e: [] }),
+    ).toEqual({ a: ["DOC", "PLN"] });
   });
 
   it("counts what it holds, for the panel that offers to discard it", () => {
@@ -141,9 +155,13 @@ describe("a snapshot can be older than the code reading it", () => {
       deleted: 1,
       contractors: 1,
       actions: 1,
+      observations: 1,
     });
     expect(isEmpty(EMPTY_OVERRIDES)).toBe(true);
     expect(isEmpty(filled)).toBe(false);
+    expect(
+      isEmpty({ ...EMPTY_OVERRIDES, observationCauses: { x: ["DOC"] } }),
+    ).toBe(false);
   });
 });
 

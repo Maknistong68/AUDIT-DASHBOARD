@@ -22,6 +22,7 @@
  */
 
 import type { EhssAction } from "../actions";
+import { readIssues, type IssueCode } from "../issues";
 import type { EhssAudit, EhssContractor } from "../model";
 import type { TrailEvent } from "../trail";
 
@@ -39,6 +40,10 @@ export interface OverridesSnapshot {
   events: TrailEvent[];
   /** Contractors added here, and edits to recorded ones. Keyed by id. */
   contractors: Record<string, Partial<EhssContractor> & { id: string }>;
+  /** Observation id -> the causes an auditor set over Claude's first pass.
+   * The observations themselves are recorded (recorded-observations.ts);
+   * only the correction is stored, so the 650 KB log never enters storage. */
+  observationCauses: Record<string, IssueCode[]>;
 }
 
 export const EMPTY_OVERRIDES: OverridesSnapshot = {
@@ -48,6 +53,7 @@ export const EMPTY_OVERRIDES: OverridesSnapshot = {
   actions: {},
   events: [],
   contractors: {},
+  observationCauses: {},
 };
 
 export interface StorageAdapter {
@@ -86,7 +92,22 @@ export function normalize(raw: unknown): OverridesSnapshot {
     actions: parsed.actions ?? {},
     events: parsed.events ?? [],
     contractors: parsed.contractors ?? {},
+    observationCauses: readObservationCauses(parsed.observationCauses),
   };
+}
+
+/** Trust nothing: keep only entries whose causes are real issue codes. An
+ * entry that reads as no cause at all is not a correction, so it is dropped. */
+function readObservationCauses(value: unknown): Record<string, IssueCode[]> {
+  const out: Record<string, IssueCode[]> = {};
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return out;
+  }
+  for (const [id, causes] of Object.entries(value)) {
+    const read = readIssues(causes);
+    if (Array.isArray(causes) && read.length > 0) out[id] = read;
+  }
+  return out;
 }
 
 /** Is there anything in this snapshot at all? */
@@ -95,7 +116,8 @@ export function isEmpty(snapshot: OverridesSnapshot): boolean {
     Object.keys(snapshot.contractorActive).length === 0 &&
     Object.keys(snapshot.audits).length === 0 &&
     snapshot.deletedAuditIds.length === 0 &&
-    Object.keys(snapshot.actions).length === 0
+    Object.keys(snapshot.actions).length === 0 &&
+    Object.keys(snapshot.observationCauses).length === 0
   );
 }
 
@@ -105,11 +127,13 @@ export function countOverrides(snapshot: OverridesSnapshot): {
   deleted: number;
   contractors: number;
   actions: number;
+  observations: number;
 } {
   return {
     audits: Object.keys(snapshot.audits).length,
     deleted: snapshot.deletedAuditIds.length,
     contractors: Object.keys(snapshot.contractorActive).length,
     actions: Object.keys(snapshot.actions).length,
+    observations: Object.keys(snapshot.observationCauses).length,
   };
 }

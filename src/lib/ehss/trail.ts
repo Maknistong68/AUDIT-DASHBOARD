@@ -24,7 +24,7 @@
 
 import type { UserRole } from "../types";
 
-export type TrailEntity = "audit" | "action" | "contractor";
+export type TrailEntity = "audit" | "action" | "contractor" | "observation";
 
 export interface TrailEvent {
   id: string;

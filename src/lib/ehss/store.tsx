@@ -19,6 +19,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -32,11 +33,18 @@ import type {
   EhssContractor,
   EhssResponse,
   RecordedAreaScores,
+  RecordedObservation,
   SubRegion,
 } from "./model";
 import { DISCIPLINES, type DisciplineScores } from "./disciplines";
 import type { CriticalRiskScores } from "./critical-risks";
 import type { EhssAction } from "./actions";
+import type { IssueCode } from "./issues";
+import {
+  applyObservationCauses,
+  mergeObservationCauses,
+  observationCausesEvent,
+} from "./observations";
 import {
   EMPTY_OVERRIDES,
   countOverrides,
@@ -99,6 +107,8 @@ export interface LocalEditCounts {
   actions: number;
   deleted: number;
   contractors: number;
+  /** Observations whose causes an auditor corrected. */
+  observations: number;
 }
 
 interface StoreValue {
@@ -116,6 +126,12 @@ interface StoreValue {
   contractors: EhssContractor[];
   audits: EhssAudit[];
   actions: EhssAction[];
+  /** Observation id -> the causes an auditor set. Corrections only; the
+   * merged list is `useObservations()`. */
+  observationCauses: Record<string, IssueCode[]>;
+  /** Correct the causes on one observation. No-op for a viewer. An empty
+   * list takes the correction back off. */
+  setObservationCauses: (id: string, causes: IssueCode[]) => void;
   setContractorActive: (contractorId: string, active: boolean) => void;
   /**
    * Add a contractor, or change one's initials, work-order digits or
@@ -331,6 +347,30 @@ export function EhssStoreProvider({
         return { ...prev, actions };
       }),
     [update],
+  );
+
+  // The recorded causes, once the log has loaded — for the trail's "from"
+  // when this is an observation's first correction. A ref, not state: the
+  // callback reads it at call time and no render depends on it.
+  const baselineCauses = useRef<Map<string, IssueCode[]>>(new Map());
+  useEffect(() => {
+    let live = true;
+    void loadObservations().then((list) => {
+      if (live) baselineCauses.current = new Map(list.map((o) => [o.id, o.causes]));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const setObservationCauses = useCallback(
+    (id: string, causes: IssueCode[]) =>
+      update(
+        (prev) => applyObservationCauses(prev, id, causes),
+        (prev) =>
+          observationCausesEvent(prev, id, causes, role!, baselineCauses.current.get(id)),
+      ),
+    [update, role],
   );
 
   const saveContractor = useCallback(
@@ -612,6 +652,8 @@ export function EhssStoreProvider({
       contractors,
       audits,
       actions: Object.values(overrides.actions),
+      observationCauses: overrides.observationCauses,
+      setObservationCauses,
       setContractorActive,
       saveContractor,
       raiseAction,
@@ -638,6 +680,8 @@ export function EhssStoreProvider({
       contractors,
       audits,
       overrides.actions,
+      overrides.observationCauses,
+      setObservationCauses,
       setContractorActive,
       saveContractor,
       raiseAction,
@@ -667,3 +711,46 @@ export function useEhss(): StoreValue {
   if (!ctx) throw new Error("useEhss must be used inside EhssStoreProvider");
   return ctx;
 }
+
+/**
+ * recorded-observations.ts is 650 KB, so it is never imported statically
+ * (recorded-observations.test.ts enforces that). One promise per page load,
+ * shared by every caller.
+ */
+let observationsLoad: Promise<RecordedObservation[]> | null = null;
+function loadObservations(): Promise<RecordedObservation[]> {
+  observationsLoad ??= import("./recorded-observations").then(
+    (m) => m.recordedObservations,
+  );
+  return observationsLoad;
+}
+
+/**
+ * Every observation on record, with the auditors' corrected causes laid
+ * over Claude's first pass. `observations` is empty until the log has loaded
+ * and `loaded` says so; a view that needs the log waits for it rather than
+ * reading an empty list as "no findings".
+ */
+export function useObservations(): {
+  observations: RecordedObservation[];
+  loaded: boolean;
+} {
+  const { observationCauses } = useEhss();
+  const [recorded, setRecorded] = useState<RecordedObservation[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    void loadObservations().then((list) => {
+      if (live) setRecorded(list);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const observations = useMemo(
+    () => (recorded ? mergeObservationCauses(recorded, observationCauses) : EMPTY_LIST),
+    [recorded, observationCauses],
+  );
+  return { observations, loaded: recorded !== null };
+}
+
+const EMPTY_LIST: RecordedObservation[] = [];
