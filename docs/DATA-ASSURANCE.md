@@ -239,10 +239,15 @@ Two rules keep this explainable:
   number of findings. Every view that shows them says so. A finding usually
   has more than one cause and forcing one label loses the rest.
 
-**No free text anywhere in the audit.** Answers are Full/Partial/No/N-A and
-the reason is picked from the fixed list. This is not a UI preference — a
+**The record is structured; one field is typed.** Answers are
+Full/Partial/No/N-A and the reason is picked from the fixed list. Since
+2026-10-18 an auditor may also describe what they saw, against a question
+or an area — optional, 300 characters, and refused at entry if it looks
+like it names anybody. **Nothing is computed from it**, so no figure in
+this document depends on it. The distinction is not a UI preference: a
 comments box is how an audit tool acquires personal data by accident, and
-personal data is what would change which laws apply (§9).
+personal data is what would change which laws apply (§9). The controls that
+keep that from happening are listed in COMPLIANCE-KSA §2 and §4.
 
 ---
 

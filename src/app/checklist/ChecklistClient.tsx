@@ -368,6 +368,7 @@ export function ChecklistClient() {
                         .join(", ")}
                     </span>
                     <span className="qa-q">{quarterLabel(a.quarter)}</span>
+                    {a.note && <span className="qa-note">{a.note}</span>}
                   </li>
                 ))}
               </ul>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { RatingBadge } from "@/components/Badges";
 import { ChecklistForm } from "@/components/audit/ChecklistForm";
-import type { Responses } from "@/components/audit/QuestionRow";
+import type { Responses } from "@/lib/ehss/answers";
 import { formatScore } from "@/lib/format";
 import { quarterLabel, ratingFor, type EhssAudit } from "@/lib/ehss/model";
 import {

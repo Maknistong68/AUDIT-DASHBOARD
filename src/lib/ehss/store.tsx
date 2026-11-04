@@ -44,7 +44,7 @@ import {
   type StorageAdapter,
 } from "./storage/adapter";
 import { localStorageAdapter } from "./storage/local";
-import { appendEvent, mayWrite, type TrailEvent } from "./trail";
+import { appendEvent, mayWrite, textSize, type TrailEvent } from "./trail";
 import type { UserRole } from "../types";
 import { memoryAdapter } from "./storage/memory";
 
@@ -145,6 +145,7 @@ interface StoreValue {
   /** The 15 checklist areas as raw points. Passing an area with
    * `possible <= 0` drops it, which is how an area is un-recorded. */
   saveAreaScores: (auditId: string, areas: RecordedAreaScores) => void;
+  saveAreaNotes: (auditId: string, notes: Record<string, string>) => void;
   /** Answers for a checklist other than Health & Safety — Environment,
    * Security, Worker Welfare, or one of the fourteen CRC hazards. H&S goes
    * through `saveResponses`; see ./scopes for why the two are apart. */
@@ -455,6 +456,59 @@ export function EhssStoreProvider({
     [update, currentAudit, role],
   );
 
+  /**
+   * What the auditor saw, per checklist area.
+   *
+   * Its own mutation rather than a passenger on `saveAreaScores`, whose
+   * "no areas left means drop the key" rule would delete the notes along
+   * with the points.
+   *
+   * THE TRAIL RECORDS THAT A NOTE CHANGED, NEVER WHAT IT SAID. The trail is
+   * append-only, five hundred events deep, and lives in the same storage
+   * blob; copying observation text into it would duplicate the app's only
+   * free-text surface into the place it is hardest to redact. A character
+   * count answers "was this edited, and by which role", which is what a
+   * trail is for.
+   */
+  const saveAreaNotes = useCallback(
+    (auditId: string, notes: Record<string, string>) =>
+      update(
+        (prev) => {
+          const audit = currentAudit(auditId, prev);
+          if (!audit) return prev;
+          const kept = Object.keys(notes).length > 0 ? notes : undefined;
+          return {
+            ...prev,
+            audits: {
+              ...prev.audits,
+              [auditId]: { ...audit, areaNotes: kept },
+            },
+          };
+        },
+        (prev) => {
+          const was = currentAudit(auditId, prev)?.areaNotes ?? {};
+          const codes = [...new Set([...Object.keys(was), ...Object.keys(notes)])];
+          // See `textSize`: the trail records that an observation changed,
+          // never what it said.
+          return codes.flatMap((code) =>
+            (was[code] ?? "") === (notes[code] ?? "")
+              ? []
+              : [
+                  {
+                    actorRole: role!,
+                    entity: "audit" as const,
+                    entityId: auditId,
+                    field: `area ${code} — what was seen`,
+                    from: textSize(was[code]),
+                    to: textSize(notes[code]),
+                  },
+                ],
+          );
+        },
+      ),
+    [update, currentAudit, role],
+  );
+
   const saveScopedResponses = useCallback(
     (
       auditId: string,
@@ -621,6 +675,7 @@ export function EhssStoreProvider({
       createAudit,
       saveResponses,
       saveAreaScores,
+      saveAreaNotes,
       saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,
@@ -647,6 +702,7 @@ export function EhssStoreProvider({
       createAudit,
       saveResponses,
       saveAreaScores,
+      saveAreaNotes,
       saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,

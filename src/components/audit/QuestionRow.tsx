@@ -11,6 +11,7 @@ import {
   ISSUE_BY_CODE,
   type IssueCode,
 } from "@/lib/ehss/issues";
+import { NoteField } from "./NoteField";
 
 export const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
 
@@ -25,9 +26,13 @@ export const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
  * actually touches is written once. A second copy of this markup is how two
  * checklists end up disagreeing about what "Partial" means.
  *
- * No free text anywhere: the answer is one of four and the reason is picked
- * from the fixed category list. A comments box is how an audit tool acquires
- * personal data by accident.
+ * The answer is one of four and the reason is picked from the fixed category
+ * list — neither is ever typed. Beneath them sits the audit's ONE free-text
+ * field, "what was seen", which is optional, capped and refused outright if
+ * it looks like it names somebody (`noteProblem`, lib/ehss/model.ts). It
+ * exists because the categories say why a requirement was missed and the
+ * score says how much, and neither can say what was actually on site.
+ * Read docs/COMPLIANCE-KSA.md §2 and §4 before widening it.
  */
 export function QuestionRow({
   question,
@@ -37,6 +42,7 @@ export function QuestionRow({
   onClear,
   onToggleIssue,
   onGoodPractice,
+  onNote,
 }: {
   question: ChecklistQuestion;
   response: EhssResponse | undefined;
@@ -45,6 +51,7 @@ export function QuestionRow({
   onClear: () => void;
   onToggleIssue: (issue: IssueCode) => void;
   onGoodPractice: (on: boolean) => void;
+  onNote: (text: string) => void;
 }) {
   const r = response;
   const isGap = r !== undefined && (r.answer === "partial" || r.answer === "no");
@@ -126,79 +133,18 @@ export function QuestionRow({
           )}
         </div>
       )}
+
+      {/* Only where there is something to describe. A Full answer with
+          nothing wrong does not need a sentence, and 81 textareas on one
+          screen is how a form stops being filled in. */}
+      {r && r.answer !== "na" && (
+        <NoteField
+          id={question.code}
+          value={r.note}
+          canEdit={canEdit}
+          onCommit={onNote}
+        />
+      )}
     </div>
   );
-}
-
-/* ------------------------------------------------------------------ *
- * The answer reducers — the rules that decide what an answer DOES to the
- * causes recorded beside it. Shared for the same reason the row is: these
- * are the audit's semantics, not one screen's behaviour.
- * ------------------------------------------------------------------ */
-
-export type Responses = Record<string, EhssResponse>;
-
-/** Set an answer, keeping the causes only where they still mean something. */
-export function withAnswer(
-  responses: Responses,
-  code: string,
-  answer: EhssAnswer,
-): Responses {
-  const cur = responses[code];
-  // Moving between Partial and No keeps the categories — the cause did not
-  // change, only how badly. Anything else clears them, because a category
-  // chosen for a gap is meaningless on a Full or N/A.
-  const keep =
-    (answer === "partial" || answer === "no") &&
-    cur !== undefined &&
-    (cur.answer === "partial" || cur.answer === "no");
-  return { ...responses, [code]: { answer, issues: keep ? cur!.issues : [] } };
-}
-
-/** Take an answer back off a question — the only way to undo a misclick. */
-export function withoutAnswer(responses: Responses, code: string): Responses {
-  const next = { ...responses };
-  delete next[code];
-  return next;
-}
-
-/** Toggle one cause, keeping the list in register order so two auditors who
- * pick the same categories produce the same record. */
-export function withIssue(
-  responses: Responses,
-  code: string,
-  issue: IssueCode,
-): Responses {
-  const cur = responses[code];
-  if (!cur) return responses;
-  const has = cur.issues.includes(issue);
-  return {
-    ...responses,
-    [code]: {
-      answer: cur.answer,
-      issues: GAP_CATEGORIES.map((c) => c.code).filter((c) =>
-        has
-          ? cur.issues.includes(c) && c !== issue
-          : cur.issues.includes(c) || c === issue,
-      ),
-    },
-  };
-}
-
-/** Mark a Full answer as good practice, or take the mark off. */
-export function withGoodPractice(
-  responses: Responses,
-  code: string,
-  on: boolean,
-): Responses {
-  const cur = responses[code];
-  if (!cur) return responses;
-  return { ...responses, [code]: { answer: cur.answer, issues: on ? ["GOOD"] : [] } };
-}
-
-/** Gaps with no cause recorded — what blocks a checklist from being submitted. */
-export function gapsNeedingCause(responses: Responses): number {
-  return Object.values(responses).filter(
-    (r) => (r.answer === "partial" || r.answer === "no") && r.issues.length === 0,
-  ).length;
 }

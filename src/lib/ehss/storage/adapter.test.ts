@@ -18,7 +18,20 @@ const audit: EhssAudit = {
   auditDate: "2026-02-01",
   inspectionNo: "T-1",
   status: "draft",
-  responses: { A1: { answer: "no", issues: ["DOC"] } },
+  // The note is in the fixture on purpose. `upgradeAudits` used to rebuild
+  // every response as exactly `{ answer, issues }`, so a field the code did
+  // not know about saved correctly and was gone by the next page load. The
+  // round-trip below is what catches that, and it only catches it if a
+  // response here carries more than the two fields.
+  responses: {
+    A1: { answer: "no", issues: ["DOC"], note: "Register was three months old." },
+  },
+  scopedResponses: {
+    "crc:fire": {
+      Q1: { answer: "partial", issues: ["SUP"], note: "Two extinguishers unsealed." },
+    },
+  },
+  areaNotes: { B6: "Three of eight subcontractor packs had no evaluation." },
   disciplineScores: { env: 70 },
   criticalRisks: { fire: 80 },
 };

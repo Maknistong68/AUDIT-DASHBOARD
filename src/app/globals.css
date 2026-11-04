@@ -922,6 +922,124 @@ button.ghost:hover { background: var(--mat-hover); }
   min-width: 240px;
 }
 
+/* An observation in a table cell. Capped so one long note cannot set the
+   column width for every other row; the full text is on the audit page. */
+.obs-note {
+  max-width: 260px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+/* And in the question drill-down's answer list. */
+.qa-note {
+  grid-column: 1 / -1;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  padding-left: 10px;
+  border-left: 2px solid var(--mat-line);
+}
+
+/* ---- "What was seen" — the one free-text control in the audit ----
+   Recessive by design. It sits under the answer and the causes because
+   those are the record and this is the explanation; a box that competed
+   with them would invite a narrative, and a narrative is where names
+   appear. The rule under it is permanent, not an error state. */
+
+.note-field {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 2px;
+}
+
+.note-field > label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.note-field > label em {
+  font-style: normal;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.note-field textarea {
+  width: 100%;
+  /* The shared control rule caps every input at 380px, which is right for a
+     date or a points box and wrong for a sentence — it put a 300-character
+     observation in four cramped lines. Capped at a reading measure instead,
+     not at the row's full width: prose set 1100px wide is as hard to read. */
+  max-width: 64ch;
+  min-height: 46px;
+  resize: vertical;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-1);
+  background: var(--mat-sunken);
+  border: 1px solid var(--mat-line);
+  border-radius: var(--r-3);
+}
+
+.note-field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.note-field textarea::placeholder {
+  color: var(--muted);
+}
+
+.note-rule {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.note-rule b {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+/* A refused value is not saved, so this is a blocker and wears the blocking
+   colour; the caution below is advice and does not. */
+.note-problem {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 580;
+  color: var(--status-critical);
+}
+
+.note-caution {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--status-warning);
+}
+
+/* What a viewer sees: the observation without the box. */
+.note-read {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+.note-read span {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
 /* The submit bar docks to the bottom of the card as a frosted toolbar. */
 .entry-footer {
   position: sticky;
@@ -3917,6 +4035,90 @@ table.matrix td.matrix-cell {
 }
 
 .av-gap { font-size: 13px; color: var(--ink-2); }
+
+/* The points behind the percentage. "18.2%" is a thing to compare;
+   "2 of 11 points" is a thing to argue about with a contractor. */
+.av-points {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.av-points b {
+  color: var(--ink-1);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Two bars on one scale — is this the contractor's problem or everyone's. */
+.av-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 13px 0;
+  border-top: 1px solid var(--mat-line);
+  border-bottom: 1px solid var(--mat-line);
+}
+
+.av-cmp-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 128px) minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 11px;
+}
+
+.av-cmp-id {
+  font-size: 12.5px;
+  font-weight: 580;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The programme row is the reference, not a second subject. */
+.av-cmp-row.is-ref .av-cmp-id,
+.av-cmp-row.is-ref strong {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.av-cmp-row strong {
+  text-align: right;
+  font-size: 13.5px;
+  font-weight: 680;
+  font-variant-numeric: tabular-nums;
+}
+
+.av-rank {
+  margin: 1px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.av-rank b {
+  color: var(--ink-2);
+  font-weight: 650;
+}
+
+/* What the auditor saw: the only prose in the app that a person typed, so
+   it is set as prose rather than as a field value. */
+.av-note {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-1);
+  background: var(--mat-2);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--r-3) var(--r-3) 0;
+}
+
+.av-note.is-q {
+  margin: 5px 0 0;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  border-left-color: var(--mat-line);
+}
 .av-state { font-size: 12.5px; color: var(--muted); }
 
 .av-facts {
@@ -4035,10 +4237,29 @@ table.matrix td.matrix-cell {
 
 .av-questions { gap: 9px; }
 
+/* The weight as a length, beside the question it belongs to — the list is
+   ordered by it, so the shape confirms the order rather than restating it. */
+.av-q-weight {
+  grid-column: 1 / -1;
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--mat-sunken);
+  overflow: hidden;
+}
+
+.av-q-weight i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ink-2);
+  opacity: 0.55;
+}
+
 .av-questions li {
   display: grid;
-  grid-template-columns: 58px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 6px 10px;
   align-items: baseline;
 }
 
@@ -4047,6 +4268,9 @@ table.matrix td.matrix-cell {
   font-weight: 650;
   color: var(--ink-1);
   font-variant-numeric: tabular-nums;
+  /* The code and its weight are one label. Let them wrap and "3 pts" breaks
+     after the "3", which reads as a column of stray numerals. */
+  white-space: nowrap;
 }
 
 .av-q-code em {

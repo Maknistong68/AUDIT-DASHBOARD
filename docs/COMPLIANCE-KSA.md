@@ -50,20 +50,40 @@ as a cookie header back to the origin that set it.
 - Contractor organizations and project numbers (`Al Fahd (1272)`)
 - Quarterly discipline scores and checklist answers
 - Observation codes and critical-risk hazard scores
+- **"What was seen"** — the auditor's description of a condition, against a
+  checklist question or a checklist area. Optional, 300 characters, and
+  refused at entry if it looks like it names anybody (see below). It
+  describes a *site condition*, not a person, which is what keeps it on
+  this side of the line rather than in the table above.
 
 ### Deliberately absent
 
 No worker records. No names, ID or Iqama numbers, passports,
 nationalities, salaries or wage data. No photographs, attachments or
-document store. No auditor contact details. No free-text field anywhere in
-the scoring path. No analytics, telemetry or third-party trackers. No
-cookies other than the one above.
+document store. No auditor contact details. No analytics, telemetry or
+third-party trackers. No cookies other than the one above. **Nothing
+free-text in the scoring path** — no figure anywhere is computed from
+typed text.
 
-**Why this holds under change:** the absence is structural, not a policy
-someone has to remember. Answers are enums; comments are codes from a fixed
-list; there is no upload path. The most common way an audit tool acquires
-personal data — a free-text "comments" box or a site photograph — does not
-exist here. Keep it that way and the compliance position does not drift.
+**Why this holds under change.** Two different mechanisms, and the
+difference matters:
+
+- **Structural, for everything that could name a person.** There is no
+  worker table, no assignee field on an action, no actor name on an audit
+  event, and no upload path. Tests assert the absence of each
+  (`actions.test.ts`, `trail.test.ts`), so it cannot be added by accident.
+- **Enforced at entry, for the one description field.** Until 2026-10-18
+  the absence of a free-text box was structural too. A director looking at
+  an area scored 18.2% had the number, the cause categories, and nothing
+  they could take to the contractor, so the owner asked for the auditor's
+  own description. It is capped at 300 characters, kept out of the scoring
+  path, and `noteProblem()` in `src/lib/ehss/model.ts` **refuses to save**
+  an email address, a phone number, an iqama/passport/ID reference, or an
+  honorific followed by a name. The rule is printed under the field as
+  well, because a check nobody understands gets routed around.
+
+That second mechanism is weaker than the first, and it is the only place in
+the app that relies on it. Keep it the only place and the position holds.
 
 ---
 
@@ -72,7 +92,7 @@ exist here. Keep it that way and the compliance position does not drift.
 | PDPL obligation | Status | Reasoning |
 |---|---|---|
 | Lawful basis for processing (Art. 5–6) | ✅ | The only personal data is a self-supplied display name used to render the session. Legitimate interest; no sensitive categories involved |
-| Data minimization (Art. 10) | ✅ **Exemplary** | One optional free-text name. The architecture actively prevents collecting more |
+| Data minimization (Art. 10) | ✅ **Strong** | One optional free-text name, plus one capped, validated description field that records conditions rather than people. The architecture still prevents collecting more |
 | Sensitive personal data (Art. 1, 16) | ✅ N/A | None processed. Health data in this app is *organizational* H&S performance, not any individual's health |
 | Privacy notice / transparency (Art. 12) | ⚠️ **Gap** | `/welcome` asks for a name without saying what happens to it. **Fix in §5.1** |
 | Consent & withdrawal (Art. 5, 11) | ✅ | Providing the name is voluntary; "Restart demo" deletes it |
@@ -96,6 +116,25 @@ and may be stored outside the Kingdom.** (Owner's decision, recorded
 in-Kingdom hosting requirement, and no Transfer Risk Assessment gating
 deployment.
 
+**Reviewed 2026-10-18 and re-affirmed.** An optional "what was seen" field
+was added to the audit record on the owner's instruction, which §4 item 4
+below requires be treated as a scope change rather than a feature. The
+determination stands, on four controls, all of which must remain true:
+
+1. It records a **condition**, and attaches to a checklist question or a
+   checklist area — never to a person. No field in this system points at an
+   individual, and the tests that assert that are unchanged.
+2. It is **capped** at 300 characters, in the client, in the validator and
+   in the database constraint. Past that it is a narrative, and a narrative
+   is where names appear.
+3. It is **validated at entry** and the save is blocked, not warned:
+   `noteProblem()` refuses an email, a phone number, an
+   iqama/passport/ID/badge reference, or an honorific followed by a name.
+4. It is **outside the scoring path**. No figure is derived from it. The
+   audit trail records that it changed and by which role, never its text.
+
+If any of those four stops being true, this section is re-opened again.
+
 That determination rests on what §2 describes, so it holds only while those
 facts hold:
 
@@ -105,8 +144,12 @@ facts hold:
   no-personal-data rule in `CLAUDE.md` is an invariant and not a preference.
 - **Contractor-level results only.** Organizational audit scores, not
   individual performance.
-- **No free text and no uploads.** A comments box or a site photograph is
-  how an audit tool acquires personal data by accident, and neither exists.
+- **No uploads, and one controlled description field.** A site photograph
+  is how an audit tool acquires personal data by accident, and there is no
+  upload path at all. The auditor's "what was seen" is the single free-text
+  field: capped, outside the scoring path, attached to a question or an
+  area rather than to anybody, and refused at entry when it looks like an
+  identifier. See §2 and the 2026-10-18 review below.
 - **Contractors are identified only by initials and the last three digits of
   the work order** — `SIBS (838)`, `AF (272)`. Applied when the real Q4 2025
   and Q1 2026 audits were imported (owner's instruction, 2026-10-07): full
@@ -151,7 +194,9 @@ Send this document. §2 is your Record of Processing Activities.
 
 ### 5.5 When the database is added — *design-time constraints*
 - Keep the no-personal-data rule at the **schema** level: no worker table,
-  no free-text column in the scoring path, no attachment storage.
+  no free-text column in the scoring path (the one
+  description column is `audit_responses.note` and its siblings — length
+  constrained in the schema, and read by no view that computes a figure), no attachment storage.
 - Auditor identity: store an opaque user id, not a name, in audit records.
   If auditors need to be identifiable, that is a deliberate scope change
   requiring a lawful basis and a retention period — not a default.

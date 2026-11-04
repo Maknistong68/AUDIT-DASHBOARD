@@ -41,7 +41,7 @@ import {
   type Source,
 } from "./DisciplinePanels";
 import { scopeProgress } from "@/lib/ehss/scopes";
-import type { Responses } from "@/components/audit/QuestionRow";
+import type { Responses } from "@/lib/ehss/answers";
 import type { UserRole } from "@/lib/types";
 
 const STATUSES: EhssAuditStatus[] = ["draft", "submitted", "approved"];
@@ -140,8 +140,19 @@ function AuditMetaPanel({
             value={audit.status}
             onChange={(e) => onStatus(e.target.value as EhssAuditStatus)}
           >
-            {STATUSES.filter((st) => st !== "approved" || isAdmin).map((st) => (
-              <option key={st} value={st}>
+            {/* Every status is always an option, and the ones this role may
+                not SET are disabled rather than removed. Filtering "approved"
+                out for an auditor left the select with no option matching its
+                own value, so a browser fell back to the first one and an
+                approved review read as a DRAFT on screen — the badge beside
+                it said Approved at the same time. An audit tool may not
+                misreport the state of an audit. */}
+            {STATUSES.map((st) => (
+              <option
+                key={st}
+                value={st}
+                disabled={st === "approved" && !isAdmin}
+              >
                 {st}
               </option>
             ))}
@@ -184,6 +195,7 @@ export function AuditDetailClient({
     audits,
     saveResponses,
     saveAreaScores,
+    saveAreaNotes,
     saveAuditMeta,
     saveDisciplineScores,
     saveCriticalRisks,
@@ -386,6 +398,7 @@ export function AuditDetailClient({
             key={`${panelKey}-${unlocked}`}
             initialResponses={audit.responses}
             initialAreas={audit.areaScores ?? {}}
+            initialNotes={audit.areaNotes ?? {}}
             sharedStorage={storage.shared}
             prior={prior}
             canEdit={canEdit}
@@ -394,16 +407,20 @@ export function AuditDetailClient({
             onSave={(
               responses: Record<string, EhssResponse>,
               areas: RecordedAreaScores,
+              notes: Record<string, string>,
             ) => {
               saveResponses(audit.id, responses);
               saveAreaScores(audit.id, areas);
+              saveAreaNotes(audit.id, notes);
             }}
             onSubmit={(
               responses: Record<string, EhssResponse>,
               areas: RecordedAreaScores,
+              notes: Record<string, string>,
             ) => {
               saveResponses(audit.id, responses);
               saveAreaScores(audit.id, areas);
+              saveAreaNotes(audit.id, notes);
               // The completed checklist becomes the Health & Safety score,
               // scored the same way the page shows it: per area, from
               // whichever of the two sources that area is on record at.

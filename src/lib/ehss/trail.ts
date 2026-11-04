@@ -75,6 +75,23 @@ export function appendEvent(
   return all.length > TRAIL_LIMIT ? all.slice(all.length - TRAIL_LIMIT) : all;
 }
 
+/**
+ * How a free-text value is rendered INTO the trail: as its size, never as
+ * its content.
+ *
+ * The audit holds exactly one free-text field — the auditor's "what was
+ * seen" — and the trail is append-only, five hundred events deep, in the
+ * same storage blob as everything else. Copying that text into it would
+ * duplicate the app's only free-text surface into the place it is hardest
+ * to find and redact, and for nothing: a trail answers "was this changed,
+ * and by a role entitled to change it", and a character count answers that.
+ * See docs/COMPLIANCE-KSA.md §2.
+ */
+export function textSize(value: string | undefined): string | null {
+  const text = (value ?? "").trim();
+  return text.length === 0 ? null : `${text.length} characters`;
+}
+
 /** A one-line description, for the panel that lists them. */
 export function describeEvent(event: TrailEvent): string {
   if (event.from === null && event.to !== null) {

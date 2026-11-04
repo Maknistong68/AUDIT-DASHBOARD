@@ -80,6 +80,22 @@ export interface EhssResponse {
    * more than one cause, and forcing one label loses the rest.
    */
   issues: import("./issues").IssueCode[];
+  /**
+   * What the auditor saw — the ONE free-text field in the audit, optional,
+   * capped, and validated at entry by `noteProblem()` below.
+   *
+   * It exists because the categories say WHY a requirement was missed and
+   * the score says HOW MUCH, and neither can say what was actually on site.
+   * A director reading "Subcontractor Management 18.2%" had nothing to take
+   * to the contractor (owner's instruction, 2026-10-18).
+   *
+   * THREE THINGS KEEP THE §4 HOSTING DETERMINATION TRUE AND MUST STAY TRUE:
+   * it describes a CONDITION and is attached to a question or an area,
+   * never to a person; `noteProblem()` refuses anything that looks like an
+   * identifier; and nothing computes from it — it is outside the scoring
+   * path entirely. See docs/COMPLIANCE-KSA.md §2 and §4.
+   */
+  note?: string;
 }
 
 export interface SubRegion {
@@ -162,6 +178,18 @@ export interface EhssAudit {
    * An audit entered through the app leaves this unset.
    */
   areaScores?: RecordedAreaScores;
+  /**
+   * What the auditor saw in a checklist AREA, keyed by area code ("B6").
+   *
+   * The per-question twin of this lives on `EhssResponse.note`, and the same
+   * compliance rules govern both. It exists separately because every review
+   * on record carries area points and no answers, so an area is the only
+   * grain at which today's data can hold an observation at all.
+   *
+   * NOT folded into `areaScores`: the store drops that key when its points
+   * are emptied, which would silently take the notes with them.
+   */
+  areaNotes?: Record<string, string>;
   /**
    * The total the source sheet stated, where it was transcribed from one.
    * Kept because it disagrees with that sheet's own points in 7 of the 20
@@ -261,6 +289,71 @@ export function auditableQuarters(known: string[], today = new Date()): string[]
  * So the rule is enforced at the point of entry rather than left to the
  * convention it used to be. Returns null when the value is acceptable.
  */
+/** Longer than an observation and it is a narrative, and a narrative is
+ * where names appear. Also the DB column width when one exists. */
+export const NOTE_MAX = 300;
+
+/**
+ * Why an observation would be refused.
+ *
+ * This is the control that lets the audit hold free text at all. §2 of
+ * `docs/COMPLIANCE-KSA.md` used to say the absence of a comments box was
+ * "structural, not a policy someone has to remember"; now that the box
+ * exists, the absence of IDENTIFIERS in it has to be enforced somewhere,
+ * and a rule nobody runs is exactly the policy §2 warned about. So it is
+ * enforced here, at the point of entry, and the save is blocked.
+ *
+ * Blocks what is reliably an identifier. A bare run of digits only WARNS
+ * (see `noteCaution`) because a CR number, a permit number and a work order
+ * all look like that, and a validator that traps a legitimate observation
+ * teaches auditors to route around it.
+ *
+ * Returns null when the value is acceptable. Every message names the rule
+ * and the reason: "invalid" teaches nobody why the rule exists.
+ */
+export function noteProblem(value: string): string | null {
+  const text = value.trim();
+  if (text.length === 0) return null;
+  if (text.length > NOTE_MAX) {
+    return `${text.length} characters — an observation, not a report (max ${NOTE_MAX})`;
+  }
+  if (/[\w.+-]+@[\w-]+\.[\w.]+/.test(text)) {
+    return "that looks like an email address — record the condition, not the person";
+  }
+  if (/(\+|00)?966[\s-]?\d|\b0?5\d[\s-]?\d{3}[\s-]?\d{4}\b/.test(text)) {
+    return "that looks like a phone number — record the condition, not the person";
+  }
+  const idWord =
+    /\b(iqama|passport|visa\s*(no|number)|national\s*id|id\s*(no|number)|badge\s*(no|number)|cpr)\b/i.exec(
+      text,
+    );
+  if (idWord) {
+    return `"${idWord[0]}" belongs to a person — this field records what was seen`;
+  }
+  // Case-insensitive: "Eng." is how it is actually written on a permit.
+  const titled =
+    /\b(mr|mrs|ms|miss|eng|engr|dr|capt|sheikh)\.?\s+[A-Z][a-z]/i.exec(text);
+  if (titled) {
+    return "that looks like somebody's name — say what was wrong, not who was there";
+  }
+  if (/\b(name|worker|operator|driver|foreman)\s*:\s*[A-Z][a-z]/i.test(text)) {
+    return "that looks like somebody's name — say what was wrong, not who was there";
+  }
+  return null;
+}
+
+/**
+ * A caution that does NOT block. A long digit run is usually a CR number or
+ * a permit, occasionally an ID; the auditor is the one who can tell, so they
+ * are told rather than stopped.
+ */
+export function noteCaution(value: string): string | null {
+  if (noteProblem(value) !== null) return null;
+  return /\b\d{8,}\b/.test(value)
+    ? "check that long number is a permit or CR, not anyone's ID"
+    : null;
+}
+
 export function contractorFieldProblem(
   field: "name" | "code",
   value: string,

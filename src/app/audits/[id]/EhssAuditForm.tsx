@@ -20,6 +20,8 @@ import { formatScore } from "@/lib/format";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { quarterLabel } from "@/lib/ehss/model";
 import type { PriorReview } from "@/lib/ehss/summaries";
+import { NoteField } from "@/components/audit/NoteField";
+import { withNote } from "@/lib/ehss/answers";
 
 const ANSWERS: EhssAnswer[] = ["full", "partial", "no", "na"];
 
@@ -133,6 +135,7 @@ function AreaPoints({
 export function EhssAuditForm({
   initialResponses,
   initialAreas,
+  initialNotes,
   sharedStorage,
   prior,
   canEdit,
@@ -146,6 +149,9 @@ export function EhssAuditForm({
   initialResponses: Record<string, EhssResponse>;
   /** Area points from an imported review; `{}` for one entered here. */
   initialAreas: RecordedAreaScores;
+  /** What the auditor saw, per area. The per-question twin lives on each
+   * response; this is the grain every imported review actually has. */
+  initialNotes: Record<string, string>;
   /** True when a save is visible to other people. Read from the storage
    * seam rather than assumed, so the warning below disappears by itself
    * the day a shared adapter is wired in. */
@@ -165,10 +171,12 @@ export function EhssAuditForm({
   onSave?: (
     responses: Record<string, EhssResponse>,
     areas: RecordedAreaScores,
+    notes: Record<string, string>,
   ) => void;
   onSubmit?: (
     responses: Record<string, EhssResponse>,
     areas: RecordedAreaScores,
+    notes: Record<string, string>,
   ) => void;
   onApprove?: () => void;
   onDelete?: () => void;
@@ -176,6 +184,7 @@ export function EhssAuditForm({
   const [responses, setResponses] =
     useState<Record<string, EhssResponse>>(initialResponses);
   const [areas, setAreas] = useState<RecordedAreaScores>(initialAreas);
+  const [notes, setNotes] = useState<Record<string, string>>(initialNotes);
   const [dirty, setDirty] = useState(false);
   /** What to show. An 81-question form is only workable if you can ask it
    * what is left. */
@@ -239,9 +248,13 @@ export function EhssAuditForm({
         (answer === "partial" || answer === "no") &&
         cur !== undefined &&
         (cur.answer === "partial" || cur.answer === "no");
+      // Spread `cur` first: rebuilding the response as exactly
+      // `{ answer, issues }` silently deleted every other field on it, and
+      // an observation written against a Partial would vanish the moment
+      // the auditor changed their mind to No.
       return {
         ...prev,
-        [code]: { answer, issues: keep ? cur!.issues : [] },
+        [code]: { ...cur, answer, issues: keep ? cur!.issues : [] },
       };
     });
   };
@@ -266,7 +279,7 @@ export function EhssAuditForm({
       return {
         ...prev,
         [code]: {
-          answer: cur.answer,
+          ...cur,
           // Kept in register order so two auditors who pick the same
           // categories produce the same record.
           issues: GAP_CATEGORIES.map((c) => c.code).filter((c) =>
@@ -281,8 +294,28 @@ export function EhssAuditForm({
     touch();
     setResponses((prev) => ({
       ...prev,
-      [code]: { answer: prev[code]!.answer, issues: on ? ["GOOD"] : [] },
+      [code]: { ...prev[code]!, issues: on ? ["GOOD"] : [] },
     }));
+  };
+
+  /** What the auditor saw against one question. The reducer is the shared
+   * one, so H&S and the other seventeen checklists cannot drift apart over
+   * what clearing a note means. */
+  const setNote = (code: string, text: string) => {
+    touch();
+    setResponses((prev) => withNote(prev, code, text));
+  };
+
+  /** The same, for a whole area — the grain every imported review has. */
+  const setAreaNote = (code: string, text: string) => {
+    touch();
+    setNotes((prev) => {
+      const out = { ...prev };
+      const next = text.trim();
+      if (next.length === 0) delete out[code];
+      else out[code] = next;
+      return out;
+    });
   };
 
   const setAreaPoints = (
@@ -445,7 +478,7 @@ export function EhssAuditForm({
       : (answeredTotal.answered / answeredTotal.total) * 100;
 
   const save = () => {
-    onSave?.(responses, areas);
+    onSave?.(responses, areas, notes);
     setDirty(false);
     setMessage("Saved.");
   };
@@ -516,9 +549,16 @@ export function EhssAuditForm({
             <p>
               Every Partial or No needs at least one cause, and more than one
               may apply — a finding usually has several and picking one loses
-              the rest. There is <b>no notes field and no photo upload</b>,
-              deliberately: this system holds contractor results and names
-              nobody, which is what lets it run where it runs.
+              the rest.
+            </p>
+            <p>
+              <b>What was seen</b> is optional and is the one place anything is
+              typed. Record the <b>condition</b>: what was missing, where, how
+              many. Never a person — no names, ID or iqama numbers, phone
+              numbers or job titles of individuals, and{" "}
+              <b>no photographs</b>. This system holds contractor results and
+              names nobody, which is what lets it run where it runs, so the
+              field refuses anything that looks like an identifier.
             </p>
           </div>
         </details>
@@ -640,6 +680,18 @@ export function EhssAuditForm({
                     onChange={(next) => setAreaPoints(area.key, next)}
                   />
 
+                  {/* The area is the grain every imported review has: its
+                      points are on record and not one of its questions is
+                      answered, so this is the only place an observation can
+                      attach to last quarter's audit. */}
+                  <NoteField
+                    id={`area-${area.key}`}
+                    label={`What was seen in ${area.key}`}
+                    value={notes[area.key]}
+                    canEdit={canEdit}
+                    onCommit={(t) => setAreaNote(area.key, t)}
+                  />
+
                   {shown.map((q) => {
                     const r = responses[q.code];
                     const needsObservation =
@@ -729,6 +781,15 @@ export function EhssAuditForm({
                               </label>
                             )}
                           </div>
+                        )}
+
+                        {r && r.answer !== "na" && (
+                          <NoteField
+                            id={q.code}
+                            value={r.note}
+                            canEdit={canEdit}
+                            onCommit={(t) => setNote(q.code, t)}
+                          />
                         )}
                       </div>
                     );
@@ -834,7 +895,7 @@ export function EhssAuditForm({
                     );
                     return;
                   }
-                  onSubmit?.(responses, areas);
+                  onSubmit?.(responses, areas, notes);
                   setDirty(false);
                   setMessage("Review submitted.");
                 }}

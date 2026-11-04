@@ -73,7 +73,7 @@ else waits on it.
 | 1.3 | **Scoring rules where the scoring happens.** The formula is on the admin Reference page only. Put a compact "how this is scored" disclosure in the entry toolbar. | An auditor can read what Partial scores without leaving the form. No new prose on the page by default — a disclosure, closed. |
 | 1.4 | **Say that a save is local.** The Save button implies durability it does not have. Until Phase 4, label it honestly. | The entry footer states that edits are held in this browser. Removed by Phase 4, not before. |
 | 1.5 | **Submit leads somewhere.** Submitting sets a status and tells nobody. Add a "submitted, awaiting approval" filter to `/audits` and a count on the admin's view. | After submitting, the review appears in a queue an admin can find without being told it exists. |
-| 1.6 | **Say why there is no photo or notes field.** Auditors will reach for both. | One line in the entry disclosure (1.3): answers and causes only, and why. Not an apology on the page. |
+| 1.6 | **Say what may and may not be typed.** Auditors will reach for a notes field and a camera. Superseded 2026-10-18: there IS a notes field now ("what was seen"), and there is still no camera. | The entry disclosure (1.3) says what the field is for — the condition, not the person — and `noteProblem()` enforces it. Not an apology on the page. |
 
 ---
 
@@ -227,8 +227,12 @@ the end).
   reminder, and there is already a calendar.
 - **A real benchmark (director 8).** Cannot be invented. It arrives with the
   fourth quarter of data, not with code.
-- **Free text or photo uploads.** Refused by the compliance position, not by
-  the backlog. See §4 of the compliance doc before anyone asks again.
+- **Photo uploads.** Still refused by the compliance position, not by the
+  backlog. See §4 of the compliance doc before anyone asks again.
+  *(Free text: a single capped, validated "what was seen" field was added
+  on 2026-10-18 at the owner's instruction, and §4 was re-opened and
+  re-affirmed on four controls as that section requires. It is the only
+  one; widening it re-opens §4 again.)*
 
 ---
 

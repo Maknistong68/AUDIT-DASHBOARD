@@ -54,13 +54,25 @@ Two invariants shape everything:
    the basis that it names nobody*. A field that names a person does not
    just add a feature — it changes which laws apply and where the system may
    run.
-2. **No free text in the audit.** Answers are Full/Partial/No/N-A, and the
-   reason is picked from the twelve **issue categories** in
-   `src/lib/ehss/issues.ts` — never typed. At least one gap category is
-   required on every Partial/No, and **several may apply**: a finding
-   usually has more than one cause, and forcing one label loses the rest.
-   Don't add free-text or photo fields; a comments box is how an audit tool
-   acquires personal data by accident.
+2. **The record is structured; exactly one field is typed.** Answers are
+   Full/Partial/No/N-A and the reason is picked from the **issue
+   categories** in `src/lib/ehss/issues.ts` — never typed. At least one gap
+   category is required on every Partial/No, and **several may apply**: a
+   finding usually has more than one cause, and forcing one label loses the
+   rest.
+   The one exception is **"what was seen"** (`EhssResponse.note` and
+   `EhssAudit.areaNotes`, added 2026-10-18 on the owner's instruction): the
+   auditor's description of a CONDITION, optional, 300 characters, and
+   refused at entry by `noteProblem()` if it looks like it names anybody.
+   It exists because the categories say why a requirement was missed and
+   the score says how much, and neither could tell a director what to say
+   to the contractor.
+   **It is the only one, and widening it is a compliance change, not a
+   feature.** Read `docs/COMPLIANCE-KSA.md` §2 and the 2026-10-18 review in
+   §4 first — they are what lets this data be hosted where it is. Still
+   banned outright: photographs, uploads, any attachment path, and free
+   text on an action or a trail event (`actions.test.ts` and
+   `trail.test.ts` assert those and must keep passing).
 
 ## Architecture
 
@@ -363,24 +375,28 @@ Two invariants shape everything:
   on record, and "is it sticking" needs two reviews — with one, every gap
   would read as "new", which says more about how much history we hold than
   about the contractor.
-- `contractorProblems()` / `problemEvidence()` / `problemPeer()` in
-  `summaries.ts` are the drill-down model: a "problem" is a checklist area,
-  a critical-risk hazard or a question, ranked by gap to target amplified
-  when the trend is flat or declining. Every problem carries a 0–100
-  `score`, questions included (the engine already scores an answer Full 100
-  / Partial 50 / No 0), so every row in the drill-down reads the same way:
-  how compliant, against the same target.
-- **Three drill-down levels, and the first two are VISUAL.** Directors read
-  shapes before sentences, so level 1 (`ContractorPanel`) and level 2
-  (`ProblemOverview`) carry magnitude and direction and almost no prose —
-  bullet bars against the 90% target, quarter columns, sparklines, cause
-  bars (`charts/Marks.tsx` holds the shared marks). Level 3
-  (`ProblemPanel`) is where words belong, because "what the auditor
-  recorded" has no shape. Keep new drill-down work on that split; a
-  sentence added to level 1 or 2 is a regression.
-- Level 2 shows the quarter bars in the rail only when the main column has
-  controls to list. A hazard or a single question has none, so the bars move
-  across and become the main visual rather than being drawn twice.
+- **The drill-down is two components, not three.** `ContractorView` is
+  level one and `AreaView` is level two; a `contractorProblems()` /
+  `problemEvidence()` / `problemPeer()` model was built, described here for
+  weeks, and referenced by nothing. Those five exports were deleted on
+  2026-10-18 along with `weakestSubSections()`. If a generic "problem" row
+  is wanted again, write it against a caller.
+- **Level one is VISUAL; level two is where words belong.** Directors read
+  shapes before sentences, so `ContractorView` carries magnitude and
+  direction and almost no prose — bullet bars against the 90% target,
+  quarter columns, sparklines, cause bars (`charts/Marks.tsx` holds the
+  shared marks). `AreaView` is where words belong, because "what the
+  auditor recorded" has no shape. A sentence added to level one is a
+  regression.
+- **`AreaView` answers "so what do I tell them".** The percentage alone
+  did not: it now carries the POINTS behind it (`areaPoints()`) and how
+  many of the area's points were not applicable, the contractor and the
+  programme as two bars **on one scale** so a reader can see whether a gap
+  is theirs or everyone's, the rank among the quarter's audited contractors
+  (`areaRanking()` — not `checklistMatrix()`, whose cells are means across
+  every review in scope and would be comparing a different thing), and
+  what the auditor saw. Its question list is ordered by WEIGHT, so it reads
+  as an agenda: B6.1 alone is 3 of that area's 15 points.
 - **Area-level recurrence is what the recorded data supports.**
   `stickyAreas()` is the owner's definition applied where it has real numbers
   behind it: an area below target in this review AND the one before it. The

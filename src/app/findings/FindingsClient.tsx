@@ -387,6 +387,7 @@ export function FindingsClient() {
                   <th>Area</th>
                   <th>Answer</th>
                   <th>Classification</th>
+                  <th>What was seen</th>
                 </tr>
               </thead>
               <tbody>
@@ -417,6 +418,7 @@ export function FindingsClient() {
                         ))}
                       </span>
                     </td>
+                    <td className="obs-note">{o.note ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -24,12 +24,14 @@ import { ScoreColumns } from "@/components/charts/ScoreColumns";
 import { CHECKLIST } from "@/lib/ehss/checklist";
 import { flattenChecklist } from "@/lib/ehss/scoring";
 import { useEhss } from "@/lib/ehss/store";
-import { quarterLabel } from "@/lib/ehss/model";
+import { quarterLabel, type ChecklistQuestion } from "@/lib/ehss/model";
 import { bandColor } from "@/lib/ehss/bands";
 import { TARGET_SCORE } from "@/lib/ehss/disciplines";
 import { formatScore } from "@/lib/format";
 import { downloadCsv, exportName } from "@/lib/export/csv";
 import {
+  areaPoints,
+  areaRanking,
   boardBySubRegion,
   checklistAreas,
   collectObservations,
@@ -46,6 +48,8 @@ import {
   scoredDisciplines,
   stickyAreas,
   summarizeAll,
+  type AreaPoints,
+  type AreaRank,
   type AreaStanding,
   type BoardRow,
   type EvidenceRow,
@@ -233,36 +237,66 @@ export function DashboardClient() {
     };
   }, [selected, scoped, audits, contractors]);
 
-  /** Programme mean for the open area, so the detail has something to sit
-   * against rather than a bare number. */
+  /** Everything the open area's panel needs beyond the standing itself:
+   * the programme figure to sit against, the points behind the percentage,
+   * where this contractor ranks, what the auditor wrote, and the questions
+   * the area asks. */
   const areaContext = useMemo(() => {
-    if (!area)
-      return { programme: null as number | null, questions: [], evidence: [] as EvidenceRow[] };
+    const empty = {
+      programme: null as number | null,
+      points: null as AreaPoints | null,
+      rank: null as AreaRank | null,
+      note: undefined as string | undefined,
+      questions: [] as ChecklistQuestion[],
+      evidence: [] as EvidenceRow[],
+    };
+    if (!area) return empty;
     const programmeAreas = stickyAreas(scoped);
     const questions = FLAT.filter((f) => (f.subSection ?? f.section) === area.code).map(
       (f) => f.question,
     );
+    // Filtered by CODE, like `questions` above. It used to match on the
+    // area's TITLE, reconstructing "Section {code}" for the sub-sections
+    // that have no code of their own — two different keys for one lookup,
+    // on the same object, three lines apart.
     const rows = selected
       ? collectObservations(
           audits.filter((a) => a.contractorId === selected.contractorId),
           contractors,
-        ).filter((r) => (r.subSectionTitle ?? `Section ${r.sectionCode}`) === area.title)
+        ).filter((r) => (r.subSectionCode ?? r.sectionCode) === area.code)
       : [];
-    const evidence: EvidenceRow[] = rows.map((r) => ({
-      quarter: r.quarter,
-      code: r.questionCode,
-      text: r.questionText,
-      score: null,
-      answer: r.answer,
-      issues: r.issues,
-      weight: null,
-    }));
+    const evidence: EvidenceRow[] = rows
+      // Newest first, and capped. This was every Partial or No the
+      // contractor had ever had in the area, in whatever order the store
+      // happened to hold them.
+      .sort((a, b) => b.quarter.localeCompare(a.quarter))
+      .slice(0, 12)
+      .map((r) => ({
+        quarter: r.quarter,
+        code: r.questionCode,
+        text: r.questionText,
+        score: null,
+        answer: r.answer,
+        issues: r.issues,
+        weight: null,
+        note: r.note,
+      }));
+    const own = selected
+      ? audits.find(
+          (a) => a.contractorId === selected.contractorId && a.quarter === shown,
+        )
+      : undefined;
     return {
       programme: programmeAreas.find((a) => a.code === area.code)?.score ?? null,
+      points: own ? areaPoints(own, area.code) : null,
+      rank: selected
+        ? areaRanking(area.code, scoped, shown, selected.contractorId)
+        : null,
+      note: own?.areaNotes?.[area.code],
       questions,
       evidence,
     };
-  }, [area, scoped, selected, audits, contractors]);
+  }, [area, scoped, selected, audits, contractors, shown]);
 
   /** The register, which every tile and panel below reads. */
   const tally = useMemo(
@@ -555,6 +589,9 @@ export function DashboardClient() {
               area={area}
               contractorLabel={selected.label}
               programmeScore={areaContext.programme}
+              points={areaContext.points}
+              rank={areaContext.rank}
+              note={areaContext.note}
               questions={areaContext.questions}
               evidence={areaContext.evidence}
               actionSlot={

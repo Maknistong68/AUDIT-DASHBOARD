@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { QuestionRow } from "./QuestionRow";
 import {
-  QuestionRow,
   gapsNeedingCause,
   withAnswer,
   withGoodPractice,
+  withNote,
   withIssue,
   withoutAnswer,
   type Responses,
-} from "./QuestionRow";
+} from "@/lib/ehss/answers";
 import { answeredCount, scoreAudit } from "@/lib/ehss/scoring";
 import { ratingFor, type EhssResponse } from "@/lib/ehss/model";
 import { formatScore } from "@/lib/format";
@@ -165,6 +166,7 @@ export function ChecklistForm({
                       onGoodPractice={(on) =>
                         onChange(withGoodPractice(responses, q.code, on))
                       }
+                      onNote={(t) => onChange(withNote(responses, q.code, t))}
                     />
                   ))}
               </div>

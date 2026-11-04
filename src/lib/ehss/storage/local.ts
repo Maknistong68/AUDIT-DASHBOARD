@@ -6,7 +6,7 @@
  */
 
 import { readIssues } from "../issues";
-import type { EhssAudit } from "../model";
+import type { EhssAudit, EhssResponse } from "../model";
 import {
   EMPTY_OVERRIDES,
   normalize,
@@ -26,23 +26,57 @@ export const STORAGE_KEY = "ehss-v2";
  * forcing anyone to clear their browser — `readIssues` maps the old code to
  * its nearest category and ignores anything unrecognised.
  */
+type LegacyResponse = EhssResponse & { observation?: unknown };
+
+/**
+ * One response, upgraded.
+ *
+ * SPREAD FIRST, then correct. This used to rebuild the object as exactly
+ * `{ answer, issues }`, which silently deleted every field the code did not
+ * know about on the next page load — a field could be saved correctly and
+ * be gone by the time anyone looked. `note` was the first one to land on
+ * this type and would have vanished that way.
+ */
+function upgradeResponse(r: EhssResponse): EhssResponse {
+  const legacy = r as LegacyResponse;
+  return {
+    ...r,
+    answer: legacy.answer,
+    issues: readIssues(legacy.issues ?? legacy.observation),
+  };
+}
+
+function upgradeMap(
+  responses: Record<string, EhssResponse> | undefined,
+): Record<string, EhssResponse> {
+  const out: Record<string, EhssResponse> = {};
+  for (const [code, r] of Object.entries(responses ?? {})) {
+    out[code] = upgradeResponse(r);
+  }
+  return out;
+}
+
 function upgradeAudits(
   audits: Record<string, EhssAudit>,
 ): Record<string, EhssAudit> {
   const out: Record<string, EhssAudit> = {};
   for (const [id, audit] of Object.entries(audits)) {
-    const responses: EhssAudit["responses"] = {};
-    for (const [code, r] of Object.entries(audit.responses ?? {})) {
-      const legacy = r as { answer: EhssAudit["responses"][string]["answer"] } & {
-        issues?: unknown;
-        observation?: unknown;
-      };
-      responses[code] = {
-        answer: legacy.answer,
-        issues: readIssues(legacy.issues ?? legacy.observation),
-      };
-    }
-    out[id] = { ...audit, responses, criticalRisks: audit.criticalRisks ?? {} };
+    // `scopedResponses` was not walked at all, so the same record upgraded
+    // in Health & Safety and did not in the other seventeen checklists.
+    const scoped = audit.scopedResponses
+      ? Object.fromEntries(
+          Object.entries(audit.scopedResponses).map(([scopeId, map]) => [
+            scopeId,
+            upgradeMap(map),
+          ]),
+        )
+      : undefined;
+    out[id] = {
+      ...audit,
+      responses: upgradeMap(audit.responses),
+      scopedResponses: scoped,
+      criticalRisks: audit.criticalRisks ?? {},
+    };
   }
   return out;
 }

@@ -19,11 +19,15 @@ Three consequences, each enforced in code rather than by convention:
   is a work-order reference, not an identity. There is no worker table, no
   auditor table, and no field anywhere that names an individual.
 - **No free text in the scoring path.** Every answer is an enum
-  (Full / Partial / No / N-A) and every comment is an observation code
-  (OB1–OB5). This is what makes the trend analytics trustworthy — auditors
-  cannot describe the same problem five different ways — and it is also the
-  reason the app cannot accidentally accumulate personal data. A free-text
-  box is where a worker's name ends up. There isn't one.
+  (Full / Partial / No / N-A) and every cause is a code from a fixed list.
+  This is what makes the trend analytics trustworthy — auditors cannot
+  describe the same problem five different ways — and **no figure anywhere
+  is computed from typed text**.
+  Beside the score, not inside it, an auditor may describe what they saw
+  (added 2026-10-18). A free-text box is where a worker's name ends up, so
+  that one is capped at 300 characters and refuses to save an email, a
+  phone number, an ID reference or an honorific followed by a name. It is
+  the only typed field in the audit; see COMPLIANCE-KSA §2 and §4.
 - **No uploads.** No photographs, no attachments, no document store. A site
   photograph is the most likely carrier of personal data in an audit tool,
   so the feature does not exist.

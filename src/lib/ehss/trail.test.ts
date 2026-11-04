@@ -5,6 +5,7 @@ import {
   describeEvent,
   eventsFor,
   mayWrite,
+  textSize,
   type TrailEvent,
 } from "./trail";
 
@@ -28,6 +29,18 @@ describe("the trail records a role, never a person", () => {
       expect(keys).not.toContain(forbidden);
     }
     expect(event.actorRole).toBe("auditor");
+  });
+
+  it("records the SIZE of an observation, never its text", () => {
+    // The audit's one free-text field must not be copied into an
+    // append-only log 500 events deep — COMPLIANCE-KSA §2. A trail answers
+    // "was this changed, and by a role entitled to", and a count does that.
+    const note = "Three of eight subcontractor packs had no evaluation.";
+    const rendered = textSize(note);
+    expect(rendered).toBe(`${note.length} characters`);
+    expect(rendered).not.toContain("subcontractor");
+    expect(textSize(undefined)).toBeNull();
+    expect(textSize("   ")).toBeNull();
   });
 
   it("stamps an id and a time the caller did not have to supply", () => {

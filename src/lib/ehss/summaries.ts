@@ -88,12 +88,20 @@ export interface ObservationRow {
   questionCode: string;
   questionText: string;
   subSectionTitle: string | null;
+  /** The area's own code — "B6", or null where the sub-section has none.
+   * Carried as well as the title because a lookup by title has to
+   * reconstruct "Section A" for the ones without a code, and two different
+   * keys for one join is how a filter quietly matches nothing. */
+  subSectionCode: string | null;
   sectionCode: string;
   /** SHEW pillar the audited control belongs to. */
   domain: DomainId;
   answer: "partial" | "no";
   /** Every category the auditor chose; at least one on a gap. */
   issues: IssueCode[];
+  /** What the auditor saw, where they wrote it. Optional and capped — see
+   * `EhssResponse.note`. Nothing is derived from it. */
+  note?: string;
 }
 
 const FLAT = flattenChecklist(CHECKLIST);
@@ -390,10 +398,12 @@ export function collectObservations(
         questionCode: item.question.code,
         questionText: item.question.text,
         subSectionTitle: item.subSectionTitle,
+        subSectionCode: item.subSection ?? null,
         sectionCode: item.section,
         domain: item.question.domain,
         answer: r.answer,
         issues: r.issues,
+        note: r.note,
       });
     }
   }
@@ -522,41 +532,6 @@ export function averageByQuarter(
       quarter,
       score: round(scores.reduce((sum, v) => sum + v, 0) / scores.length),
     }));
-}
-
-/** Mean sub-section score across the given audits, weakest first. */
-export function weakestSubSections(
-  summaries: AuditSummary[],
-  limit: number,
-): Array<{ section: string; code: string; title: string; avg: number; n: number }> {
-  const acc = new Map<
-    string,
-    { section: string; title: string; sum: number; n: number }
-  >();
-  for (const s of finalized(summaries)) {
-    for (const ss of s.subSections) {
-      if (ss.score === null || ss.code === null) continue;
-      const cur = acc.get(ss.code) ?? {
-        section: ss.section,
-        title: ss.title ?? ss.code,
-        sum: 0,
-        n: 0,
-      };
-      cur.sum += ss.score;
-      cur.n += 1;
-      acc.set(ss.code, cur);
-    }
-  }
-  return [...acc.entries()]
-    .map(([code, v]) => ({
-      section: v.section,
-      code,
-      title: v.title,
-      avg: round(v.sum / v.n),
-      n: v.n,
-    }))
-    .sort((a, b) => a.avg - b.avg)
-    .slice(0, limit);
 }
 
 /** All quarters present in the data, newest first. */
@@ -901,47 +876,6 @@ export function weakestCriticalRisks(
 
 export type ProblemKind = "area" | "hazard" | "question";
 
-export interface ProblemRow {
-  /** Stable key, unique across kinds. */
-  id: string;
-  kind: ProblemKind;
-  /** Code as the auditor knows it: "B6", "height", "A1". */
-  code: string;
-  label: string;
-  /**
-   * Latest score, 0-100. A question has an answer rather than a figure, but
-   * the engine already scores it (Full 100, Partial 50, No 0), so that is
-   * what it carries — every problem row then reads the same way: how
-   * compliant, against the same target. Null only when nothing is scored.
-   */
-  score: number | null;
-  /** Points below the 90% target. */
-  gap: number;
-  direction: AreaDirection | null;
-  /** Reviews the judgement rests on. */
-  reviews: number;
-  /** One short line. Never a sentence — this is read at a glance. */
-  note: string;
-  /** Consecutive reviews open. Only tracked for questions, where the
-   * answer is recorded review by review; 0 for areas and hazards, whose
-   * `note` already carries their movement. */
-  streak: number;
-  /** Closed at some point and open again — the fix did not hold. */
-  reopened: boolean;
-  /** Ranking weight: the gap, amplified when it is not getting better. */
-  severity: number;
-  /**
-   * Score across the quarters in the window, oldest first — what the row's
-   * sparkline draws. A question has answers rather than a score, so its
-   * answers are mapped onto the same 0-100 scale the checklist uses
-   * (Full 100, Partial 50, No 0) and N/A is skipped: it is the trajectory
-   * that matters here, not a score anyone would quote.
-   */
-  series: number[];
-  /** Quarter labels matching `series`. */
-  quarters: string[];
-}
-
 const TREND_WEIGHT: Record<AreaDirection, number> = {
   declining: 1.6,
   flat: 1.25,
@@ -960,142 +894,6 @@ function trendNote(
   return `${verb} ${Math.abs(change ?? 0).toFixed(1)} pts`;
 }
 
-/**
- * Everything this contractor is failing at, worst first.
- *
- * Three sources, one ranking: checklist sub-sections below target, critical
- * risk hazards below target, and questions answered No often enough to
- * matter on their own. Ranked by gap to target, amplified when the trend is
- * flat or declining — a 15-point gap that is closing is a smaller problem
- * than a 12-point gap that has not moved in a year, and that is the whole
- * point of tracking quarters.
- */
-export function contractorProblems(
-  summaries: AuditSummary[],
-  audits: EhssAudit[],
-  limit = 6,
-): ProblemRow[] {
-  const scored = finalized(summaries);
-  const rows: ProblemRow[] = [];
-  // areaTrends gives scores per quarter but not their labels; they are the
-  // window's quarters in order, which is what the sparklines label with.
-  const areaQuarters = [...new Set(scored.map((s) => s.quarter))].sort();
-
-  // 1. Checklist sub-sections below target.
-  for (const area of areaTrends(scored)) {
-    if (area.gap === null || area.gap <= 0) continue;
-    rows.push({
-      id: `area:${area.code}`,
-      kind: "area",
-      code: area.code,
-      label: area.title,
-      score: area.latest,
-      gap: area.gap,
-      direction: area.reviews < 2 ? null : area.direction,
-      reviews: area.reviews,
-      note: trendNote(
-        area.reviews < 2 ? null : area.direction,
-        area.change,
-        area.reviews,
-      ),
-      streak: 0,
-      reopened: false,
-      severity:
-        area.gap *
-        (area.reviews < 2 ? 1 : TREND_WEIGHT[area.direction]),
-      series: area.scores,
-      quarters: areaQuarters,
-    });
-  }
-
-  // 2. Critical-risk hazards below target, from this contractor's own scope.
-  for (const risk of CRITICAL_RISKS) {
-    const series = scored
-      .map((s) => s.criticalRisks[risk.id])
-      .filter((v): v is number => v !== undefined);
-    if (series.length === 0) continue;
-    const latest = series[series.length - 1]!;
-    const gap = gapToTarget(latest);
-    if (gap === null || gap <= 0) continue;
-    const change = series.length < 2 ? null : round(latest - series[0]!);
-    const direction: AreaDirection | null =
-      change === null
-        ? null
-        : change > 1
-          ? "improving"
-          : change < -1
-            ? "declining"
-            : "flat";
-    rows.push({
-      id: `hazard:${risk.id}`,
-      kind: "hazard",
-      code: risk.id,
-      label: risk.label,
-      score: latest,
-      gap,
-      direction,
-      reviews: series.length,
-      note: trendNote(direction, change, series.length),
-      streak: 0,
-      reopened: false,
-      severity: gap * (direction === null ? 1 : TREND_WEIGHT[direction]),
-      series,
-      quarters: scored
-        .filter((s) => s.criticalRisks[risk.id] !== undefined)
-        .map((s) => s.quarter),
-    });
-  }
-
-  // 3. Individual questions costing real points — only those answered No,
-  //    weighted up when the same answer keeps coming back. A question open
-  //    four reviews running outranks a worse one seen only once: the first
-  //    is a management failure, the second is a finding.
-  const byQuestion = new Map(
-    findingHistories(summaries, audits).map((h) => [h.questionCode, h]),
-  );
-  for (const issue of topIssues(audits, 8)) {
-    if (issue.noCount === 0) continue;
-    const history = byQuestion.get(issue.questionCode);
-    const streak = history?.openStreak ?? 0;
-    const reopened = history?.status === "reopened";
-    const recurring = history?.status === "recurring";
-    const answered = (history?.timeline ?? []).filter((t) => t.answer !== "na");
-    const last = answered[answered.length - 1];
-    rows.push({
-      id: `question:${issue.questionCode}`,
-      kind: "question",
-      code: issue.questionCode,
-      label: issue.questionText,
-      score:
-        last === undefined
-          ? null
-          : ANSWER_VALUE[last.answer as "full" | "partial" | "no"] * 100,
-      gap: issue.lostPoints,
-      direction: null,
-      reviews: issue.occurrences,
-      note: reopened
-        ? "closed, then came back"
-        : recurring
-          ? `open ${streak} reviews running`
-          : issue.occurrences === 1
-            ? "1 review"
-            : `${issue.noCount} of ${issue.occurrences} reviews: No`,
-      streak,
-      reopened,
-      severity:
-        issue.lostPoints * (reopened ? 1.8 : recurring ? 1.5 : 1.1),
-      series: (history?.timeline ?? [])
-        .filter((t) => t.answer !== "na")
-        .map((t) => ANSWER_VALUE[t.answer as "full" | "partial" | "no"] * 100),
-      quarters: (history?.timeline ?? [])
-        .filter((t) => t.answer !== "na")
-        .map((t) => t.quarter),
-    });
-  }
-
-  return rows.sort((a, b) => b.severity - a.severity).slice(0, limit);
-}
-
 /** One row of evidence behind a problem: what was answered, and when. */
 export interface EvidenceRow {
   quarter: string;
@@ -1107,146 +905,9 @@ export interface EvidenceRow {
   answer: "partial" | "no" | null;
   issues: IssueCode[];
   weight: number | null;
-}
-
-/**
- * The evidence behind one problem — what the auditor actually recorded.
- *
- * For an area: every Partial or No answer inside that sub-section, newest
- * first. For a hazard: its score each quarter. For a question: how it was
- * answered each quarter. This is the bottom of the drill-down: below this
- * there is only the audit itself.
- */
-export function problemEvidence(
-  problem: ProblemRow,
-  summaries: AuditSummary[],
-  audits: EhssAudit[],
-  limit = 8,
-): EvidenceRow[] {
-  const scored = finalized(summaries);
-  const byId = new Map(audits.map((a) => [a.id, a]));
-  const flat = flattenChecklist(CHECKLIST);
-
-  if (problem.kind === "hazard") {
-    return scored
-      .map((s) => ({
-        quarter: s.quarter,
-        code: problem.code,
-        text: problem.label,
-        score: s.criticalRisks[problem.code as CriticalRiskId] ?? null,
-        answer: null,
-        issues: [],
-        weight: null,
-      }))
-      .filter((r) => r.score !== null)
-      .reverse()
-      .slice(0, limit);
-  }
-
-  // Both remaining kinds read the checklist answers.
-  const inScope = (code: string) =>
-    problem.kind === "question"
-      ? code === problem.code
-      : flat.some(
-          (f) => f.question.code === code && f.subSection === problem.code,
-        );
-
-  const rows: EvidenceRow[] = [];
-  for (const summary of [...scored].reverse()) {
-    const audit = byId.get(summary.id);
-    if (!audit) continue;
-    for (const { question } of flat) {
-      if (!inScope(question.code)) continue;
-      const response = audit.responses[question.code];
-      if (!response) continue;
-      if (response.answer !== "partial" && response.answer !== "no") continue;
-      rows.push({
-        quarter: summary.quarter,
-        code: question.code,
-        text: question.text,
-        score: null,
-        answer: response.answer,
-        issues: response.issues,
-        weight: question.weight,
-      });
-      if (rows.length >= limit) return rows;
-    }
-  }
-  return rows;
-}
-
-/** How a contractor's problem compares with the rest of the programme. */
-export interface ProblemPeer {
-  label: string;
-  /** The programme figure: a mean score, or a count of contractors. */
-  value: number;
-  suffix: string;
-  /** This contractor minus the programme, for scores. Null for counts. */
-  delta: number | null;
-}
-
-/**
- * The benchmark for one problem across every contractor in scope.
- *
- * "We score 71% on Working at Height" means something different when the
- * programme averages 88% than when it averages 72% — the first is a
- * contractor problem, the second is a programme problem, and they get
- * fixed by different people.
- */
-export function problemPeer(
-  problem: ProblemRow,
-  allSummaries: AuditSummary[],
-  allAudits: EhssAudit[],
-): ProblemPeer | null {
-  const scored = finalized(allSummaries);
-  if (scored.length === 0) return null;
-
-  if (problem.kind === "hazard") {
-    const values = scored
-      .map((s) => s.criticalRisks[problem.code as CriticalRiskId])
-      .filter((v): v is number => v !== undefined);
-    if (values.length === 0) return null;
-    const mean = round(values.reduce((sum, v) => sum + v, 0) / values.length);
-    return {
-      label: "Programme average",
-      value: mean,
-      suffix: "%",
-      delta: problem.score === null ? null : round(problem.score - mean),
-    };
-  }
-
-  if (problem.kind === "area") {
-    const values = scored
-      .flatMap((s) => s.subSections)
-      .filter((ss) => ss.code === problem.code && ss.score !== null)
-      .map((ss) => ss.score!);
-    if (values.length === 0) return null;
-    const mean = round(values.reduce((sum, v) => sum + v, 0) / values.length);
-    return {
-      label: "Programme average",
-      value: mean,
-      suffix: "%",
-      delta: problem.score === null ? null : round(problem.score - mean),
-    };
-  }
-
-  // A question: how widely shared the failure is.
-  const contractorsFailing = new Set(
-    allAudits
-      .filter((a) => {
-        const r = a.responses[problem.code];
-        return r && (r.answer === "partial" || r.answer === "no");
-      })
-      .map((a) => a.contractorId),
-  ).size;
-  const total = new Set(scored.map((s) => s.contractorId)).size;
-  if (total === 0) return null;
-  return {
-    label: "Contractors with the same gap",
-    value: contractorsFailing,
-    suffix: ` of ${total}`,
-    delta: null,
-  };
+  /** What the auditor saw. Absent on a score series, and on an answer
+   * nobody described. */
+  note?: string;
 }
 
 /* ------------------------------------------------------------------ *
@@ -1526,6 +1187,9 @@ export interface ChecklistArea {
   title: string;
   section: string;
   questionCount: number;
+  /** Sum of its questions' weights — the area's full possible points when
+   * every question applies. */
+  weight: number;
 }
 
 export function checklistAreas(): ChecklistArea[] {
@@ -1538,6 +1202,10 @@ export function checklistAreas(): ChecklistArea[] {
         title: section.title,
         section: section.code,
         questionCount: bare.reduce((n, ss) => n + ss.questions.length, 0),
+        weight: bare.reduce(
+          (n, ss) => n + ss.questions.reduce((w, q) => w + q.weight, 0),
+          0,
+        ),
       });
     }
     for (const ss of section.subSections) {
@@ -1547,6 +1215,7 @@ export function checklistAreas(): ChecklistArea[] {
         title: ss.title ?? ss.code,
         section: section.code,
         questionCount: ss.questions.length,
+        weight: ss.questions.reduce((w, q) => w + q.weight, 0),
       });
     }
   }
@@ -1562,6 +1231,125 @@ export interface AreaCell {
   name: string;
   code: string;
   score: number | null;
+}
+
+/**
+ * The POINTS behind one area's percentage, for one contractor.
+ *
+ * The percentage is all the summary layer carries: `scoreQuestions()`
+ * computes the numerator and the denominator and returns only their ratio,
+ * and no summary type has held a point count. That is fine for comparing
+ * and useless for explaining — "18.2%" is not a thing to take to a
+ * contractor, and "2 of 11 points" is.
+ *
+ * `possible` is the applicable weight, so it is NOT the area's nominal
+ * weight: N/A questions drop out of it, which is the workbook's own rule.
+ * The difference between the two is what the panel reports as not
+ * applicable, and it matters — NBC's B6 is 2 of 11 because four points'
+ * worth of that area was not asked of them.
+ *
+ * The source follows the same per-area precedence `areaSource()` owns: the
+ * recorded points until every question in the area is answered, the answers
+ * after that. This reads; it changes no formula.
+ */
+export interface AreaPoints {
+  scored: number;
+  possible: number;
+  /** The area's full weight when every question applies. */
+  nominal: number;
+  /** Weight that dropped out as N/A: `nominal - possible`. */
+  notApplicable: number;
+  source: "answers" | "points" | "none";
+}
+
+export function areaPoints(
+  audit: EhssAudit,
+  areaCode: string,
+): AreaPoints | null {
+  const questions = FLAT.filter(
+    (f) => (f.subSection ?? f.section) === areaCode,
+  ).map((f) => f.question);
+  if (questions.length === 0) return null;
+  const nominal = questions.reduce((n, q) => n + q.weight, 0);
+
+  const recorded = audit.areaScores?.[areaCode];
+  const complete = questions.every((q) => audit.responses[q.code] !== undefined);
+
+  if (recorded && !complete) {
+    return {
+      scored: recorded.scored,
+      possible: recorded.possible,
+      nominal,
+      notApplicable: round(Math.max(0, nominal - recorded.possible)),
+      source: "points",
+    };
+  }
+
+  let scored = 0;
+  let possible = 0;
+  for (const q of questions) {
+    const r = audit.responses[q.code];
+    if (!r || r.answer === "na") continue;
+    possible += q.weight;
+    scored += q.weight * ANSWER_VALUE[r.answer];
+  }
+  if (possible === 0) {
+    return { scored: 0, possible: 0, nominal, notApplicable: 0, source: "none" };
+  }
+  return {
+    scored: round(scored),
+    possible,
+    nominal,
+    notApplicable: round(nominal - possible),
+    source: "answers",
+  };
+}
+
+export interface AreaRank {
+  /** 1 is the WORST. The panel's question is "how bad, among whom". */
+  rank: number;
+  of: number;
+  /** Contractors at or above target on this area in this quarter. */
+  atTarget: number;
+  /** Mean across the contractors scored on it. */
+  mean: number | null;
+}
+
+/**
+ * Where one contractor stands on one area, against everyone audited in the
+ * same quarter.
+ *
+ * NOT `checklistMatrix()`, which looks like it answers this and does not:
+ * its cells are means across every review in scope, while the panel's own
+ * figure is the latest review that covered the area. Ranking one against
+ * the other would compare two different things and nobody would see it.
+ *
+ * Modelled on `questionByContractor`, which is this shape one grain down.
+ */
+export function areaRanking(
+  areaCode: string,
+  summaries: AuditSummary[],
+  quarter: string | null,
+  contractorId: string,
+): AreaRank | null {
+  if (!quarter) return null;
+  const scores: Array<{ contractorId: string; score: number }> = [];
+  for (const s of finalized(summaries)) {
+    if (s.quarter !== quarter) continue;
+    const area = s.subSections.find((ss) => ss.code === areaCode);
+    if (!area || area.score === null) continue;
+    scores.push({ contractorId: s.contractorId, score: area.score });
+  }
+  if (scores.length === 0) return null;
+  scores.sort((a, b) => a.score - b.score);
+  const index = scores.findIndex((x) => x.contractorId === contractorId);
+  if (index === -1) return null;
+  return {
+    rank: index + 1,
+    of: scores.length,
+    atTarget: scores.filter((x) => x.score >= TARGET_SCORE).length,
+    mean: round(scores.reduce((n, x) => n + x.score, 0) / scores.length),
+  };
 }
 
 export interface ChecklistAreaStat extends ChecklistArea {
@@ -1749,6 +1537,7 @@ export interface QuestionByContractor {
   quarter: string;
   answer: EhssAnswer;
   issues: IssueCode[];
+  note?: string;
 }
 
 export function questionByContractor(
@@ -1775,6 +1564,7 @@ export function questionByContractor(
       quarter: summary.quarter,
       answer: response.answer,
       issues: response.issues,
+      note: response.note,
     });
   }
 
