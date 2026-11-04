@@ -60,10 +60,17 @@ Two invariants shape everything:
    category is required on every Partial/No, and **several may apply**: a
    finding usually has more than one cause, and forcing one label loses the
    rest.
-   The one exception is **"what was seen"** (`EhssResponse.note` and
-   `EhssAudit.areaNotes`, added 2026-10-18 on the owner's instruction): the
-   auditor's description of a CONDITION, optional, 300 characters, and
-   refused at entry by `noteProblem()` if it looks like it names anybody.
+   The one exception is **"what was seen"** (added 2026-10-18 on the
+   owner's instruction): the auditor's description of a CONDITION,
+   optional, 300 characters, and refused at entry by `noteProblem()` if it
+   looks like it names anybody. It attaches at **three grains**, one per
+   thing that can be audited — a question (`EhssResponse.note`, so it works
+   in all eighteen checklists), a Health & Safety area
+   (`EhssAudit.areaNotes`), and a critical-risk hazard
+   (`EhssAudit.riskNotes`). The two map grains exist because thirteen of
+   the fourteen hazard checklists and all four non-H&S checklists are still
+   to be supplied, so an area and a hazard carry a score with no questions
+   under it to hang an observation off.
    It exists because the categories say why a requirement was missed and
    the score says how much, and neither could tell a director what to say
    to the contractor.
@@ -498,6 +505,14 @@ Two invariants shape everything:
     the H&S form uses between its answers and its area points, for the same
     reason. `riskScore()` carries it; `crcScore()` is still the only
     definition of the discipline score.
+    A hazard also carries **what was seen** (`audit.riskNotes`), which on a
+    hazard whose checklist does not exist yet is the only thing behind its
+    number. It is written only for hazards IN SCOPE — `criticalRisks[id]`
+    is both the score and the in-scope flag, so a hazard out of scope is
+    work the contractor does not do and an observation about it would sit
+    where nothing displays it. `notesForScope()` carries that rule and
+    `observations.test.ts` pins it; the entry screen keeps the text in its
+    draft meanwhile, so un-ticking and re-ticking loses nothing.
   - **Environment / Security / Worker Welfare** show the recorded score,
     which is the real screen and not a placeholder — those audits happen
     and their numbers exist. Their checklist appears under it the moment

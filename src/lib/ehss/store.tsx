@@ -35,7 +35,7 @@ import type {
   SubRegion,
 } from "./model";
 import { DISCIPLINES, type DisciplineScores } from "./disciplines";
-import type { CriticalRiskScores } from "./critical-risks";
+import type { CriticalRiskId, CriticalRiskScores } from "./critical-risks";
 import type { EhssAction } from "./actions";
 import {
   EMPTY_OVERRIDES,
@@ -146,6 +146,10 @@ interface StoreValue {
    * `possible <= 0` drops it, which is how an area is un-recorded. */
   saveAreaScores: (auditId: string, areas: RecordedAreaScores) => void;
   saveAreaNotes: (auditId: string, notes: Record<string, string>) => void;
+  saveRiskNotes: (
+    auditId: string,
+    notes: Partial<Record<CriticalRiskId, string>>,
+  ) => void;
   /** Answers for a checklist other than Health & Safety — Environment,
    * Security, Worker Welfare, or one of the fourteen CRC hazards. H&S goes
    * through `saveResponses`; see ./scopes for why the two are apart. */
@@ -509,6 +513,52 @@ export function EhssStoreProvider({
     [update, currentAudit, role],
   );
 
+  /**
+   * The same, per critical-risk hazard. A separate mutation rather than a
+   * generic one keyed by "kind:code": the two maps sit beside the two score
+   * maps they explain (`areaScores`/`areaNotes`,
+   * `criticalRisks`/`riskNotes`), which is how a reader finds them.
+   */
+  const saveRiskNotes = useCallback(
+    (auditId: string, notes: Partial<Record<CriticalRiskId, string>>) =>
+      update(
+        (prev) => {
+          const audit = currentAudit(auditId, prev);
+          if (!audit) return prev;
+          const kept = Object.keys(notes).length > 0 ? notes : undefined;
+          return {
+            ...prev,
+            audits: {
+              ...prev.audits,
+              [auditId]: { ...audit, riskNotes: kept },
+            },
+          };
+        },
+        (prev) => {
+          const was = currentAudit(auditId, prev)?.riskNotes ?? {};
+          const ids = [
+            ...new Set([...Object.keys(was), ...Object.keys(notes)]),
+          ] as CriticalRiskId[];
+          // See `textSize`: a size, never the text.
+          return ids.flatMap((id) =>
+            (was[id] ?? "") === (notes[id] ?? "")
+              ? []
+              : [
+                  {
+                    actorRole: role!,
+                    entity: "audit" as const,
+                    entityId: auditId,
+                    field: `hazard ${id} — what was seen`,
+                    from: textSize(was[id]),
+                    to: textSize(notes[id]),
+                  },
+                ],
+          );
+        },
+      ),
+    [update, currentAudit, role],
+  );
+
   const saveScopedResponses = useCallback(
     (
       auditId: string,
@@ -676,6 +726,7 @@ export function EhssStoreProvider({
       saveResponses,
       saveAreaScores,
       saveAreaNotes,
+      saveRiskNotes,
       saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,
@@ -703,6 +754,7 @@ export function EhssStoreProvider({
       saveResponses,
       saveAreaScores,
       saveAreaNotes,
+      saveRiskNotes,
       saveScopedResponses,
       saveAuditMeta,
       saveDisciplineScores,

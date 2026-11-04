@@ -74,6 +74,9 @@ export interface AuditSummary {
   fromAreaScores: boolean;
   /** CRC focus-audit scores per hazardous-work item in the contractor's scope. */
   criticalRisks: CriticalRiskScores;
+  /** What the auditor saw, per hazard. Carried so the CRC views can show
+   * it; nothing is derived from it. */
+  riskNotes: Partial<Record<CriticalRiskId, string>>;
   rating: string | null;
   sections: SectionSummary[];
   subSections: SubSectionSummary[];
@@ -168,6 +171,7 @@ export function summarizeAudit(
     total: score.total,
     disciplineScores,
     criticalRisks: audit.criticalRisks,
+    riskNotes: audit.riskNotes ?? {},
     overall,
     reportedTotal: audit.reportedTotal ?? null,
     fromAreaScores,
@@ -793,8 +797,15 @@ export interface CriticalRiskStat {
   reviews: number;
   /** Distinct contractors carrying the hazard in scope. */
   contractors: number;
-  /** Contractors scoring below target on it, worst first. */
-  belowTarget: Array<{ contractorId: string; label: string; score: number }>;
+  /** Contractors scoring below target on it, worst first. Each carries the
+   * auditor's own description where one was recorded — on a hazard with no
+   * checklist yet, that sentence is the only thing behind the number. */
+  belowTarget: Array<{
+    contractorId: string;
+    label: string;
+    score: number;
+    note?: string;
+  }>;
 }
 
 /**
@@ -812,7 +823,10 @@ export function criticalRiskStats(
   const scored = finalized(summaries);
 
   return CRITICAL_RISKS.map((risk) => {
-    const byContractor = new Map<string, { label: string; values: number[] }>();
+    const byContractor = new Map<
+      string,
+      { label: string; values: number[]; note?: string; noteQuarter?: string }
+    >();
     const values: number[] = [];
 
     for (const s of scored) {
@@ -824,6 +838,15 @@ export function criticalRiskStats(
         values: [],
       };
       entry.values.push(value);
+      // The most recent review's words win, decided by comparing quarters
+      // rather than by trusting the order this array arrived in — it is
+      // whatever order the store holds, and the file it comes from happens
+      // to be oldest-first per contractor, which is not a guarantee.
+      const note = s.riskNotes[risk.id];
+      if (note && (!entry.noteQuarter || s.quarter > entry.noteQuarter)) {
+        entry.note = note;
+        entry.noteQuarter = s.quarter;
+      }
       byContractor.set(s.contractorId, entry);
     }
 
@@ -833,10 +856,11 @@ export function criticalRiskStats(
         : round(values.reduce((sum, v) => sum + v, 0) / values.length);
 
     const belowTarget = [...byContractor.entries()]
-      .map(([contractorId, { label, values: v }]) => ({
+      .map(([contractorId, { label, values: v, note }]) => ({
         contractorId,
         label,
         score: round(v.reduce((sum, x) => sum + x, 0) / v.length),
+        note,
       }))
       .filter((c) => c.score < TARGET_SCORE)
       .sort((a, b) => a.score - b.score);

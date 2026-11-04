@@ -23,11 +23,12 @@ Three consequences, each enforced in code rather than by convention:
   This is what makes the trend analytics trustworthy — auditors cannot
   describe the same problem five different ways — and **no figure anywhere
   is computed from typed text**.
-  Beside the score, not inside it, an auditor may describe what they saw
-  (added 2026-10-18). A free-text box is where a worker's name ends up, so
-  that one is capped at 300 characters and refuses to save an email, a
-  phone number, an ID reference or an honorific followed by a name. It is
-  the only typed field in the audit; see COMPLIANCE-KSA §2 and §4.
+  Beside the score, not inside it, an auditor may describe what they saw —
+  against a question, a checklist area, or a critical-risk hazard. A
+  free-text box is where a worker's name ends up, so that one is capped at
+  300 characters and refuses to save an email, a phone number, an ID
+  reference or an honorific followed by a name. It is the only typed field
+  in the audit; see COMPLIANCE-KSA §2 and §4.
 - **No uploads.** No photographs, no attachments, no document store. A site
   photograph is the most likely carrier of personal data in an audit tool,
   so the feature does not exist.

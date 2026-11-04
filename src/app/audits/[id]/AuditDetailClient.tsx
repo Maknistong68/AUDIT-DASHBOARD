@@ -196,6 +196,7 @@ export function AuditDetailClient({
     saveResponses,
     saveAreaScores,
     saveAreaNotes,
+    saveRiskNotes,
     saveAuditMeta,
     saveDisciplineScores,
     saveCriticalRisks,
@@ -356,6 +357,7 @@ export function AuditDetailClient({
             priorScope={priorScope}
             canEdit={canEdit}
             onSaveRisks={(risks) => saveCriticalRisks(audit.id, risks)}
+            onSaveNotes={(notes) => saveRiskNotes(audit.id, notes)}
             onSaveResponses={(scopeId: string, responses: Responses) =>
               saveScopedResponses(audit.id, scopeId, responses)
             }

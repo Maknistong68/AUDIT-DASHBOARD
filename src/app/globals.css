@@ -1717,6 +1717,28 @@ table.heatmap th[scope="row"] {
   flex: none;
 }
 
+/* A contractor row is a pill until it carries an observation, and a
+   sentence set inside a pill reads as a mislaid label. One that has
+   something to say becomes a full-width card instead. */
+.crc-contractors li:has(.crc-note) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  width: 100%;
+  border-radius: var(--r-3);
+}
+
+.crc-note {
+  flex-basis: 100%;
+  font-style: normal;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  margin-top: 4px;
+  padding-left: 11px;
+  border-left: 2px solid var(--mat-line);
+}
+
 .crc-contractors strong {
   font-variant-numeric: tabular-nums;
 }
@@ -5078,6 +5100,13 @@ table.matrix td.matrix-cell {
   background: var(--mat-2);
 }
 
+/* The hazard's observation, indented to start under its name rather than
+   under its checkbox — flush left it reads as belonging to the list, not
+   to the hazard above it. 12px of row padding + a 16px box + the 12px gap. */
+.risk-list .note-field {
+  padding: 4px 12px 12px 40px;
+}
+
 .risk-list .is-out .risk-row { background: transparent; }
 
 .risk-name {
@@ -5240,8 +5269,10 @@ input.risk-input {
   letter-spacing: 0.04em;
 }
 
-/* CRC scope: carried forward on purpose, and a zero nobody typed called out. */
-.risk-notes {
+/* CRC scope notices: carried forward on purpose, and a zero nobody typed
+   called out. NOT the observation field — that is `.note-field`, and the
+   model calls its map `riskNotes`, which this class predates. */
+.risk-flags {
   display: flex;
   align-items: center;
   gap: 10px 14px;

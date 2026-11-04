@@ -191,6 +191,23 @@ export interface EhssAudit {
    */
   areaNotes?: Record<string, string>;
   /**
+   * What the auditor saw against one CRITICAL-RISK HAZARD, keyed the same
+   * way `criticalRisks` is.
+   *
+   * The hazard is the CRC discipline's equivalent of a Health & Safety
+   * area, and for the same reason: thirteen of the fourteen hazard
+   * checklists are still to be supplied, so a hazard carries a score and an
+   * in-scope decision and no questions to hang an observation off. Once a
+   * hazard's checklist exists, its per-question notes live on
+   * `EhssResponse.note` inside `scopedResponses["crc:<hazard>"]`, exactly
+   * as Health & Safety's do.
+   *
+   * Its own map rather than a passenger on `criticalRisks`, which is both
+   * the score AND the in-scope flag: a note must not be deleted by the
+   * arithmetic that drops an out-of-scope hazard.
+   */
+  riskNotes?: Partial<Record<import("./critical-risks").CriticalRiskId, string>>;
+  /**
    * The total the source sheet stated, where it was transcribed from one.
    * Kept because it disagrees with that sheet's own points in 7 of the 20
    * imported audits: the app scores the points and shows the stated figure

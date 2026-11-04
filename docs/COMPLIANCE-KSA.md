@@ -51,10 +51,10 @@ as a cookie header back to the origin that set it.
 - Quarterly discipline scores and checklist answers
 - Observation codes and critical-risk hazard scores
 - **"What was seen"** — the auditor's description of a condition, against a
-  checklist question or a checklist area. Optional, 300 characters, and
-  refused at entry if it looks like it names anybody (see below). It
-  describes a *site condition*, not a person, which is what keeps it on
-  this side of the line rather than in the table above.
+  checklist question, a checklist area or a critical-risk hazard. Optional,
+  300 characters, and refused at entry if it looks like it names anybody
+  (see below). It describes a *site condition*, not a person, which is what
+  keeps it on this side of the line rather than in the table above.
 
 ### Deliberately absent
 
@@ -121,9 +121,12 @@ was added to the audit record on the owner's instruction, which §4 item 4
 below requires be treated as a scope change rather than a feature. The
 determination stands, on four controls, all of which must remain true:
 
-1. It records a **condition**, and attaches to a checklist question or a
-   checklist area — never to a person. No field in this system points at an
-   individual, and the tests that assert that are unchanged.
+1. It records a **condition**, and attaches to a checklist question, a
+   checklist area or a critical-risk hazard — never to a person. No field
+   in this system points at an individual, and the tests that assert that
+   are unchanged. (The hazard grain was added 2026-11-04 under the same
+   four controls; it is a third place the same field appears, not a new
+   kind of field.)
 2. It is **capped** at 300 characters, in the client, in the validator and
    in the database constraint. Past that it is a narrative, and a narrative
    is where names appear.

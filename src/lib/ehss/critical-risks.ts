@@ -96,3 +96,28 @@ export function crcScore(scores: CriticalRiskScores): number | null {
   const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
   return Math.round((mean + Number.EPSILON) * 100) / 100;
 }
+
+/**
+ * The hazard observations worth storing, given what is in scope.
+ *
+ * `criticalRisks[id]` is both the score and the IN-SCOPE FLAG, so a hazard
+ * taken out of scope is one this contractor does not do — and an
+ * observation about work nobody audited would persist somewhere nothing
+ * displays it. So Save writes only the notes whose hazard is in scope.
+ *
+ * The entry screen keeps the text in its own draft either way, so
+ * un-ticking a hazard and ticking it back does not lose what was typed; it
+ * is saving that decides, and nothing is deleted behind the auditor's back
+ * while they are still looking at it.
+ */
+export function notesForScope(
+  notes: Partial<Record<CriticalRiskId, string>>,
+  scores: CriticalRiskScores,
+): Partial<Record<CriticalRiskId, string>> {
+  const out: Partial<Record<CriticalRiskId, string>> = {};
+  for (const risk of CRITICAL_RISKS) {
+    const note = notes[risk.id];
+    if (note && scores[risk.id] !== undefined) out[risk.id] = note;
+  }
+  return out;
+}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RatingBadge } from "@/components/Badges";
 import { ChecklistForm } from "@/components/audit/ChecklistForm";
+import { NoteField } from "@/components/audit/NoteField";
 import type { Responses } from "@/lib/ehss/answers";
 import { formatScore } from "@/lib/format";
 import { quarterLabel, ratingFor, type EhssAudit } from "@/lib/ehss/model";
@@ -14,6 +15,7 @@ import {
 import {
   CRITICAL_RISKS,
   crcScore,
+  notesForScope,
   type CriticalRiskId,
   type CriticalRiskScores,
 } from "@/lib/ehss/critical-risks";
@@ -146,6 +148,7 @@ export function CriticalRiskPanel({
   priorScope,
   canEdit,
   onSaveRisks,
+  onSaveNotes,
   onSaveResponses,
 }: {
   audit: EhssAudit;
@@ -162,9 +165,13 @@ export function CriticalRiskPanel({
   priorScope: { quarter: string; risks: CriticalRiskId[] } | null;
   canEdit: boolean;
   onSaveRisks: (risks: CriticalRiskScores) => void;
+  onSaveNotes: (notes: Partial<Record<CriticalRiskId, string>>) => void;
   onSaveResponses: (scopeId: string, responses: Responses) => void;
 }) {
   const [draft, setDraft] = useState<CriticalRiskScores>(audit.criticalRisks);
+  const [notes, setNotes] = useState<Partial<Record<CriticalRiskId, string>>>(
+    audit.riskNotes ?? {},
+  );
   const [open, setOpen] = useState<CriticalRiskId | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -186,6 +193,17 @@ export function CriticalRiskPanel({
       ...prev,
       [id]: Number.isNaN(value) ? 0 : Math.max(0, Math.min(100, value)),
     }));
+  };
+
+  const setNote = (id: CriticalRiskId, text: string) => {
+    setSaved(false);
+    setNotes((prev) => {
+      const next = { ...prev };
+      const trimmed = text.trim();
+      if (trimmed.length === 0) delete next[id];
+      else next[id] = trimmed;
+      return next;
+    });
   };
 
   const toggle = (id: CriticalRiskId, on: boolean) => {
@@ -216,7 +234,7 @@ export function CriticalRiskPanel({
       </div>
 
       {(carryable.length > 0 || unscored.length > 0) && (
-        <div className="risk-notes">
+        <div className="risk-flags">
           {carryable.length > 0 && canEdit && (
             <button
               type="button"
@@ -305,6 +323,20 @@ export function CriticalRiskPanel({
                   </button>
                 )}
               </div>
+              {/* A hazard carries a score and an in-scope decision, and
+                  thirteen of the fourteen have no checklist to hang a
+                  per-question observation off — so this is the grain the
+                  CRC audit can hold one at, exactly as an area is for
+                  Health & Safety. */}
+              {scoped && (
+                <NoteField
+                  id={`risk-${risk.id}`}
+                  label={`What was seen — ${risk.label}`}
+                  value={notes[risk.id]}
+                  canEdit={canEdit}
+                  onCommit={(t) => setNote(risk.id, t)}
+                />
+              )}
               {expandable && scoped && isOpen && (
                 <ChecklistForm
                   scope={scope}
@@ -325,6 +357,7 @@ export function CriticalRiskPanel({
             type="button"
             onClick={() => {
               onSaveRisks(draft);
+              onSaveNotes(notesForScope(notes, draft));
               setSaved(true);
             }}
           >

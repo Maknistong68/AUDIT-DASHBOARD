@@ -32,6 +32,7 @@ const audit: EhssAudit = {
     },
   },
   areaNotes: { B6: "Three of eight subcontractor packs had no evaluation." },
+  riskNotes: { fire: "Two extinguishers past their inspection date." },
   disciplineScores: { env: 70 },
   criticalRisks: { fire: 80 },
 };

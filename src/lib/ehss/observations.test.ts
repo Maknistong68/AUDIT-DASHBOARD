@@ -23,7 +23,14 @@ import {
   withNote,
   type Responses,
 } from "./answers";
-import { areaPoints, areaRanking, summarizeAll } from "./summaries";
+import {
+  areaPoints,
+  areaRanking,
+  criticalRiskStats,
+  summarizeAll,
+} from "./summaries";
+import { notesForScope } from "./critical-risks";
+import type { EhssAudit } from "./model";
 import { audits, contractors, subRegions } from "./recorded";
 import { TARGET_SCORE } from "./disciplines";
 
@@ -207,5 +214,101 @@ describe("where one contractor stands on one area", () => {
   it("is null for a contractor not audited in that quarter", () => {
     expect(areaRanking("B6", all, "2026-Q1", "nobody")).toBeNull();
     expect(areaRanking("B6", all, null, "nbc026")).toBeNull();
+  });
+});
+
+describe("an observation against a critical-risk hazard", () => {
+  const notes = {
+    fire: "Two extinguishers past their inspection date at the south gate.",
+    water: "Rescue plan not posted at the jetty.",
+  } as const;
+
+  it("is kept for a hazard in scope", () => {
+    expect(notesForScope(notes, { fire: 40, water: 55 })).toEqual(notes);
+  });
+
+  it("is NOT written for a hazard out of scope", () => {
+    // `criticalRisks[id]` is both the score and the in-scope flag, so a
+    // hazard with no entry is work this contractor does not do. An
+    // observation about it would sit where nothing displays it.
+    expect(notesForScope(notes, { fire: 40 })).toEqual({ fire: notes.fire });
+    expect(notesForScope(notes, {})).toEqual({});
+  });
+
+  it("does not invent a note for a scored hazard nobody described", () => {
+    expect(notesForScope({}, { fire: 40 })).toEqual({});
+  });
+
+  it("keeps the register's order rather than the typing order", () => {
+    // Fire comes before Water in the client's own register. Two auditors
+    // who wrote the same two observations should produce the same record.
+    expect(Object.keys(notesForScope(notes, { water: 55, fire: 40 }))).toEqual([
+      "fire",
+      "water",
+    ]);
+  });
+});
+
+describe("a hazard observation reaches the people reading the hazard", () => {
+  const audit = (over: Partial<EhssAudit>): EhssAudit => ({
+    id: "x",
+    contractorId: "c1",
+    quarter: "2026-Q1",
+    auditDate: "2026-02-01",
+    inspectionNo: "T-1",
+    status: "approved",
+    responses: {},
+    disciplineScores: {},
+    criticalRisks: {},
+    ...over,
+  });
+  const contractors = [
+    { id: "c1", name: "AB", code: "901", subRegionId: "sr1", active: true },
+  ];
+  const subRegions = [{ id: "sr1", name: "Sub Region 1" }];
+
+  const statsFor = (audits: EhssAudit[]) =>
+    criticalRiskStats(summarizeAll(audits, contractors, subRegions));
+
+  it("carries it beside the contractor that is below target", () => {
+    const stats = statsFor([
+      audit({
+        criticalRisks: { fire: 40 },
+        riskNotes: { fire: "Two extinguishers past their inspection date." },
+      }),
+    ]);
+    const fire = stats.find((r) => r.id === "fire")!;
+    expect(fire.belowTarget[0]!.note).toBe(
+      "Two extinguishers past their inspection date.",
+    );
+  });
+
+  it("shows the most RECENT review's words, whatever order they arrive in", () => {
+    const older = audit({
+      id: "old",
+      quarter: "2025-Q4",
+      criticalRisks: { fire: 30 },
+      riskNotes: { fire: "last quarter" },
+    });
+    const newer = audit({
+      id: "new",
+      quarter: "2026-Q1",
+      criticalRisks: { fire: 40 },
+      riskNotes: { fire: "this quarter" },
+    });
+    for (const order of [
+      [older, newer],
+      [newer, older],
+    ]) {
+      const fire = statsFor(order).find((r) => r.id === "fire")!;
+      expect(fire.belowTarget[0]!.note).toBe("this quarter");
+    }
+  });
+
+  it("is absent, not empty, where nobody wrote one", () => {
+    const fire = statsFor([audit({ criticalRisks: { fire: 40 } })]).find(
+      (r) => r.id === "fire",
+    )!;
+    expect(fire.belowTarget[0]!.note).toBeUndefined();
   });
 });

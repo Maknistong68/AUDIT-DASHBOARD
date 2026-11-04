@@ -81,6 +81,10 @@ export function CriticalRiskBars({ stats }: { stats: CriticalRiskStat[] }) {
                           <i style={{ background: bandColor(c.score) }} />
                           {c.label}
                           <strong>{formatScore(c.score)}</strong>
+                          {/* On a hazard whose checklist is still to be
+                              supplied, this sentence is the only thing
+                              behind the number. */}
+                          {c.note && <em className="crc-note">{c.note}</em>}
                         </li>
                       ))}
                     </ul>
